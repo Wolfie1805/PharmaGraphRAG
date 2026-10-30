@@ -130,6 +130,7 @@ def acquire_pubmed(
             verify=certifi.where(),
             headers={"User-Agent": f"{ncbi_settings.ncbi_tool}-Research/0.1.0"},
             timeout=60.0,
+            follow_redirects=True,
         )
         should_close_client = True
 

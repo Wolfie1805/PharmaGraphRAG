@@ -1,0 +1,84 @@
+{
+  "run_id": "20261030_79ff97e7",
+  "source_name": "ClinPGx",
+  "endpoint_url": "https://api.clinpgx.org/v1/data/file/data/?view=min",
+  "retrieval_timestamp_utc": "2026-10-30T13:39:18.688408+00:00",
+  "source_version": "2026-10-05",
+  "license_name": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "license_checked_date": "2026-10-30",
+  "git_commit": "6897af715606541f194a1935fc7bc6e4794337c5",
+  "run_status": "complete",
+  "notes": null,
+  "files": [
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/clinpgx_file_catalog.json",
+      "byte_size": 24943,
+      "sha256": "f62ca3cdf85117d0b2964a802e5f14e64a73bf51103f15ac86cce78279088193",
+      "record_count": 121
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/genes.zip",
+      "byte_size": 2905579,
+      "sha256": "36cda3a7f02f50b9a4c97a3c2d3cdb82a76d028761d8f1e192ac49d90012b428",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/drugs.zip",
+      "byte_size": 679044,
+      "sha256": "fdaebc1909775a31b46e481f929d2b3b601de0b0bdb1de9dcd8a295f7abf1895",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/chemicals.zip",
+      "byte_size": 816104,
+      "sha256": "11a292c9802e3ce431ada32f0e49a505ea5dacbf38a09ec227e2d4be3afff3d6",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/variants.zip",
+      "byte_size": 908661,
+      "sha256": "13750bffd5f97b615c0fc77a83183051551ad791f373c6feecb708ab7cf3e99e",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/clinicalVariants.zip",
+      "byte_size": 74004,
+      "sha256": "2ae6f1cd93198da74e5b070b06781d69e9580ebbb3daa1e3b2dbdbec3210c6f8",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/summaryAnnotations.zip",
+      "byte_size": 1236737,
+      "sha256": "16e10905ca674f1e3dcf0477f0d3a1e7c4380eeda35fed612f5a7a218288adb5",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/variantAnnotations.zip",
+      "byte_size": 4296635,
+      "sha256": "ab29a58fbdad0e3770e24c5e3c4df7d91dd2534881693f1ac5c8f8772d4965f0",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/drugLabels.zip",
+      "byte_size": 60036,
+      "sha256": "ad892f2a413882d4d0f83e27453c811f79b8cc15e15eb0860b73b5bf0e8a7ef8",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/guidelineAnnotations.json.zip",
+      "byte_size": 854307,
+      "sha256": "df70db76644fa560ffa1c40159e844a453718cbaf56f8b3e60d1811ac3ef44cd",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261030_79ff97e7/relationships.zip",
+      "byte_size": 4300897,
+      "sha256": "a126f11045adc16bc2b2ccf825d9ed0be055410ef84120adee90ba1a34492f7a",
+      "record_count": null
+    }
+  ],
+  "release_date_as_shown": "2026-10-05T00:47:12-07:00",
+  "catalog_snapshot_file": "data/raw/clinpgx/20261030_79ff97e7/clinpgx_file_catalog.json",
+  "discrepancy_notes": "UI states 'These files are generated on the 6th of every month.' whereas catalog file metadata records lastModified timestamps as 2026-10-05."
+}

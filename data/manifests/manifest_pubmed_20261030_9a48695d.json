@@ -1,0 +1,223 @@
+{
+  "run_id": "20261030_9a48695d",
+  "source_name": "PubMed",
+  "endpoint_url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+  "retrieval_timestamp_utc": "2026-10-30T13:42:00.837809+00:00",
+  "source_version": "not provided",
+  "license_name": "NLM / Public Domain (citations); Publisher Copyright (abstracts)",
+  "license_url": "https://www.ncbi.nlm.nih.gov/About/disclaimer.html",
+  "license_checked_date": "2026-10-30",
+  "git_commit": "6897af715606541f194a1935fc7bc6e4794337c5",
+  "run_status": "complete",
+  "notes": null,
+  "files": [
+    {
+      "relative_path": "data/raw/pubmed/20261030_9a48695d/batch_0001.xml",
+      "byte_size": 915740,
+      "sha256": "78bc336ce59bb04ed05cec9c832b4fc0670ead4897146e396bc25b48b96fb08e",
+      "record_count": 41
+    }
+  ],
+  "database_name": "pubmed",
+  "is_pilot": true,
+  "pilot_selection_rule": "Pilot cap 50 PMIDs partitioned evenly across 4 pairs in esearch return order",
+  "queries": {
+    "CYP2C19_clopidogrel": "(CYP2C19[Title/Abstract] AND clopidogrel[Title/Abstract]) AND hasabstract[text]",
+    "CYP2C9_warfarin": "(CYP2C9[Title/Abstract] AND warfarin[Title/Abstract]) AND hasabstract[text]",
+    "VKORC1_warfarin": "(VKORC1[Title/Abstract] AND warfarin[Title/Abstract]) AND hasabstract[text]",
+    "SLCO1B1_simvastatin": "(SLCO1B1[Title/Abstract] AND simvastatin[Title/Abstract]) AND hasabstract[text]"
+  },
+  "esearch_counts": {
+    "CYP2C19_clopidogrel": 1431,
+    "CYP2C9_warfarin": 1409,
+    "VKORC1_warfarin": 978,
+    "SLCO1B1_simvastatin": 141
+  },
+  "pmids_retrieved": [
+    "42953922",
+    "42949291",
+    "42938391",
+    "42919684",
+    "42870560",
+    "42865374",
+    "42835306",
+    "42820662",
+    "42822087",
+    "42808920",
+    "42808443",
+    "42807560",
+    "42796033",
+    "42841193",
+    "42813643",
+    "42667590",
+    "42635959",
+    "42586461",
+    "42544696",
+    "28520369",
+    "42426980",
+    "42416825",
+    "28520347",
+    "42268291",
+    "42930805",
+    "42927566",
+    "42823629",
+    "42411791",
+    "42666103",
+    "42545959",
+    "42154610",
+    "41910772",
+    "41870846",
+    "41860236",
+    "41696832",
+    "41568406",
+    "41202698",
+    "41020786",
+    "40696379",
+    "40297930",
+    "39971612"
+  ],
+  "batch_size": 200,
+  "pmid_to_queries": {
+    "42953922": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42949291": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42938391": [
+      "CYP2C19_clopidogrel",
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "42919684": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42870560": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42865374": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42835306": [
+      "CYP2C19_clopidogrel",
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "42820662": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42822087": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42808920": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42808443": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42807560": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42796033": [
+      "CYP2C19_clopidogrel"
+    ],
+    "42841193": [
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "42813643": [
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "42667590": [
+      "CYP2C9_warfarin"
+    ],
+    "42635959": [
+      "CYP2C9_warfarin"
+    ],
+    "42586461": [
+      "CYP2C9_warfarin"
+    ],
+    "42544696": [
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "28520369": [
+      "CYP2C9_warfarin"
+    ],
+    "42426980": [
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "42416825": [
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "28520347": [
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "42268291": [
+      "CYP2C9_warfarin",
+      "VKORC1_warfarin"
+    ],
+    "42930805": [
+      "VKORC1_warfarin"
+    ],
+    "42927566": [
+      "VKORC1_warfarin"
+    ],
+    "42823629": [
+      "VKORC1_warfarin"
+    ],
+    "42411791": [
+      "VKORC1_warfarin"
+    ],
+    "42666103": [
+      "SLCO1B1_simvastatin"
+    ],
+    "42545959": [
+      "SLCO1B1_simvastatin"
+    ],
+    "42154610": [
+      "SLCO1B1_simvastatin"
+    ],
+    "41910772": [
+      "SLCO1B1_simvastatin"
+    ],
+    "41870846": [
+      "SLCO1B1_simvastatin"
+    ],
+    "41860236": [
+      "SLCO1B1_simvastatin"
+    ],
+    "41696832": [
+      "SLCO1B1_simvastatin"
+    ],
+    "41568406": [
+      "SLCO1B1_simvastatin"
+    ],
+    "41202698": [
+      "SLCO1B1_simvastatin"
+    ],
+    "41020786": [
+      "SLCO1B1_simvastatin"
+    ],
+    "40696379": [
+      "SLCO1B1_simvastatin"
+    ],
+    "40297930": [
+      "SLCO1B1_simvastatin"
+    ],
+    "39971612": [
+      "SLCO1B1_simvastatin"
+    ]
+  },
+  "reconciliation": {
+    "total_requested": 41,
+    "total_received": 41,
+    "missing_count": 0,
+    "missing_pmids": [],
+    "reconciled": true
+  }
+}

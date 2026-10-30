@@ -72,6 +72,7 @@ def acquire_clinpgx(
             verify=certifi.where(),
             headers={"User-Agent": USER_AGENT},
             timeout=60.0,
+            follow_redirects=True,
         )
         should_close_client = True
 
@@ -89,8 +90,12 @@ def acquire_clinpgx(
         # Extract source release date from files in catalog
         catalog_items = catalog_data.get("data", [])
         if catalog_items:
-            # find latest modified date among items
-            last_mod = catalog_items[0].get("lastModified", "2026-10-05")
+            selected_dates = [
+                item.get("lastModified")
+                for item in catalog_items
+                if item.get("fileName") in config.selected_files and item.get("lastModified")
+            ]
+            last_mod = max(selected_dates) if selected_dates else catalog_items[0].get("lastModified", "2026-10-05")
             manifest.source_version = last_mod.split("T")[0]
             manifest.release_date_as_shown = last_mod
 
