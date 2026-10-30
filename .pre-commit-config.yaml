@@ -1,0 +1,17 @@
+# Pre-commit configuration for PharmaGraph
+# Enforces secret scanning via detect-secrets before any commit
+repos:
+  - repo: local
+    hooks:
+      - id: detect-secrets
+        name: detect-secrets
+        entry: .venv/Scripts/detect-secrets-hook.exe --baseline .secrets.baseline
+        language: system
+        types: [text]
+        exclude: |
+          (?x)^(
+            \.secrets\.baseline|
+            requirements-lock\.txt|
+            poetry\.lock
+          )$
+

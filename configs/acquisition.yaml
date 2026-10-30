@@ -1,0 +1,57 @@
+# PharmaGraph Phase 1 Acquisition Configuration
+version: "1.0.0"
+domain: "pharmacogenomics_cardiovascular"
+
+gene_drug_pairs:
+  - id: "CYP2C19_clopidogrel"
+    gene: "CYP2C19"
+    drug: "clopidogrel"
+  - id: "CYP2C9_warfarin"
+    gene: "CYP2C9"
+    drug: "warfarin"
+  - id: "VKORC1_warfarin"
+    gene: "VKORC1"
+    drug: "warfarin"
+  - id: "SLCO1B1_simvastatin"
+    gene: "SLCO1B1"
+    drug: "simvastatin"
+
+pubmed:
+  base_url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
+  db: "pubmed"
+  require_abstract: true
+  abstract_filter: "hasabstract[text]"
+  date_range:
+    mindate: null
+    maxdate: null
+  max_records_per_pair: 500  # Conservative default; pilot overrides to 12-13 per pair (50 total)
+  efetch_batch_size: 200     # Batch size for efetch in XML
+  rate_limit_rps_default: 2.0  # Safe request rate without API key (NCBI allows max 3)
+  rate_limit_rps_with_key: 8.0 # Safe request rate with API key (NCBI allows max 10)
+  retry:
+    max_retries: 5
+    backoff_factor: 1.5
+    status_forcelist: [429, 500, 502, 503, 504]
+    retry_on_rate_limit_body: true
+
+clinpgx:
+  base_url: "https://api.clinpgx.org/v1"
+  catalog_endpoint: "/data/file/data/?view=min"
+  download_endpoint_template: "/download/file/data/{file_name}"
+  request_delay_seconds: 0.5
+  selected_files:
+    - "genes.zip"
+    - "drugs.zip"
+    - "chemicals.zip"
+    - "variants.zip"
+    - "clinicalVariants.zip"
+    - "summaryAnnotations.zip"
+    - "variantAnnotations.zip"
+    - "drugLabels.zip"
+    - "guidelineAnnotations.json.zip"
+    - "relationships.zip"
+
+storage:
+  raw_dir: "data/raw"
+  manifests_dir: "data/manifests"
+

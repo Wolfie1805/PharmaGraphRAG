@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[project]
+name = "pharmagraph"
+version = "0.1.0"
+description = "Evidence-Grounded Pharmacogenomics & Drug Intelligence System"
+readme = "PharmaRAG.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic==2.14.2",
+    "pydantic-settings==2.16.2",
+    "httpx==0.28.1",
+    "certifi==2026.10.23",
+    "pyyaml==6.0.3",
+    "pytest==9.2.0",
+    "respx==0.23.1",
+    "ruff==0.17.3",
+    "pre-commit==4.7.0",
+    "detect-secrets==1.5.0",
+    "dvc==3.67.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = []
+
