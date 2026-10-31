@@ -6,16 +6,13 @@ Runs parsers, enforces deterministic serialization, logs rejects, and produces P
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Any, Dict, List, Tuple
+
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 from app.normalization.contracts import (
     EntityRecord,
-    CrossReferenceRecord,
-    SynonymRecord,
-    RelationshipRecord,
-    PublicationRecord,
 )
 from app.normalization.parsers.clinpgx import ClinPGxParser
 from app.normalization.parsers.cpic import CPICParser
@@ -39,7 +36,9 @@ def run_normalization_pipeline(
     review_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Initialize parsers
-    clinpgx_parser = ClinPGxParser(clinpgx_raw_dir, haplo_raw_dir, clinpgx_manifest_id, haplo_manifest_id)
+    clinpgx_parser = ClinPGxParser(
+        clinpgx_raw_dir, haplo_raw_dir, clinpgx_manifest_id, haplo_manifest_id
+    )
     cpic_parser = CPICParser(haplo_raw_dir / "cpic.alleles.json", haplo_manifest_id)
     pubmed_parser = PubMedParser(pubmed_manifest)
 
@@ -105,23 +104,27 @@ def run_normalization_pipeline(
     ]
     entity_dicts.sort(key=lambda x: (x["canonical_id"], x["primary_source_id"]))
 
-    ent_schema = pa.schema([
-        ("canonical_id", pa.string()),
-        ("entity_type", pa.string()),
-        ("primary_source_id", pa.string()),
-        ("display_name", pa.string()),
-        ("normalized_name", pa.string()),
-        ("is_drug", pa.bool_()),
-        ("gene_symbol", pa.string()),
-        ("defined_by", pa.string()),
-        ("is_ambiguous", pa.bool_()),
-        ("is_artifact", pa.bool_()),
-        ("source_name", pa.string()),
-        ("raw_file_sha256", pa.string()),
-    ])
+    ent_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("entity_type", pa.string()),
+            ("primary_source_id", pa.string()),
+            ("display_name", pa.string()),
+            ("normalized_name", pa.string()),
+            ("is_drug", pa.bool_()),
+            ("gene_symbol", pa.string()),
+            ("defined_by", pa.string()),
+            ("is_ambiguous", pa.bool_()),
+            ("is_artifact", pa.bool_()),
+            ("source_name", pa.string()),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
     ent_table = pa.Table.from_pylist(entity_dicts, schema=ent_schema)
     ent_path = output_dir / "entities.parquet"
-    pq.write_table(ent_table, ent_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE)
+    pq.write_table(
+        ent_table, ent_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE
+    )
 
     # B. Cross-references
     xref_dicts = [
@@ -134,15 +137,22 @@ def run_normalization_pipeline(
         for x in all_xrefs
     ]
     xref_dicts.sort(key=lambda x: (x["canonical_id"], x["namespace"], x["external_id"]))
-    xref_schema = pa.schema([
-        ("canonical_id", pa.string()),
-        ("namespace", pa.string()),
-        ("external_id", pa.string()),
-        ("raw_file_sha256", pa.string()),
-    ])
+    xref_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("namespace", pa.string()),
+            ("external_id", pa.string()),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
     xref_table = pa.Table.from_pylist(xref_dicts, schema=xref_schema)
     xref_path = output_dir / "cross_references.parquet"
-    pq.write_table(xref_table, xref_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE)
+    pq.write_table(
+        xref_table,
+        xref_path,
+        compression=PARQUET_COMPRESSION,
+        row_group_size=PARQUET_ROW_GROUP_SIZE,
+    )
 
     # C. Synonyms
     syn_dicts = [
@@ -159,19 +169,23 @@ def run_normalization_pipeline(
         for s in all_synonyms
     ]
     syn_dicts.sort(key=lambda x: (x["canonical_id"], x["normalized_synonym"], x["synonym_text"]))
-    syn_schema = pa.schema([
-        ("canonical_id", pa.string()),
-        ("synonym_text", pa.string()),
-        ("normalized_synonym", pa.string()),
-        ("synonym_type", pa.string()),
-        ("is_ambiguous", pa.bool_()),
-        ("is_artifact", pa.bool_()),
-        ("is_split_ambiguous", pa.bool_()),
-        ("raw_file_sha256", pa.string()),
-    ])
+    syn_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("synonym_text", pa.string()),
+            ("normalized_synonym", pa.string()),
+            ("synonym_type", pa.string()),
+            ("is_ambiguous", pa.bool_()),
+            ("is_artifact", pa.bool_()),
+            ("is_split_ambiguous", pa.bool_()),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
     syn_table = pa.Table.from_pylist(syn_dicts, schema=syn_schema)
     syn_path = output_dir / "synonyms.parquet"
-    pq.write_table(syn_table, syn_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE)
+    pq.write_table(
+        syn_table, syn_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE
+    )
 
     # D. Relationships
     rel_dicts = [
@@ -193,24 +207,28 @@ def run_normalization_pipeline(
         for r in relationships
     ]
     rel_dicts.sort(key=lambda x: x["relationship_id"])
-    rel_schema = pa.schema([
-        ("relationship_id", pa.string()),
-        ("entity1_id", pa.string()),
-        ("entity1_name", pa.string()),
-        ("entity1_type", pa.string()),
-        ("entity1_canonical_id", pa.string()),
-        ("entity2_id", pa.string()),
-        ("entity2_name", pa.string()),
-        ("entity2_type", pa.string()),
-        ("entity2_canonical_id", pa.string()),
-        ("association", pa.string()),
-        ("pmids", pa.list_(pa.string())),
-        ("is_dangling", pa.bool_()),
-        ("raw_file_sha256", pa.string()),
-    ])
+    rel_schema = pa.schema(
+        [
+            ("relationship_id", pa.string()),
+            ("entity1_id", pa.string()),
+            ("entity1_name", pa.string()),
+            ("entity1_type", pa.string()),
+            ("entity1_canonical_id", pa.string()),
+            ("entity2_id", pa.string()),
+            ("entity2_name", pa.string()),
+            ("entity2_type", pa.string()),
+            ("entity2_canonical_id", pa.string()),
+            ("association", pa.string()),
+            ("pmids", pa.list_(pa.string())),
+            ("is_dangling", pa.bool_()),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
     rel_table = pa.Table.from_pylist(rel_dicts, schema=rel_schema)
     rel_path = output_dir / "relationships.parquet"
-    pq.write_table(rel_table, rel_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE)
+    pq.write_table(
+        rel_table, rel_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE
+    )
 
     # E. Publications
     pub_dicts = [
@@ -231,23 +249,27 @@ def run_normalization_pipeline(
         for p in publications
     ]
     pub_dicts.sort(key=lambda x: x["pmid"])
-    pub_schema = pa.schema([
-        ("pmid", pa.string()),
-        ("record_type", pa.string()),
-        ("title", pa.string()),
-        ("journal_or_book", pa.string()),
-        ("pubdate_iso", pa.string()),
-        ("date_precision", pa.string()),
-        ("doi", pa.string()),
-        ("abstract_text", pa.string()),
-        ("abstract_structured", pa.bool_()),
-        ("abstract_sections", pa.string()),
-        ("mesh_terms", pa.list_(pa.string())),
-        ("raw_file_sha256", pa.string()),
-    ])
+    pub_schema = pa.schema(
+        [
+            ("pmid", pa.string()),
+            ("record_type", pa.string()),
+            ("title", pa.string()),
+            ("journal_or_book", pa.string()),
+            ("pubdate_iso", pa.string()),
+            ("date_precision", pa.string()),
+            ("doi", pa.string()),
+            ("abstract_text", pa.string()),
+            ("abstract_structured", pa.bool_()),
+            ("abstract_sections", pa.string()),
+            ("mesh_terms", pa.list_(pa.string())),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
     pub_table = pa.Table.from_pylist(pub_dicts, schema=pub_schema)
     pub_path = output_dir / "publications.parquet"
-    pq.write_table(pub_table, pub_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE)
+    pq.write_table(
+        pub_table, pub_path, compression=PARQUET_COMPRESSION, row_group_size=PARQUET_ROW_GROUP_SIZE
+    )
 
     # 6. Rejects Logging
     all_rejects = {

@@ -1,13 +1,13 @@
 """
 PubMed parser for Phase 2 data normalization.
-Parses full PubMed corpus XML batches, validates against contracts, and strictly rejects pilot manifests.
+Parses full PubMed XML batches, validates against contracts, and refuses pilot manifests.
 """
 
 import hashlib
 import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from app.normalization.contracts import PublicationRecord, SourceProvenance
 from app.normalization.normalize import normalize_text, parse_pubmed_date
@@ -24,15 +24,25 @@ PUBMED_LICENSE_CHECK_DATE = "2026-10-31"
 class PubMedParser:
     """Parses full PubMed corpus XML files into validated PublicationRecords."""
 
-    def __init__(self, manifest_path: Path):
+    def __init__(
+        self,
+        manifest_path: Path,
+        raw_dir: Optional[Path] = None,
+        max_rejection_rate: float = 0.001,
+    ):
         self.manifest_path = manifest_path
+        self.max_rejection_rate = max_rejection_rate
         self._validate_manifest_not_pilot()
 
         with open(self.manifest_path, "r", encoding="utf-8") as f:
             self.manifest_data = json.load(f)
 
         self.manifest_run_id = self.manifest_data.get("run_id", "20261031_7d1398e0")
-        self.raw_dir = Path("data/raw/pubmed") / self.manifest_run_id
+        self.raw_dir = (
+            raw_dir
+            if raw_dir is not None
+            else (Path("data/raw/pubmed") / self.manifest_run_id)
+        )
 
         # File SHA-256 cache
         self.file_hashes: Dict[str, str] = {}
@@ -43,6 +53,17 @@ class PubMedParser:
         self.rejects: List[Dict[str, Any]] = []
         self.accounting = {"raw_rows": 0, "accepted": 0, "rejected": 0}
 
+    def _check_rejection_threshold(self) -> None:
+        """Enforce strict 0.1% abort threshold policy."""
+        raw = self.accounting["raw_rows"]
+        rej = self.accounting["rejected"]
+        if raw > 0 and (rej / raw) > self.max_rejection_rate:
+            raise ValueError(
+                f"REJECTION_THRESHOLD_EXCEEDED: PubMed parser rejected {rej}/{raw} records "
+                f"({(rej / raw):.2%}), exceeding the maximum allowed threshold of "
+                f"{self.max_rejection_rate:.1%}."
+            )
+
     def _validate_manifest_not_pilot(self) -> None:
         """Enforce strict rule: parser must refuse pilot manifests."""
         with open(self.manifest_path, "r", encoding="utf-8") as f:
@@ -50,8 +71,9 @@ class PubMedParser:
 
         if data.get("is_pilot", False) is True:
             raise ValueError(
-                f"PILOT_MANIFEST_REJECTED: Parsing attempted on pilot manifest '{self.manifest_path.name}'. "
-                "The PubMed parser strictly requires the full production corpus manifest."
+                f"PILOT_MANIFEST_REJECTED: Parsing attempted on pilot manifest "
+                f"'{self.manifest_path.name}'. The PubMed parser strictly requires "
+                "the full production corpus manifest."
             )
 
     def parse_all_batches(self) -> List[PublicationRecord]:
@@ -74,20 +96,32 @@ class PubMedParser:
             for elem_idx, art in enumerate(root.findall(".//PubmedArticle"), start=1):
                 self.accounting["raw_rows"] += 1
                 pmid_elem = art.find(".//MedlineCitation/PMID")
-                pmid = pmid_elem.text.strip() if (pmid_elem is not None and pmid_elem.text) else None
+                pmid = (
+                    pmid_elem.text.strip() if (pmid_elem is not None and pmid_elem.text) else None
+                )
 
                 if not pmid:
                     self.accounting["rejected"] += 1
-                    self.rejects.append({
-                        "file": xml_file.name, "element_index": elem_idx, "reason": "EMPTY_PRIMARY_ID"
-                    })
+                    self.rejects.append(
+                        {
+                            "file": xml_file.name,
+                            "element_index": elem_idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                        }
+                    )
                     continue
 
                 title = art.findtext(".//ArticleTitle") or ""
-                journal = art.findtext(".//Journal/Title") or art.findtext(".//Journal/ISOAbbreviation") or "UNKNOWN"
+                journal = (
+                    art.findtext(".//Journal/Title")
+                    or art.findtext(".//Journal/ISOAbbreviation")
+                    or "UNKNOWN"
+                )
 
                 # Date parsing
-                year = art.findtext(".//JournalIssue/PubDate/Year") or art.findtext(".//DateCompleted/Year")
+                year = art.findtext(".//JournalIssue/PubDate/Year") or art.findtext(
+                    ".//DateCompleted/Year"
+                )
                 month = art.findtext(".//JournalIssue/PubDate/Month")
                 day = art.findtext(".//JournalIssue/PubDate/Day")
                 medline_date = art.findtext(".//JournalIssue/PubDate/MedlineDate")
@@ -96,9 +130,9 @@ class PubMedParser:
                     pubdate_iso, date_precision = parse_pubmed_date(year, month, day, medline_date)
                 except Exception as e:
                     self.accounting["rejected"] += 1
-                    self.rejects.append({
-                        "file": xml_file.name, "pmid": pmid, "reason": f"UNPARSEABLE_DATE: {e}"
-                    })
+                    self.rejects.append(
+                        {"file": xml_file.name, "pmid": pmid, "reason": f"UNPARSEABLE_DATE: {e}"}
+                    )
                     continue
 
                 # DOI
@@ -170,20 +204,32 @@ class PubMedParser:
             for elem_idx, b_art in enumerate(root.findall(".//PubmedBookArticle"), start=1):
                 self.accounting["raw_rows"] += 1
                 pmid_elem = b_art.find(".//BookDocument/PMID")
-                pmid = pmid_elem.text.strip() if (pmid_elem is not None and pmid_elem.text) else None
+                pmid = (
+                    pmid_elem.text.strip() if (pmid_elem is not None and pmid_elem.text) else None
+                )
 
                 if not pmid:
                     self.accounting["rejected"] += 1
-                    self.rejects.append({
-                        "file": xml_file.name, "element_index": elem_idx, "reason": "EMPTY_PRIMARY_ID"
-                    })
+                    self.rejects.append(
+                        {
+                            "file": xml_file.name,
+                            "element_index": elem_idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                        }
+                    )
                     continue
 
                 title = b_art.findtext(".//ArticleTitle") or b_art.findtext(".//BookTitle") or ""
                 book_title = b_art.findtext(".//Book/BookTitle") or "Medical Genetics Summaries"
-                book_acc = b_art.findtext(".//BookDocument/Book/CollectionTitle") or b_art.findtext(".//BookDocument/ArticleIdList/ArticleId[@IdType='bookaccession']")
+                book_acc = b_art.findtext(".//BookDocument/Book/CollectionTitle") or b_art.findtext(
+                    ".//BookDocument/ArticleIdList/ArticleId[@IdType='bookaccession']"
+                )
 
-                year = b_art.findtext(".//Book/PubDate/Year") or b_art.findtext(".//DateRevised/Year") or "2012"
+                year = (
+                    b_art.findtext(".//Book/PubDate/Year")
+                    or b_art.findtext(".//DateRevised/Year")
+                    or "2012"
+                )
                 month = b_art.findtext(".//Book/PubDate/Month")
                 day = b_art.findtext(".//Book/PubDate/Day")
 
@@ -232,5 +278,5 @@ class PubMedParser:
                 publications.append(rec)
                 self.accounting["accepted"] += 1
 
+        self._check_rejection_threshold()
         return publications
-

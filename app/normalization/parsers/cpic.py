@@ -6,15 +6,16 @@ Parses cpic.alleles.json, carries dedicated CC0 1.0 license metadata, and enforc
 import hashlib
 import json
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from app.normalization.contracts import EntityRecord, SourceProvenance
-from app.normalization.normalize import normalize_text, normalize_search_term
+from app.normalization.normalize import normalize_search_term, normalize_text
 
 CPIC_SOURCE_NAME = "CPIC"
 CPIC_LICENSE_TEXT = (
     "Creative Commons Zero 1.0 Universal (CC0 1.0) Public Domain Dedication. "
-    "CPIC has waived all copyright and related rights to CPIC guidelines and associated data tables."
+    "CPIC has waived all copyright and related rights to CPIC guidelines and "
+    "associated data tables."
 )
 CPIC_LICENSE_CHECK_DATE = "2026-10-31"
 
@@ -22,13 +23,25 @@ CPIC_LICENSE_CHECK_DATE = "2026-10-31"
 class CPICParser:
     """Parses cpic.alleles.json into validated canonical haplotype/allele EntityRecords."""
 
-    def __init__(self, json_path: Path, manifest_run_id: str):
+    def __init__(self, json_path: Path, manifest_run_id: str, max_rejection_rate: float = 0.001):
         self.json_path = json_path
         self.manifest_run_id = manifest_run_id
+        self.max_rejection_rate = max_rejection_rate
         self.file_sha256 = hashlib.sha256(self.json_path.read_bytes()).hexdigest()
 
         self.rejects: List[Dict[str, Any]] = []
         self.accounting = {"raw_rows": 0, "accepted": 0, "rejected": 0}
+
+    def _check_rejection_threshold(self) -> None:
+        """Enforce strict 0.1% abort threshold policy."""
+        raw = self.accounting["raw_rows"]
+        rej = self.accounting["rejected"]
+        if raw > 0 and (rej / raw) > self.max_rejection_rate:
+            raise ValueError(
+                f"REJECTION_THRESHOLD_EXCEEDED: CPIC alleles rejected {rej}/{raw} records "
+                f"({(rej / raw):.2%}), exceeding the maximum allowed threshold of "
+                f"{self.max_rejection_rate:.1%}."
+            )
 
     def parse_alleles(self) -> List[EntityRecord]:
         """Parse all allele objects from cpic.alleles.json."""
@@ -45,12 +58,21 @@ class CPICParser:
 
             if not acc_id:
                 self.accounting["rejected"] += 1
-                self.rejects.append({
-                    "file": "cpic.alleles.json", "row_index": idx, "reason": "EMPTY_PRIMARY_ID", "raw": item
-                })
+                self.rejects.append(
+                    {
+                        "file": "cpic.alleles.json",
+                        "row_index": idx,
+                        "reason": "EMPTY_PRIMARY_ID",
+                        "raw": item,
+                    }
+                )
                 continue
 
-            display_name = f"{gene_symbol} {allele_name}" if (gene_symbol and allele_name) else (allele_name if allele_name else acc_id)
+            display_name = (
+                f"{gene_symbol} {allele_name}"
+                if (gene_symbol and allele_name)
+                else (allele_name if allele_name else acc_id)
+            )
             canonical_id = f"pg:haplo:{acc_id.replace('PA', '')}"
 
             prov = SourceProvenance(
@@ -76,5 +98,5 @@ class CPICParser:
             entities.append(ent)
             self.accounting["accepted"] += 1
 
+        self._check_rejection_threshold()
         return entities
-

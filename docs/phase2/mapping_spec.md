@@ -179,6 +179,272 @@ All tabular outputs will be written to `data/processed/` as Snappy-compressed Pa
 | `mesh_terms` | `list<string>`| No | List of MeSH Descriptor names (empty for books/pre-indexed) |
 | `raw_file_sha256` | `string` | No | SHA-256 of the XML batch file |
 
+### 3.6 Clinical Variants Table (`clinical_variants.parquet`)
+*Source*: `clinicalVariants.zip#clinicalVariants.tsv` (5,192 raw rows)
+*Rules*: Retain all raw fields verbatim; preserve list fields as raw string plus parsed list (`chemicals`, `phenotypes`, `variant_tokens`). Because `clinicalVariants.tsv` contains only free-text names/symbols and lacks source accession columns, zero inferred links or name-based joins are made. Foreign keys remain unlinked (`None`).
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `row_index` | `int64` | No | 1-based source row index |
+| `variant_raw` | `string` | No | Verbatim raw variant string (e.g. `'CYP2C9*1, CYP2C9*3'`) |
+| `variants` | `list<string>` | No | Parsed token list |
+| `gene_symbol` | `string` | Yes | Gene symbol (verbatim from source) |
+| `type` | `string` | No | Annotation type (e.g. `'Metabolism/PK'`, `'Toxicity'`) |
+| `level_of_evidence` | `string` | No | ClinPGx level (e.g. `'1A'`, `'2B'`, `'3'`) |
+| `chemicals_raw` | `string` | Yes | Verbatim raw chemicals string |
+| `chemicals` | `list<string>` | No | Parsed list of chemical names |
+| `phenotypes_raw` | `string` | Yes | Verbatim raw phenotypes string |
+| `phenotypes` | `list<string>` | No | Parsed list of phenotype strings |
+| `raw_file_sha256` | `string` | No | SHA-256 of `clinicalVariants.zip` |
+
+### 3.7 Drug Labels Table (`drug_labels.parquet`)
+*Source*: `drugLabels.zip#drugLabels.tsv` (1,435 raw rows)
+*Rules*: All 15 raw fields retained. Exact join to chemical registry only if explicit accession matches (`PharmGKB ID` `PA...` joins to `pg:chem:`). List fields kept as raw string plus parsed list (`chemicals`, `genes`, `variants_haplotypes`).
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `label_id` | `string` | No | Primary PharmGKB ID (`PA166...`) |
+| `name` | `string` | No | Label annotation name |
+| `source` | `string` | No | Regulatory agency (`'FDA'`, `'EMA'`, `'HCSC'`, `'PMDA'`) |
+| `biomarker_flag` | `string` | Yes | Verbatim biomarker flag |
+| `testing_level` | `string` | No | Level (`'Actionable PGx'`, `'Required PGx'`, etc.) |
+| `has_prescribing_info` | `string` | Yes | Prescribing info indicator |
+| `has_dosing_info` | `string` | Yes | Dosing info indicator |
+| `has_alternate_drug` | `string` | Yes | Alternate drug indicator |
+| `has_other_guidance` | `string` | Yes | Other prescribing guidance indicator |
+| `cancer_genome` | `string` | Yes | Cancer genome indicator |
+| `prescribing_markdown`| `string` | Yes | Verbatim prescribing guidance text |
+| `chemicals_raw` | `string` | Yes | Verbatim chemicals string |
+| `chemicals` | `list<string>` | No | Parsed chemical names |
+| `genes_raw` | `string` | Yes | Verbatim genes string |
+| `genes` | `list<string>` | No | Parsed gene symbols |
+| `variants_raw` | `string` | Yes | Verbatim variants/haplotypes string |
+| `variants` | `list<string>` | No | Parsed variant/haplotype tokens |
+| `latest_history_date`| `string` | Yes | ISO date string (`YYYY-MM-DD`) |
+| `raw_file_sha256` | `string` | No | SHA-256 of `drugLabels.zip` |
+
+### 3.8 Drug Labels By Gene Table (`drug_labels_by_gene.parquet`)
+*Source*: `drugLabels.zip#drugLabels.byGene.tsv` (239 raw rows)
+*Rules*: Exact foreign key join on `Gene ID` (`PA...`) to `pg:gene:`. List fields `Label IDs` and `Label Names` split on semicolon (`;`).
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `gene_id` | `string` | No | PharmGKB Gene Accession (`PA...`) |
+| `gene_canonical_id` | `string` | No | Canonical gene ID (`pg:gene:...`) via exact accession join |
+| `gene_symbol` | `string` | No | Gene symbol |
+| `label_ids_raw` | `string` | No | Semicolon-delimited label IDs |
+| `label_ids` | `list<string>` | No | Parsed list of label `PA...` IDs |
+| `label_names_raw` | `string` | No | Semicolon-delimited label names |
+| `label_names` | `list<string>` | No | Parsed list of label names |
+| `raw_file_sha256` | `string` | No | SHA-256 of `drugLabels.zip` |
+
+### 3.9 Summary Annotations Table (`summary_annotations.parquet`)
+*Source*: `summaryAnnotations.zip#summary_annotations.tsv` (5,192 raw rows)
+*Rules*: All 15 raw fields retained. Joins by exact ID only. List fields kept raw plus parsed list (`drugs`, `phenotypes`).
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `summary_annotation_id` | `string` | No | Primary summary annotation ID |
+| `variant_haplotypes_raw`| `string` | No | Verbatim variant/haplotypes string |
+| `variant_haplotypes` | `list<string>` | No | Parsed variant/haplotype tokens |
+| `gene_symbol` | `string` | Yes | Gene symbol |
+| `level_of_evidence` | `string` | No | Evidence level (`'1A'`, `'1B'`, `'2A'`, etc.) |
+| `level_override` | `string` | Yes | Level override |
+| `level_modifiers` | `string` | Yes | Level modifiers |
+| `score` | `string` | Yes | Numerical score string |
+| `phenotype_category` | `string` | Yes | Phenotype category |
+| `pmid_count` | `int64` | No | Count of supporting PMIDs |
+| `evidence_count` | `int64` | No | Count of supporting evidence items |
+| `drugs_raw` | `string` | Yes | Verbatim drug string |
+| `drugs` | `list<string>` | No | Parsed drug names |
+| `phenotypes_raw` | `string` | Yes | Verbatim phenotype string |
+| `phenotypes` | `list<string>` | No | Parsed phenotype names |
+| `latest_history_date` | `string` | Yes | ISO date string (`YYYY-MM-DD`) |
+| `url` | `string` | No | Official ClinPGx URL |
+| `specialty_population` | `string` | Yes | Population qualification |
+| `raw_file_sha256` | `string` | No | SHA-256 of `summaryAnnotations.zip` |
+
+### 3.10 Summary Annotation Alleles Table (`summary_annotation_alleles.parquet`)
+*Source*: `summaryAnnotations.zip#summary_ann_alleles.tsv` (16,122 raw rows)
+*Rules*: Exact join on `Summary Annotation ID` to `summary_annotations.parquet`. Raw text preserved verbatim.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `summary_annotation_id` | `string` | No | Foreign key to summary annotation |
+| `genotype_allele` | `string` | No | Genotype or allele string |
+| `annotation_text` | `string` | No | Full annotation narrative text |
+| `allele_function` | `string` | Yes | Allele function description |
+| `raw_file_sha256` | `string` | No | SHA-256 of `summaryAnnotations.zip` |
+
+### 3.11 Summary Annotation History Table (`summary_annotation_history.parquet`)
+*Source*: `summaryAnnotations.zip#summary_ann_history.tsv` (14,056 raw rows)
+*Rules*: Exact join on `Summary Annotation ID` to `summary_annotations.parquet`.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `summary_annotation_id` | `string` | No | Foreign key to summary annotation |
+| `history_date` | `string` | No | ISO date string (`YYYY-MM-DD`) |
+| `history_type` | `string` | No | Event type (`'Create'`, `'Update'`) |
+| `comment` | `string` | Yes | Curator commentary |
+| `raw_file_sha256` | `string` | No | SHA-256 of `summaryAnnotations.zip` |
+
+### 3.12 Summary Annotation Evidence Table (`summary_annotation_evidence.parquet`)
+*Source*: `summaryAnnotations.zip#summary_ann_evidence.tsv` (15,542 raw rows)
+*Rules*: Exact join on `Summary Annotation ID` and `Evidence ID`. PMIDs validated.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `summary_annotation_id` | `string` | No | Foreign key to summary annotation |
+| `evidence_id` | `string` | No | Variant annotation evidence ID |
+| `evidence_type` | `string` | No | Evidence type description |
+| `evidence_url` | `string` | Yes | ClinPGx evidence URL |
+| `pmid` | `string` | Yes | Supporting PMID |
+| `summary` | `string` | Yes | Verbatim summary assertion sentence |
+| `score` | `string` | Yes | Numerical evidence score |
+| `raw_file_sha256` | `string` | No | SHA-256 of `summaryAnnotations.zip` |
+
+### 3.13 Variant Phenotype Annotations Table (`variant_phenotype_annotations.parquet`)
+*Source*: `variantAnnotations.zip#var_pheno_ann.tsv` (14,560 raw rows)
+*Rules*: All 25 raw columns retained verbatim. List fields parsed with quote-aware splitter (`drugs`, `phenotypes`, `population_types`, `metabolizer_types`). Exact joins on PMIDs to `publications.parquet`.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `annotation_id` | `string` | No | Primary Variant Annotation ID |
+| `variant_raw` | `string` | No | Verbatim variant/haplotypes string |
+| `gene_symbol` | `string` | Yes | Gene symbol |
+| `drugs_raw` | `string` | Yes | Verbatim drug string |
+| `drugs` | `list<string>` | No | Parsed drug list |
+| `pmid` | `string` | Yes | Supporting PMID |
+| `phenotype_category` | `string` | Yes | Category |
+| `significance` | `string` | Yes | Significance assertion (`'yes'`, `'no'`, `'not stated'`) |
+| `notes` | `string` | Yes | Curator notes |
+| `sentence` | `string` | No | Structured PGx sentence |
+| `alleles` | `string` | Yes | Studied alleles |
+| `specialty_population` | `string` | Yes | Specialty population |
+| `metabolizer_types` | `string` | Yes | Metabolizer types |
+| `is_plural` | `string` | Yes | Plurality |
+| `is_associated` | `string` | No | Association term |
+| `direction_of_effect` | `string` | Yes | Effect direction (`'increased'`, `'decreased'`, etc.) |
+| `side_effect_other` | `string` | Yes | Side effect or efficacy category |
+| `phenotype_raw` | `string` | Yes | Verbatim phenotype string |
+| `phenotypes` | `list<string>` | No | Parsed phenotypes |
+| `multiple_phenotypes_conjunction` | `string` | Yes | Conjunction (`'and'`, `'or'`) |
+| `when_treated_with` | `string` | Yes | Treatment exposure string |
+| `multiple_drugs_conjunction` | `string` | Yes | Drug conjunction |
+| `population_types` | `string` | Yes | Population descriptor |
+| `population_diseases` | `string` | Yes | Population diseases |
+| `comparison_alleles` | `string` | Yes | Comparison genotype/alleles |
+| `comparison_metabolizers` | `string` | Yes | Comparison metabolizers |
+| `raw_file_sha256` | `string` | No | SHA-256 of `variantAnnotations.zip` |
+
+### 3.14 Variant Drug Annotations Table (`variant_drug_annotations.parquet`)
+*Source*: `variantAnnotations.zip#var_drug_ann.tsv` (13,030 raw rows)
+*Rules*: All 22 raw columns retained verbatim. List fields parsed.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `annotation_id` | `string` | No | Primary Variant Annotation ID |
+| `variant_raw` | `string` | No | Verbatim variant string |
+| `gene_symbol` | `string` | Yes | Gene symbol |
+| `drugs_raw` | `string` | Yes | Verbatim drug string |
+| `drugs` | `list<string>` | No | Parsed drugs |
+| `pmid` | `string` | Yes | Supporting PMID |
+| `phenotype_category` | `string` | Yes | Category |
+| `significance` | `string` | Yes | Significance assertion |
+| `notes` | `string` | Yes | Curator notes |
+| `sentence` | `string` | No | Structured sentence |
+| `alleles` | `string` | Yes | Studied alleles |
+| `specialty_population` | `string` | Yes | Specialty population |
+| `metabolizer_types` | `string` | Yes | Metabolizer types |
+| `is_plural` | `string` | Yes | Plurality |
+| `is_associated` | `string` | No | Association term |
+| `direction_of_effect` | `string` | Yes | Effect direction |
+| `pdpk_terms` | `string` | Yes | PD/PK terms |
+| `multiple_drugs_conjunction` | `string` | Yes | Conjunction |
+| `population_types` | `string` | Yes | Population descriptor |
+| `population_diseases` | `string` | Yes | Population diseases |
+| `comparison_alleles` | `string` | Yes | Comparison alleles |
+| `comparison_metabolizers` | `string` | Yes | Comparison metabolizers |
+| `raw_file_sha256` | `string` | No | SHA-256 of `variantAnnotations.zip` |
+
+### 3.15 Variant Functional Annotations Table (`variant_functional_annotations.parquet`)
+*Source*: `variantAnnotations.zip#var_fa_ann.tsv` (2,189 raw rows)
+*Rules*: All 23 raw columns retained verbatim.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `annotation_id` | `string` | No | Primary Variant Annotation ID |
+| `variant_raw` | `string` | No | Verbatim variant string |
+| `gene_symbol` | `string` | Yes | Gene symbol |
+| `drugs_raw` | `string` | Yes | Verbatim drug string |
+| `drugs` | `list<string>` | No | Parsed drugs |
+| `pmid` | `string` | Yes | Supporting PMID |
+| `phenotype_category` | `string` | Yes | Category |
+| `significance` | `string` | Yes | Significance assertion |
+| `notes` | `string` | Yes | Curator notes |
+| `sentence` | `string` | No | Structured sentence |
+| `alleles` | `string` | Yes | Studied alleles |
+| `specialty_population` | `string` | Yes | Specialty population |
+| `assay_type` | `string` | Yes | In vitro or clinical assay type |
+| `metabolizer_types` | `string` | Yes | Metabolizer types |
+| `is_plural` | `string` | Yes | Plurality |
+| `is_associated` | `string` | No | Association term |
+| `direction_of_effect` | `string` | Yes | Effect direction |
+| `functional_terms` | `string` | Yes | Functional terms |
+| `gene_product` | `string` | Yes | Gene or product |
+| `exposure_assay` | `string` | Yes | Assay exposure description |
+| `multiple_drugs_conjunction` | `string` | Yes | Drug conjunction |
+| `cell_type` | `string` | Yes | Biological cell type |
+| `comparison_alleles` | `string` | Yes | Comparison alleles |
+| `comparison_metabolizers` | `string` | Yes | Comparison metabolizers |
+| `raw_file_sha256` | `string` | No | SHA-256 of `variantAnnotations.zip` |
+
+### 3.16 Study Parameters Table (`study_parameters.parquet`)
+*Source*: `variantAnnotations.zip#study_parameters.tsv` (36,083 raw rows)
+*Rules*: All 17 raw columns retained. Foreign key exact join on `Variant Annotation ID` to annotation tables.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `study_parameters_id` | `string` | No | Primary study parameter ID |
+| `variant_annotation_id` | `string` | No | Foreign key to variant annotation |
+| `study_type` | `string` | Yes | Study design (`'case/control'`, `'cohort'`, etc.) |
+| `study_cases` | `int64` | Yes | Count of case subjects |
+| `study_controls` | `int64` | Yes | Count of control subjects |
+| `characteristics` | `string` | Yes | Cohort characteristics |
+| `characteristics_type` | `string` | Yes | Type of characteristics |
+| `frequency_in_cases` | `float64`| Yes | Reported allele frequency in cases |
+| `allele_in_cases` | `string` | Yes | Studied allele in cases |
+| `frequency_in_controls`| `float64`| Yes | Reported allele frequency in controls |
+| `allele_in_controls` | `string` | Yes | Studied allele in controls |
+| `p_value` | `string` | Yes | Verbatim p-value string |
+| `ratio_stat_type` | `string` | Yes | Statistic type (`'OR'`, `'HR'`, `'RR'`) |
+| `ratio_stat` | `float64`| Yes | Reported ratio statistic |
+| `ci_start` | `float64`| Yes | Confidence interval lower bound |
+| `ci_stop` | `float64`| Yes | Confidence interval upper bound |
+| `biogeographical_groups`| `string` | Yes | Self-reported ancestry / biogeographical group |
+| `raw_file_sha256` | `string` | No | SHA-256 of `variantAnnotations.zip` |
+
+### 3.17 Guideline Annotations Table (`guideline_annotations.parquet`)
+*Source*: `guidelineAnnotations.json.zip` (219 JSON files)
+*Rules*: Top-level metadata extracted (`guideline_id`, `name`, `source`, `version`). The complete nested guideline structure (`literature`, `recommendations`, `history`, `terms`, `textMarkdown`, `summaryMarkdown`) is preserved verbatim as `guideline_json` (JSON string). Exact foreign key joins on `relatedGenes` (`PA...` $\rightarrow$ `pg:gene:`), `relatedChemicals` (`PA...` $\rightarrow$ `pg:chem:`), and `relatedAlleles` (`PA...` $\rightarrow$ `pg:haplo:`).
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `guideline_id` | `string` | No | Guideline ID (`PA166...`) |
+| `name` | `string` | No | Official guideline title |
+| `source` | `string` | No | Authoring body (`'CPIC'`, `'DPWG'`, `'CPNDS'`, `'RNPGx'`) |
+| `version` | `int64` | No | Guideline revision version number |
+| `has_testing_info` | `bool` | No | Testing info flag |
+| `alternate_drug_available`| `bool` | No | Alternate drug available flag |
+| `dosing_information` | `bool` | No | Dosing information flag |
+| `pediatric` | `bool` | No | Pediatric guidance flag |
+| `cancer_genome` | `bool` | No | Cancer genome flag |
+| `related_gene_ids` | `list<string>` | No | Explicit PharmGKB Gene Accessions (`PA...`) |
+| `related_chemical_ids`| `list<string>` | No | Explicit PharmGKB Chemical Accessions (`PA...`) |
+| `related_allele_ids` | `list<string>` | No | Explicit PharmGKB Allele Accessions (`PA...`) |
+| `guideline_json` | `string` | No | Full verbatim nested JSON payload |
+| `raw_file_sha256` | `string` | No | SHA-256 of `guidelineAnnotations.json.zip` |
+
 ---
 
 ## 4. Rejection & Human Review Artifacts

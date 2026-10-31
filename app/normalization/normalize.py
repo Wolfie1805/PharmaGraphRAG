@@ -1,27 +1,39 @@
 """
 Normalization utilities for Phase 2 data processing.
-Unicode standardization, quote-aware list splitting, artifact detection, and robust ISO date parsing.
+Unicode standardization, quote-aware list splitting, artifact detection,
+and robust ISO date parsing.
 """
 
 import csv
 import io
 import re
 import unicodedata
-from typing import List, Optional, Tuple, Dict, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 MONTH_NAME_TO_NUM: Dict[str, str] = {
-    "jan": "01", "january": "01",
-    "feb": "02", "february": "02",
-    "mar": "03", "march": "03",
-    "apr": "04", "april": "04",
+    "jan": "01",
+    "january": "01",
+    "feb": "02",
+    "february": "02",
+    "mar": "03",
+    "march": "03",
+    "apr": "04",
+    "april": "04",
     "may": "05",
-    "jun": "06", "june": "06",
-    "jul": "07", "july": "07",
-    "aug": "08", "august": "08",
-    "sep": "09", "september": "09",
-    "oct": "10", "october": "10",
-    "nov": "11", "november": "11",
-    "dec": "12", "december": "12",
+    "jun": "06",
+    "june": "06",
+    "jul": "07",
+    "july": "07",
+    "aug": "08",
+    "august": "08",
+    "sep": "09",
+    "september": "09",
+    "oct": "10",
+    "october": "10",
+    "nov": "11",
+    "november": "11",
+    "dec": "12",
+    "december": "12",
 }
 
 SEASONS = {"spring", "summer", "fall", "autumn", "winter"}
@@ -51,10 +63,7 @@ def normalize_search_term(text: Optional[str]) -> str:
 
 
 def parse_pubmed_date(
-    year: Optional[str],
-    month: Optional[str],
-    day: Optional[str],
-    medline_date: Optional[str]
+    year: Optional[str], month: Optional[str], day: Optional[str], medline_date: Optional[str]
 ) -> Tuple[str, str]:
     """
     Parse PubMed date parts into (pubdate_iso, date_precision).
@@ -79,7 +88,9 @@ def parse_pubmed_date(
                     break
 
     if not clean_year or not re.match(r"^\d{4}$", clean_year):
-        raise ValueError(f"Unparseable publication year from date parts: year='{year}', medline='{medline_date}'")
+        raise ValueError(
+            f"Unparseable publication year from date parts: year='{year}', medline='{medline_date}'"
+        )
 
     # 2. Check for season strings in month
     if clean_month and clean_month.lower() in SEASONS:
@@ -125,7 +136,7 @@ def split_list_field(raw_field: Optional[str]) -> List[Dict[str, Any]]:
     if not cleaned:
         return []
 
-    raw_unbalanced_quotes = (cleaned.count('"') % 2 != 0)
+    raw_unbalanced_quotes = cleaned.count('"') % 2 != 0
     try:
         reader = csv.reader(io.StringIO(cleaned), delimiter=",", skipinitialspace=True, strict=True)
         tokens = next(reader, [])
@@ -151,14 +162,11 @@ def split_list_field(raw_field: Optional[str]) -> List[Dict[str, Any]]:
         if t_str.count("(") != t_str.count(")"):
             is_artifact = True
             is_split_ambiguous = True
-        if t_str in ('()', '""', "''"):
+        if t_str in ("()", '""', "''"):
             is_artifact = True
 
-        results.append({
-            "text": t_str,
-            "is_artifact": is_artifact,
-            "is_split_ambiguous": is_split_ambiguous
-        })
+        results.append(
+            {"text": t_str, "is_artifact": is_artifact, "is_split_ambiguous": is_split_ambiguous}
+        )
 
     return results
-

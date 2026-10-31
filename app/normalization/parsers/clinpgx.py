@@ -6,29 +6,29 @@ Parses in-memory archives, enforces data contracts, tracks raw provenance, and l
 import csv
 import hashlib
 import io
-import json
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
+from typing import Any, Dict, List, Set, Tuple
 
 from app.normalization.contracts import (
-    EntityRecord,
     CrossReferenceRecord,
-    SynonymRecord,
+    EntityRecord,
     RelationshipRecord,
     SourceProvenance,
+    SynonymRecord,
 )
 from app.normalization.normalize import (
-    normalize_text,
     normalize_search_term,
+    normalize_text,
     split_list_field,
 )
 
 # License metadata for ClinPGx
 CLINPGX_SOURCE_NAME = "ClinPGx"
 CLINPGX_LICENSE_TEXT = (
-    "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license (CC BY-NC-SA 4.0). "
-    "NonCommercial use only; under no circumstances can ClinPGx data be sold for other's private or commercial use."
+    "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license "
+    "(CC BY-NC-SA 4.0). NonCommercial use only; under no circumstances can ClinPGx data "
+    "be sold for other's private or commercial use."
 )
 CLINPGX_LICENSE_CHECK_DATE = "2026-10-31"
 
@@ -37,13 +37,21 @@ csv.field_size_limit(CSV_FIELD_SIZE_LIMIT)
 
 
 class ClinPGxParser:
-    """Parses ClinPGx core archives and haplotype definitions into validated entities and relationships."""
+    """Parses ClinPGx core archives and haplotype definitions into validated entities."""
 
-    def __init__(self, raw_dir: Path, haplo_dir: Path, manifest_run_id: str, haplo_manifest_run_id: str):
+    def __init__(
+        self,
+        raw_dir: Path,
+        haplo_dir: Path,
+        manifest_run_id: str,
+        haplo_manifest_run_id: str,
+        max_rejection_rate: float = 0.001,
+    ):
         self.raw_dir = raw_dir
         self.haplo_dir = haplo_dir
         self.manifest_run_id = manifest_run_id
         self.haplo_manifest_run_id = haplo_manifest_run_id
+        self.max_rejection_rate = max_rejection_rate
 
         # Raw file SHA-256 cache
         self.file_hashes: Dict[str, str] = {}
@@ -68,13 +76,29 @@ class ClinPGxParser:
             "relationships": {"raw_rows": 0, "accepted": 0, "rejected": 0},
         }
 
+    def _check_rejection_threshold(self, file_key: str) -> None:
+        """Enforce strict 0.1% abort threshold policy."""
+        stats = self.accounting.get(file_key)
+        if not stats:
+            return
+        raw = stats["raw_rows"]
+        rej = stats["rejected"]
+        if raw > 0 and (rej / raw) > self.max_rejection_rate:
+            raise ValueError(
+                f"REJECTION_THRESHOLD_EXCEEDED: Stream '{file_key}' rejected {rej}/{raw} records "
+                f"({(rej / raw):.2%}), exceeding the maximum allowed threshold of "
+                f"{self.max_rejection_rate:.1%}."
+            )
+
     def _compute_file_hashes(self) -> None:
         """Compute SHA-256 for all archives to guarantee provenance."""
         for p in list(self.raw_dir.glob("*.zip")) + list(self.haplo_dir.glob("*.zip")):
             h = hashlib.sha256(p.read_bytes()).hexdigest()
             self.file_hashes[p.name] = h
 
-    def parse_genes(self) -> Tuple[List[EntityRecord], List[CrossReferenceRecord], List[SynonymRecord]]:
+    def parse_genes(
+        self,
+    ) -> Tuple[List[EntityRecord], List[CrossReferenceRecord], List[SynonymRecord]]:
         """Parse genes.tsv into gene entities, cross-references, and synonyms."""
         zip_path = self.raw_dir / "genes.zip"
         archive_sha = self.file_hashes["genes.zip"]
@@ -94,9 +118,14 @@ class ClinPGxParser:
 
                 if not acc_id:
                     self.accounting["genes"]["rejected"] += 1
-                    self.rejects["entities"].append({
-                        "file": "genes.tsv", "row_index": idx, "reason": "EMPTY_PRIMARY_ID", "raw": r
-                    })
+                    self.rejects["entities"].append(
+                        {
+                            "file": "genes.tsv",
+                            "row_index": idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                            "raw": r,
+                        }
+                    )
                     continue
 
                 display_name = symbol if symbol else name
@@ -135,37 +164,49 @@ class ClinPGxParser:
                         part = tok["text"]
                         if ":" in part:
                             ns, ext_id = part.split(":", 1)
-                            xrefs.append(CrossReferenceRecord(
-                                canonical_id=canonical_id,
-                                namespace=ns.strip().upper().replace(" ", "_"),
-                                external_id=ext_id.strip(),
-                                provenance=prov,
-                            ))
+                            xrefs.append(
+                                CrossReferenceRecord(
+                                    canonical_id=canonical_id,
+                                    namespace=ns.strip().upper().replace(" ", "_"),
+                                    external_id=ext_id.strip(),
+                                    provenance=prov,
+                                )
+                            )
 
                 # Synonyms & Alternative Symbols
-                for col_name, syn_type in [("Alternative Names", "alternate_name"), ("Alternative Symbols", "symbol_alias")]:
+                for col_name, syn_type in [
+                    ("Alternative Names", "alternate_name"),
+                    ("Alternative Symbols", "symbol_alias"),
+                ]:
                     raw_syns = r.get(col_name, "")
                     if raw_syns:
                         for tok in split_list_field(raw_syns):
-                            synonyms.append(SynonymRecord(
-                                canonical_id=canonical_id,
-                                synonym_text=tok["text"],
-                                normalized_synonym=normalize_search_term(tok["text"]),
-                                synonym_type=syn_type,
-                                is_artifact=tok["is_artifact"],
-                                is_split_ambiguous=tok["is_split_ambiguous"],
-                                provenance=prov,
-                            ))
+                            synonyms.append(
+                                SynonymRecord(
+                                    canonical_id=canonical_id,
+                                    synonym_text=tok["text"],
+                                    normalized_synonym=normalize_search_term(tok["text"]),
+                                    synonym_type=syn_type,
+                                    is_artifact=tok["is_artifact"],
+                                    is_split_ambiguous=tok["is_split_ambiguous"],
+                                    provenance=prov,
+                                )
+                            )
 
+        self._check_rejection_threshold("genes")
         return entities, xrefs, synonyms
 
-    def parse_chemicals_and_drugs(self) -> Tuple[List[EntityRecord], List[CrossReferenceRecord], List[SynonymRecord]]:
+    def parse_chemicals_and_drugs(
+        self,
+    ) -> Tuple[List[EntityRecord], List[CrossReferenceRecord], List[SynonymRecord]]:
         """Parse chemicals.tsv and drugs.tsv, unifying into canonical pg:chem entities."""
         # 1. Identify all drug accessions
         drug_accs: Set[str] = set()
         drugs_zip = self.raw_dir / "drugs.zip"
         with zipfile.ZipFile(drugs_zip, "r") as z:
-            reader = csv.DictReader(io.StringIO(z.read("drugs.tsv").decode("utf-8")), delimiter="\t")
+            reader = csv.DictReader(
+                io.StringIO(z.read("drugs.tsv").decode("utf-8")), delimiter="\t"
+            )
             for idx, r in enumerate(reader, start=1):
                 self.accounting["drugs"]["raw_rows"] += 1
                 acc = normalize_text(r.get("PharmGKB Accession Id"))
@@ -193,13 +234,18 @@ class ClinPGxParser:
 
                 if not acc_id:
                     self.accounting["chemicals"]["rejected"] += 1
-                    self.rejects["entities"].append({
-                        "file": "chemicals.tsv", "row_index": idx, "reason": "EMPTY_PRIMARY_ID", "raw": r
-                    })
+                    self.rejects["entities"].append(
+                        {
+                            "file": "chemicals.tsv",
+                            "row_index": idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                            "raw": r,
+                        }
+                    )
                     continue
 
                 display_name = name if name else acc_id
-                is_drug = (acc_id in drug_accs)
+                is_drug = acc_id in drug_accs
                 canonical_id = f"pg:chem:{acc_id.replace('PA', '')}"
 
                 prov = SourceProvenance(
@@ -232,28 +278,37 @@ class ClinPGxParser:
                         part = tok["text"]
                         if ":" in part:
                             ns, ext_id = part.split(":", 1)
-                            xrefs.append(CrossReferenceRecord(
-                                canonical_id=canonical_id,
-                                namespace=ns.strip().upper().replace(" ", "_"),
-                                external_id=ext_id.strip(),
-                                provenance=prov,
-                            ))
+                            xrefs.append(
+                                CrossReferenceRecord(
+                                    canonical_id=canonical_id,
+                                    namespace=ns.strip().upper().replace(" ", "_"),
+                                    external_id=ext_id.strip(),
+                                    provenance=prov,
+                                )
+                            )
 
                 # Trade Names & Alternate Names
-                for col_name, syn_type in [("Trade Names", "trade_name"), ("Alternate Names", "alternate_name")]:
+                for col_name, syn_type in [
+                    ("Trade Names", "trade_name"),
+                    ("Alternate Names", "alternate_name"),
+                ]:
                     raw_syns = r.get(col_name, "")
                     if raw_syns:
                         for tok in split_list_field(raw_syns):
-                            synonyms.append(SynonymRecord(
-                                canonical_id=canonical_id,
-                                synonym_text=tok["text"],
-                                normalized_synonym=normalize_search_term(tok["text"]),
-                                synonym_type=syn_type,
-                                is_artifact=tok["is_artifact"],
-                                is_split_ambiguous=tok["is_split_ambiguous"],
-                                provenance=prov,
-                            ))
+                            synonyms.append(
+                                SynonymRecord(
+                                    canonical_id=canonical_id,
+                                    synonym_text=tok["text"],
+                                    normalized_synonym=normalize_search_term(tok["text"]),
+                                    synonym_type=syn_type,
+                                    is_artifact=tok["is_artifact"],
+                                    is_split_ambiguous=tok["is_split_ambiguous"],
+                                    provenance=prov,
+                                )
+                            )
 
+        self._check_rejection_threshold("drugs")
+        self._check_rejection_threshold("chemicals")
         return entities, xrefs, synonyms
 
     def parse_variants(self) -> Tuple[List[EntityRecord], List[SynonymRecord]]:
@@ -275,9 +330,14 @@ class ClinPGxParser:
 
                 if not var_id:
                     self.accounting["variants"]["rejected"] += 1
-                    self.rejects["entities"].append({
-                        "file": "variants.tsv", "row_index": idx, "reason": "EMPTY_PRIMARY_ID", "raw": r
-                    })
+                    self.rejects["entities"].append(
+                        {
+                            "file": "variants.tsv",
+                            "row_index": idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                            "raw": r,
+                        }
+                    )
                     continue
 
                 display_name = var_name if var_name else var_id
@@ -310,16 +370,19 @@ class ClinPGxParser:
                 raw_syns = r.get("Synonyms", "")
                 if raw_syns:
                     for tok in split_list_field(raw_syns):
-                        synonyms.append(SynonymRecord(
-                            canonical_id=canonical_id,
-                            synonym_text=tok["text"],
-                            normalized_synonym=normalize_search_term(tok["text"]),
-                            synonym_type="variant_synonym",
-                            is_artifact=tok["is_artifact"],
-                            is_split_ambiguous=tok["is_split_ambiguous"],
-                            provenance=prov,
-                        ))
+                        synonyms.append(
+                            SynonymRecord(
+                                canonical_id=canonical_id,
+                                synonym_text=tok["text"],
+                                normalized_synonym=normalize_search_term(tok["text"]),
+                                synonym_type="variant_synonym",
+                                is_artifact=tok["is_artifact"],
+                                is_split_ambiguous=tok["is_split_ambiguous"],
+                                provenance=prov,
+                            )
+                        )
 
+        self._check_rejection_threshold("variants")
         return entities, synonyms
 
     def parse_haplotypes(self) -> List[EntityRecord]:
@@ -341,12 +404,19 @@ class ClinPGxParser:
 
                 if not acc_id:
                     self.accounting["haplotypes_star"]["rejected"] += 1
-                    self.rejects["entities"].append({
-                        "file": "clinpgxHaplotypes_star_alleles.tsv", "row_index": idx, "reason": "EMPTY_PRIMARY_ID", "raw": r
-                    })
+                    self.rejects["entities"].append(
+                        {
+                            "file": "clinpgxHaplotypes_star_alleles.tsv",
+                            "row_index": idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                            "raw": r,
+                        }
+                    )
                     continue
 
-                display_name = f"{gene} {allele}" if (gene and allele) else (allele if allele else acc_id)
+                display_name = (
+                    f"{gene} {allele}" if (gene and allele) else (allele if allele else acc_id)
+                )
                 canonical_id = f"pg:haplo:{acc_id.replace('PA', '')}"
 
                 prov = SourceProvenance(
@@ -383,12 +453,19 @@ class ClinPGxParser:
 
                 if not acc_id:
                     self.accounting["haplotypes_named"]["rejected"] += 1
-                    self.rejects["entities"].append({
-                        "file": "clinpgxHaplotypes_named_alleles.tsv", "row_index": idx, "reason": "EMPTY_PRIMARY_ID", "raw": r
-                    })
+                    self.rejects["entities"].append(
+                        {
+                            "file": "clinpgxHaplotypes_named_alleles.tsv",
+                            "row_index": idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                            "raw": r,
+                        }
+                    )
                     continue
 
-                display_name = f"{gene} {allele}" if (gene and allele) else (allele if allele else acc_id)
+                display_name = (
+                    f"{gene} {allele}" if (gene and allele) else (allele if allele else acc_id)
+                )
                 canonical_id = f"pg:haplo:{acc_id.replace('PA', '')}"
 
                 prov = SourceProvenance(
@@ -414,6 +491,8 @@ class ClinPGxParser:
                 entities.append(ent)
                 self.accounting["haplotypes_named"]["accepted"] += 1
 
+        self._check_rejection_threshold("haplotypes_star")
+        self._check_rejection_threshold("haplotypes_named")
         return entities
 
     def parse_relationships(
@@ -445,9 +524,14 @@ class ClinPGxParser:
 
                 if not (id1 and id2 and t1 and t2):
                     self.accounting["relationships"]["rejected"] += 1
-                    self.rejects["relationships"].append({
-                        "file": "relationships.tsv", "row_index": idx, "reason": "EMPTY_PRIMARY_ID", "raw": r
-                    })
+                    self.rejects["relationships"].append(
+                        {
+                            "file": "relationships.tsv",
+                            "row_index": idx,
+                            "reason": "EMPTY_PRIMARY_ID",
+                            "raw": r,
+                        }
+                    )
                     continue
 
                 prov = SourceProvenance(
@@ -464,7 +548,15 @@ class ClinPGxParser:
                 cid1 = known_canonical_ids.get((t1.lower(), id1))
                 if not cid1:
                     # Register relationships_only entity
-                    ent_type1 = "snv" if t1 == "SNV" else ("phenotype" if t1 == "Phenotype" else ("cnv" if "CopyNumber" in t1 else "haplotype"))
+                    ent_type1 = (
+                        "snv"
+                        if t1 == "SNV"
+                        else (
+                            "phenotype"
+                            if t1 == "Phenotype"
+                            else ("cnv" if "CopyNumber" in t1 else "haplotype")
+                        )
+                    )
                     canonical_id1 = f"pg:{ent_type1}:{id1.replace('PA', '')}"
                     if id1 not in relationships_only_entities:
                         relationships_only_entities[id1] = EntityRecord(
@@ -480,7 +572,15 @@ class ClinPGxParser:
 
                 cid2 = known_canonical_ids.get((t2.lower(), id2))
                 if not cid2:
-                    ent_type2 = "snv" if t2 == "SNV" else ("phenotype" if t2 == "Phenotype" else ("cnv" if "CopyNumber" in t2 else "haplotype"))
+                    ent_type2 = (
+                        "snv"
+                        if t2 == "SNV"
+                        else (
+                            "phenotype"
+                            if t2 == "Phenotype"
+                            else ("cnv" if "CopyNumber" in t2 else "haplotype")
+                        )
+                    )
                     canonical_id2 = f"pg:{ent_type2}:{id2.replace('PA', '')}"
                     if id2 not in relationships_only_entities:
                         relationships_only_entities[id2] = EntityRecord(
@@ -495,7 +595,7 @@ class ClinPGxParser:
                     cid2 = canonical_id2
 
                 # Flag dangling if either endpoint was relationships_only
-                is_dang = (id1 in relationships_only_entities or id2 in relationships_only_entities)
+                is_dang = id1 in relationships_only_entities or id2 in relationships_only_entities
 
                 # Deterministic rel hash
                 rel_hash = hashlib.md5(f"{id1}|{id2}|{assoc}".encode("utf-8")).hexdigest()
@@ -519,5 +619,5 @@ class ClinPGxParser:
                 records.append(rec)
                 self.accounting["relationships"]["accepted"] += 1
 
+        self._check_rejection_threshold("relationships")
         return records, list(relationships_only_entities.values())
-
