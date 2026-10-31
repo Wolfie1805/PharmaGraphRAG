@@ -25,6 +25,7 @@ data/processed/
 
 # Tool Caches
 .pytest_cache/
+.hypothesis/
 .ruff_cache/
 .mypy_cache/
 .coverage

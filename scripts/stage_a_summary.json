@@ -1,0 +1,63 @@
+{
+  "accounting": {
+    "genes": {
+      "raw_rows": 25041,
+      "accepted": 25041,
+      "rejected": 0
+    },
+    "drugs": {
+      "raw_rows": 3770,
+      "accepted": 3770,
+      "rejected": 0
+    },
+    "chemicals": {
+      "raw_rows": 5329,
+      "accepted": 5329,
+      "rejected": 0
+    },
+    "variants": {
+      "raw_rows": 7692,
+      "accepted": 7692,
+      "rejected": 0
+    },
+    "haplotypes_star": {
+      "raw_rows": 485,
+      "accepted": 485,
+      "rejected": 0
+    },
+    "haplotypes_named": {
+      "raw_rows": 758,
+      "accepted": 758,
+      "rejected": 0
+    },
+    "relationships": {
+      "raw_rows": 246714,
+      "accepted": 246714,
+      "rejected": 0
+    },
+    "cpic_alleles": {
+      "raw_rows": 3813,
+      "accepted": 3813,
+      "rejected": 0
+    },
+    "pubmed": {
+      "raw_rows": 3096,
+      "accepted": 3096,
+      "rejected": 0
+    }
+  },
+  "table_counts": {
+    "entities": 57480,
+    "cross_references": 318355,
+    "synonyms": 160807,
+    "relationships": 246714,
+    "publications": 3096
+  },
+  "parquet_hashes": {
+    "entities.parquet": "f5410b75f5e6a685238826c6bd5b246f2d11cc5eb7e0f68f112dc8df71922204",
+    "cross_references.parquet": "8bdbed38179aaaac24140adf0df634b7c48f98e0663464d98d78b0ba0262f97e",
+    "synonyms.parquet": "9a332859dfea726db86d7d28ff48b6494448de9e048eaf48b5cb7075a1a066e4",
+    "relationships.parquet": "e2bd1bcbe2872e5b9b5f3b1cc0d50043b24ec31c6481301d463140e20ea12de6",
+    "publications.parquet": "930e3eddeb2a77c960339175974526f0cd3d76326a5fad4849bfa674ead1fecb"
+  }
+}
