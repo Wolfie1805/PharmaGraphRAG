@@ -1,0 +1,3776 @@
+{
+  "clinpgx": [
+    {
+      "zip": "chemicals.zip",
+      "file": "chemicals.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 5329,
+      "columns": [
+        "PharmGKB Accession Id",
+        "Name",
+        "Generic Names",
+        "Trade Names",
+        "Brand Mixtures",
+        "Type",
+        "Cross-references",
+        "SMILES",
+        "InChI",
+        "Dosing Guideline",
+        "External Vocabulary",
+        "Clinical Annotation Count",
+        "Variant Annotation Count",
+        "Pathway Count",
+        "VIP Count",
+        "Dosing Guideline Sources",
+        "Top Clinical Annotation Level",
+        "Top FDA Label Testing Level",
+        "Top Any Drug Label Testing Level",
+        "Label Has Dosing Info",
+        "RxNorm Identifiers",
+        "ATC Identifiers",
+        "PubChem Compound Identifiers",
+        "Top CPIC Pairs Level",
+        "FDA Label has Prescribing Info",
+        "In FDA PGx Association Sections"
+      ],
+      "col_stats": [
+        {
+          "column": "PharmGKB Accession Id",
+          "null_rate": 0.0,
+          "samples": [
+            "PA166250381",
+            "PA166250405",
+            "PA166250403",
+            "PA166178620",
+            "PA166131395"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 5329
+          }
+        },
+        {
+          "column": "Name",
+          "null_rate": 0.0,
+          "samples": [
+            "10-desmethyl alpha-dihydrotetrabenazine",
+            "10-desmethyl beta-dihydrodeutetrabenazine",
+            "10-desmethyl beta-dihydrotetrabenazine",
+            "10-formyltetrahydrofolate",
+            "10-hydroxy r-warfarin"
+          ],
+          "separators": {
+            "comma": 238,
+            "semicolon": 3
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Generic Names",
+          "null_rate": 45.11,
+          "samples": [
+            "\"(2R,3R,11bR)-9-methoxy-3-(2-methylpropyl)-2,3,4,6,7,11b-hexahydro-1H-benzo[a]quinolizine-2,10-diol\", \"10-o-desmethyl-alpha-htbz\"",
+            "\"(2S,3R,11bR)-3-(2-methylpropyl)-9-(trideuteriomethoxy)-2,3,4,6,7,11b-hexahydro-1H-benzo[a]quinolizine-2,10-diol\", \"d3-10-o-desmethyl-beta-htbz\"",
+            "\"(2S,3R,11bR)-9-methoxy-3-(2-methylpropyl)-2,3,4,6,7,11b-hexahydro-1H-benzo[a]quinolizine-2,10-diol\", \"10-o-desmethyl-beta-htbz\"",
+            "\"[(1R,2S,6S,9R,11S)-11-(hydroxymethyl)-4,4,11-trimethyl-3,5,7,10,12-pentaoxatricyclo[7.3.0.02,6]dodecan-6-yl]methyl sulfamate\", \"r-hydroxy topiramate\"",
+            "11alpha-hydroxypregn-4-ene-3,20-dione"
+          ],
+          "separators": {
+            "comma": 2214,
+            "semicolon": 17,
+            "pipe": 1
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Trade Names",
+          "null_rate": 66.0,
+          "samples": [
+            "Pitolisant metabolite BP1.8054",
+            "Pitolisant metabolite BP1.10749",
+            "OPC-13015",
+            "Fidelin, OVIGYN-D",
+            "\"UK-148,993\", \"UK-148993\""
+          ],
+          "separators": {
+            "comma": 1219,
+            "semicolon": 3
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Brand Mixtures",
+          "null_rate": 95.1,
+          "samples": [
+            "Kivexa (Abacavir Sulfate + Lamivudine), Trizivir (Abacavir Sulfate + Lamivudine + Zidovudine)",
+            "Amacodone (acetaminophen + hydrocodone bitartrate), Anexsia (acetaminophen + hydrocodone bitartrate), Anodynos (acetaminophen + hydrocodone bitartrate), Anolor (acetaminophen + butalbital + caffeine), Bancap (acetaminophen + hydrocodone bitartrate), CoGesic (acetaminophen + hydrocodone bitartrate), Dolacet (acetaminophen + hydrocodone bitartrate), Duradyne (acetaminophen + hydrocodone bitartrate), Endolor (acetaminophen + butalbital + caffeine), Esgic (acetaminophen + butalbital + caffeine), Fioricet (acetaminophen + butalbital + caffeine), Hydrocet (acetaminophen + hydrocodone bitartrate), Hydrogesic (acetaminophen + hydrocodone bitartrate), Lorcet (acetaminophen + hydrocodone bitartrate), Lortab (acetaminophen + hydrocodone bitartrate), Margesic (acetaminophen + hydrocodone bitartrate), Norcet (acetaminophen + hydrocodone bitartrate), Oxycet (acetaminophen + oxycodone hydrochloride), Percocet (acetaminophen + oxycodone hydrochloride), Roxicet (acetaminophen + oxycodone hydrochloride), Roxilox (acetaminophen + oxycodone hydrochloride), Stagesic (acetaminophen + hydrocodone bitartrate), TGesic (acetaminophen + hydrocodone bitartrate), Tylox (acetaminophen + oxycodone hydrochloride), Vicodin (acetaminophen + hydrocodone bitartrate), Zebutal (acetaminophen + butalbital + caffeine), Zydone (acetaminophen + hydrocodone bitartrate)",
+            "alpha-OH tamoxifen glucuronide",
+            "Caverject Sterile Powder - Kit 11.9mcg /Vial (Alprostadil + Water), Caverject Sterile Powder - Kit 23.2mcg/Vial (Alprostadil + Water)",
+            "Alti-Amiloride HCTZ (Amiloride Hcl + Hydrochlorothiazide), Ami-Hydro Tab (Amiloride Hcl + Hydrochlorothiazide), Apo-Amilzide Tab (Amiloride Hcl + Hydrochlorothiazide), Gen-Amilazide (Amiloride Hcl + Hydrochlorothiazide), Moduret (Amiloride Hcl + Hydrochlorothiazide), Novamilor Tab USP (Amiloride Hcl + Hydrochlorothiazide), Nu-Amilzide 5/50 mg Tab (Amiloride Hcl + Hydrochlorothiazide), Riva-Amilzide 5/50 mg (Amiloride Hcl + Hydrochlorothiazide)"
+          ],
+          "separators": {
+            "comma": 168,
+            "semicolon": 1
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Type",
+          "null_rate": 0.0,
+          "samples": [
+            "Metabolite",
+            "Biological Intermediate",
+            "Metabolite, Biological Intermediate",
+            "Drug",
+            "Drug, Metabolite"
+          ],
+          "separators": {
+            "comma": 118
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Cross-references",
+          "null_rate": 23.53,
+          "samples": [
+            "PubChem Compound:59272813",
+            "PubChem Compound:117693284",
+            "PubChem Compound:59272796",
+            "PubChem Compound:10",
+            "ChEBI:CHEBI:175132, HMDB:HMDB13884, PubChem Compound:101987375"
+          ],
+          "separators": {
+            "comma": 2645
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "SMILES",
+          "null_rate": 46.95,
+          "samples": [
+            "C[C@@]1(O[C@@H]2CO[C@@]3([C@H]([C@@H]2O1)OC(O3)(C)C)COS(=O)(=O)N)CO",
+            "CC(=O)[C@H]1CC[C@@H]2[C@@]1(C[C@H]([C@H]3[C@H]2CCC4=CC(=O)CC[C@]34C)O)C",
+            "C[C@]12CCC(=O)C=C1CC[C@@H]3[C@@H]2[C@@H](C[C@]4([C@H]3CC[C@@H]4O)C)O",
+            "C[C@@H]1C[C@H]2[C@@H]3CCC4=CC(=O)C=C[C@@]4([C@]3(C(=O)C[C@@]2([C@]1(C(=O)CO)O)C)F)C",
+            "CCCCC[C@@H](/C=C/[C@@H]1[C@H]([C@H](CC(=O)O1)O)C/C=C\\CCCC(=O)O)O"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "InChI",
+          "null_rate": 46.95,
+          "samples": [
+            "InChI=1S/C12H21NO9S/c1-10(2)21-9-8-7(19-11(3,5-14)20-8)4-17-12(9,22-10)6-18-23(13,15)16/h7-9,14H,4-6H2,1-3H3,(H2,13,15,16)/t7-,8-,9+,11+,12+/m1/s1",
+            "InChI=1S/C21H30O3/c1-12(22)16-6-7-17-15-5-4-13-10-14(23)8-9-20(13,2)19(15)18(24)11-21(16,17)3/h10,15-19,24H,4-9,11H2,1-3H3/t15-,16+,17-,18+,19+,20-,21+/m0/s1",
+            "InChI=1S/C19H28O3/c1-18-8-7-12(20)9-11(18)3-4-13-14-5-6-16(22)19(14,2)10-15(21)17(13)18/h9,13-17,21-22H,3-8,10H2,1-2H3/t13-,14-,15+,16-,17+,18-,19-/m0/s1",
+            "InChI=1S/C22H27FO5/c1-12-8-16-15-5-4-13-9-14(25)6-7-19(13,2)21(15,23)17(26)10-20(16,3)22(12,28)18(27)11-24/h6-7,9,12,15-16,24,28H,4-5,8,10-11H2,1-3H3/t12-,15+,16+,19+,20+,21+,22+/m1/s1",
+            "InChI=1S/C20H32O6/c1-2-3-6-9-15(21)12-13-18-16(17(22)14-20(25)26-18)10-7-4-5-8-11-19(23)24/h4,7,12-13,15-18,21-22H,2-3,5-6,8-11,14H2,1H3,(H,23,24)/b7-4-,13-12+/t15-,16-,17-,18+/m0/s1"
+          ],
+          "separators": {
+            "comma": 2785,
+            "semicolon": 103
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Dosing Guideline",
+          "null_rate": 0.0,
+          "samples": [
+            "No",
+            "Yes"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "External Vocabulary",
+          "null_rate": 35.07,
+          "samples": [
+            "MeSH:C049235",
+            "MeSH:M0158246",
+            "MeSH:C055987",
+            "ATC:C04AA",
+            "MeSH:M0059124"
+          ],
+          "separators": {
+            "comma": 2295
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Clinical Annotation Count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "6",
+            "1",
+            "2",
+            "61"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 5329
+          }
+        },
+        {
+          "column": "Variant Annotation Count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "1",
+            "4",
+            "2",
+            "7"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 5329
+          }
+        },
+        {
+          "column": "Pathway Count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "1",
+            "2"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 5329
+          }
+        },
+        {
+          "column": "VIP Count",
+          "null_rate": 0.0,
+          "samples": [
+            "n/a"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Dosing Guideline Sources",
+          "null_rate": 95.98,
+          "samples": [
+            "CPIC, DPWG, RNPGx",
+            "CPIC [no recommendation]",
+            "DPWG, RNPGx",
+            "ACR, CPIC, DPWG, RNPGx",
+            "CPIC"
+          ],
+          "separators": {
+            "comma": 62
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Top Clinical Annotation Level",
+          "null_rate": 87.6,
+          "samples": [
+            "3",
+            "1A",
+            "4",
+            "2B",
+            "2A"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 524
+          }
+        },
+        {
+          "column": "Top FDA Label Testing Level",
+          "null_rate": 93.53,
+          "samples": [
+            "Testing Required",
+            "Actionable PGx",
+            "Informative PGx",
+            "Testing Recommended",
+            "No Clinical PGx"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Top Any Drug Label Testing Level",
+          "null_rate": 92.42,
+          "samples": [
+            "Testing Required",
+            "Actionable PGx",
+            "Informative PGx",
+            "Testing Recommended",
+            "No Clinical PGx"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Label Has Dosing Info",
+          "null_rate": 98.97,
+          "samples": [
+            "Label Has Dosing Info"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "RxNorm Identifiers",
+          "null_rate": 64.83,
+          "samples": [
+            "1426888",
+            "190521",
+            "301739",
+            "614391",
+            "83929"
+          ],
+          "separators": {
+            "comma": 42
+          },
+          "id_matches": {
+            "pmid": 1831
+          }
+        },
+        {
+          "column": "ATC Identifiers",
+          "null_rate": 45.77,
+          "samples": [
+            "C04AA",
+            "A14AA07",
+            "G03BA",
+            "G03BB",
+            "G04BD13"
+          ],
+          "separators": {
+            "comma": 360
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "PubChem Compound Identifiers",
+          "null_rate": 29.72,
+          "samples": [
+            "59272813",
+            "117693284",
+            "59272796",
+            "10",
+            "101987375"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 3745
+          }
+        },
+        {
+          "column": "Top CPIC Pairs Level",
+          "null_rate": 93.92,
+          "samples": [
+            "A",
+            "C",
+            "D",
+            "B",
+            "B/C"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "FDA Label has Prescribing Info",
+          "null_rate": 91.16,
+          "samples": [
+            "Yes",
+            "No"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "In FDA PGx Association Sections",
+          "null_rate": 97.86,
+          "samples": [
+            "Pharmacogenetic Associations for which the Data Support Therapeutic Management Recommendations",
+            "Pharmacogenetic Associations for which the Data Indicate a Potential Impact on Safety or Response",
+            "Pharmacogenetic Associations for which the Data Demonstrate a Potential Impact on Pharmacokinetic Properties Only",
+            "Pharmacogenetic Associations for which the Data Support Therapeutic Management Recommendations, Pharmacogenetic Associations for which the Data Indicate a Potential Impact on Safety or Response"
+          ],
+          "separators": {
+            "comma": 3
+          },
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "clinicalVariants.zip",
+      "file": "clinicalVariants.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 5192,
+      "columns": [
+        "variant",
+        "gene",
+        "type",
+        "level of evidence",
+        "chemicals",
+        "phenotypes"
+      ],
+      "col_stats": [
+        {
+          "column": "variant",
+          "null_rate": 0.0,
+          "samples": [
+            "CYP2C9*1, CYP2C9*3, CYP2C9*13",
+            "rs17376848",
+            "rs2297595",
+            "rs1801265",
+            "CYP2C19*1, CYP2C19*2, CYP2C19*3"
+          ],
+          "separators": {
+            "comma": 398
+          },
+          "id_matches": {
+            "rsid": 4593
+          }
+        },
+        {
+          "column": "gene",
+          "null_rate": 4.89,
+          "samples": [
+            "CYP2C9",
+            "DPYD",
+            "CYP2C19",
+            "UGT1A1",
+            "TPMT"
+          ],
+          "separators": {
+            "comma": 134
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "type",
+          "null_rate": 0.0,
+          "samples": [
+            "Metabolism/PK",
+            "Toxicity",
+            "Dosage",
+            "Efficacy",
+            "Other"
+          ],
+          "separators": {
+            "comma": 106
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "level of evidence",
+          "null_rate": 0.0,
+          "samples": [
+            "1A",
+            "1B",
+            "2A",
+            "2B",
+            "3"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 4789
+          }
+        },
+        {
+          "column": "chemicals",
+          "null_rate": 0.0,
+          "samples": [
+            "lornoxicam",
+            "capecitabine",
+            "dexlansoprazole",
+            "warfarin",
+            "atazanavir,atazanavir / ritonavir"
+          ],
+          "separators": {
+            "comma": 970
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "phenotypes",
+          "null_rate": 19.55,
+          "samples": [
+            "Neoplasms",
+            "over-anticoagulation",
+            "HIV infectious disease,Hyperbilirubinemia",
+            "Dose reduction",
+            "Non-Small Cell Lung Carcinoma"
+          ],
+          "separators": {
+            "comma": 971
+          },
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 2045
+    },
+    {
+      "zip": "drugLabels.zip",
+      "file": "drugLabels.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 1435,
+      "columns": [
+        "PharmGKB ID",
+        "Name",
+        "Source",
+        "Biomarker Flag",
+        "Testing Level",
+        "Has Prescribing Info",
+        "Has Dosing Info",
+        "Has Alternate Drug",
+        "Has Other Prescribing Guidance",
+        "Cancer Genome",
+        "Prescribing",
+        "Chemicals",
+        "Genes",
+        "Variants/Haplotypes",
+        "Latest History Date (YYYY-MM-DD)"
+      ],
+      "col_stats": [
+        {
+          "column": "PharmGKB ID",
+          "null_rate": 0.0,
+          "samples": [
+            "PA166269401",
+            "PA166273261",
+            "PA166273281",
+            "PA166273521",
+            "PA166273423"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 1435
+          }
+        },
+        {
+          "column": "Name",
+          "null_rate": 0.0,
+          "samples": [
+            "Annotation of EMA Label for nateglinide and CYP2C9",
+            "Annotation of EMA Label for ospemifene and CYP2B6, CYP2C9",
+            "Annotation of EMA Label for nusinersen and SMN2",
+            "Annotation of EMA Label for ipilimumab and ALK, CD274, EGFR",
+            "Annotation of EMA Label for lutetium (177Lu) dotatate and SSTR1, SSTR2, SSTR3, SSTR4, SSTR5"
+          ],
+          "separators": {
+            "comma": 371
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Source",
+          "null_rate": 0.0,
+          "samples": [
+            "EMA",
+            "HCSC",
+            "Swissmedic",
+            "FDA",
+            "PMDA"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Biomarker Flag",
+          "null_rate": 64.18,
+          "samples": [
+            "On FDA Biomarker List",
+            "Formerly on FDA Biomarker List"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Testing Level",
+          "null_rate": 32.96,
+          "samples": [
+            "Actionable PGx",
+            "Testing Required",
+            "No Clinical PGx",
+            "Testing Recommended",
+            "Informative PGx"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Has Prescribing Info",
+          "null_rate": 80.21,
+          "samples": [
+            "Prescribing Info"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Has Dosing Info",
+          "null_rate": 93.94,
+          "samples": [
+            "Dosing Info"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Has Alternate Drug",
+          "null_rate": 91.71,
+          "samples": [
+            "Alternate Drug"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Has Other Prescribing Guidance",
+          "null_rate": 92.06,
+          "samples": [
+            "Other Prescribing Guidance"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Cancer Genome",
+          "null_rate": 72.96,
+          "samples": [
+            "Cancer Genome"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Prescribing",
+          "null_rate": 80.21,
+          "samples": [
+            "Prescribing"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Chemicals",
+          "null_rate": 0.0,
+          "samples": [
+            "nateglinide",
+            "ospemifene",
+            "nusinersen",
+            "ipilimumab",
+            "lutetium (177Lu) dotatate"
+          ],
+          "separators": {
+            "semicolon": 7,
+            "comma": 5
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Genes",
+          "null_rate": 12.89,
+          "samples": [
+            "CYP2C9",
+            "CYP2B6; CYP2C9",
+            "SMN2",
+            "ALK; CD274; EGFR",
+            "SSTR1; SSTR2; SSTR3; SSTR4; SSTR5"
+          ],
+          "separators": {
+            "semicolon": 362
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Variants/Haplotypes",
+          "null_rate": 84.88,
+          "samples": [
+            "HLA-A*02:01",
+            "rs121913530",
+            "HLA-B*15:02",
+            "HLA-B*57:01",
+            "UGT1A1*28"
+          ],
+          "separators": {
+            "semicolon": 76,
+            "comma": 3
+          },
+          "id_matches": {
+            "rsid": 89
+          }
+        },
+        {
+          "column": "Latest History Date (YYYY-MM-DD)",
+          "null_rate": 33.59,
+          "samples": [
+            "2025-08-15",
+            "2024-12-13",
+            "2023-08-17",
+            "2025-01-09",
+            "2024-08-08"
+          ],
+          "separators": {},
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "drugLabels.zip",
+      "file": "drugLabels.byGene.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 239,
+      "columns": [
+        "Gene ID",
+        "Gene Symbol",
+        "Label IDs",
+        "Label Names"
+      ],
+      "col_stats": [
+        {
+          "column": "Gene ID",
+          "null_rate": 0.0,
+          "samples": [
+            "PA374",
+            "PA268",
+            "PA390",
+            "PA24413",
+            "PA24428"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 239
+          }
+        },
+        {
+          "column": "Gene Symbol",
+          "null_rate": 0.0,
+          "samples": [
+            "ABCB11",
+            "ABCB4",
+            "ABCG2",
+            "ABL1",
+            "ACADVL"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Label IDs",
+          "null_rate": 0.0,
+          "samples": [
+            "PA166353921;PA166269742;PA166353901;PA166268902;PA166317944",
+            "PA166353921;PA166353901;PA166436641",
+            "PA166353203;PA166433101;PA166353201;PA166432221;PA166345301;PA166432241;PA166184427;PA166184499",
+            "PA166317521;PA166274001;PA166117941;PA166104914;PA166104926;PA166105334;PA166122067;PA166268861;PA166159963;PA166114907;PA166104795;PA166104781;PA166104790;PA166177512;PA166104842;PA166114930;PA166114931;PA166182755;PA166273981;PA166274002;PA166127641;PA166127660;PA166127682;PA166127693;PA166129527;PA166123537;PA166123542",
+            "PA166350521;PA166350541"
+          ],
+          "separators": {
+            "semicolon": 186
+          },
+          "id_matches": {
+            "clinpgx_id": 53
+          }
+        },
+        {
+          "column": "Label Names",
+          "null_rate": 0.0,
+          "samples": [
+            "Annotation of EMA Label for maralixibat and ABCB11, ABCB4, ATP8B1, MYO5B, TJP2;Annotation of EMA Label for odevixibat and ABCB11;Annotation of FDA Label for maralixibat and ABCB11, ABCB4, ATP8B1, MYO5B, TJP2;Annotation of FDA Label for odevixibat and ABCB11;Annotation of HCSC Label for odevixibat and ABCB11",
+            "Annotation of EMA Label for maralixibat and ABCB11, ABCB4, ATP8B1, MYO5B, TJP2;Annotation of FDA Label for maralixibat and ABCB11, ABCB4, ATP8B1, MYO5B, TJP2;Annotation of FDA Label for odevixibat and ABCB4, ATP8B1, MYO5B, TJP2",
+            "Annotation of EMA Label for resmetirom and ABCG2;Annotation of EMA Label for sepiapterin and ABCG2;Annotation of FDA Label for resmetirom and ABCG2;Annotation of FDA Label for sepiapterin and ABCG2;Annotation of HCSC Label for rosuvastatin and ABCG2, SLCO1B1;Annotation of HCSC Label for sepiapterin and ABCG2;Annotation of Swissmedic Label for ezetimibe / rosuvastatin and ABCG2, SLCO1B1;Annotation of Swissmedic Label for rosuvastatin and ABCG2, SLCO1B1",
+            "Annotation of EMA Label for asciminib and ABL1, BCR;Annotation of EMA Label for blinatumomab and ABL1, BCR;Annotation of EMA Label for bosutinib and ABL1, BCR;Annotation of EMA Label for dasatinib and ABL1, BCR;Annotation of EMA Label for imatinib and ABL1, BCR, FIP1L1, KIT, PDGFRA, PDGFRB;Annotation of EMA Label for nilotinib and ABL1, BCR;Annotation of EMA Label for ponatinib and ABL1, BCR;Annotation of FDA Label for asciminib and ABL1, BCR;Annotation of FDA Label for blinatumomab and ABL1, BCR;Annotation of FDA Label for bosutinib and ABL1, BCR;Annotation of FDA Label for busulfan and ABL1, BCR;Annotation of FDA Label for dasatinib and ABL1, BCR;Annotation of FDA Label for imatinib and ABL1, BCR, FIP1L1, KIT, PDGFRA, PDGFRB;Annotation of FDA Label for inotuzumab ozogamicin and ABL1, BCR;Annotation of FDA Label for nilotinib and ABL1, BCR;Annotation of FDA Label for omacetaxine and ABL1, BCR;Annotation of FDA Label for ponatinib and ABL1, BCR;Annotation of FDA Label for vincristine and ABL1, BCR;Annotation of HCSC Label for asciminib and ABL1, BCR;Annotation of HCSC Label for blinatumomab and ABL1, BCR;Annotation of HCSC Label for bosutinib and ABL1, BCR;Annotation of HCSC Label for dasatinib and ABL1, BCR;Annotation of HCSC Label for imatinib and ABL1, BCR, FIP1L1, KIT, PDGFRA, PDGFRB;Annotation of HCSC Label for nilotinib and ABL1, BCR;Annotation of HCSC Label for ponatinib and ABL1, BCR;Annotation of PMDA Label for dasatinib and ABL1, BCR;Annotation of PMDA Label for imatinib and ABL1, BCR",
+            "Annotation of FDA Label for triheptanoin and ACADVL, CPT2, HADHA, HADHB;Annotation of HCSC Label for triheptanoin and ACADVL, CPT2, HADHA, HADHB"
+          ],
+          "separators": {
+            "semicolon": 186,
+            "comma": 184
+          },
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "drugs.zip",
+      "file": "drugs.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 3770,
+      "columns": [
+        "PharmGKB Accession Id",
+        "Name",
+        "Generic Names",
+        "Trade Names",
+        "Brand Mixtures",
+        "Type",
+        "Cross-references",
+        "SMILES",
+        "InChI",
+        "Dosing Guideline",
+        "External Vocabulary",
+        "Clinical Annotation Count",
+        "Variant Annotation Count",
+        "Pathway Count",
+        "VIP Count",
+        "Dosing Guideline Sources",
+        "Top Clinical Annotation Level",
+        "Top FDA Label Testing Level",
+        "Top Any Drug Label Testing Level",
+        "Label Has Dosing Info",
+        "RxNorm Identifiers",
+        "ATC Identifiers",
+        "PubChem Compound Identifiers",
+        "Top CPIC Pairs Level",
+        "FDA Label has Prescribing Info",
+        "In FDA PGx Association Sections"
+      ],
+      "col_stats": [
+        {
+          "column": "PharmGKB Accession Id",
+          "null_rate": 0.0,
+          "samples": [
+            "PA166238901",
+            "PA166238881",
+            "PA166238883",
+            "PA166238882",
+            "PA166238921"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 3770
+          }
+        },
+        {
+          "column": "Name",
+          "null_rate": 0.0,
+          "samples": [
+            "17-alpha-dihydroequilenin sulfate",
+            "17-alpha-dihydroequilin",
+            "17-alpha-dihydroequilin sulfate",
+            "17-alpha-estradiol sulfate",
+            "17-beta-dihydroequilenin sulfate"
+          ],
+          "separators": {
+            "comma": 183
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Generic Names",
+          "null_rate": 49.87,
+          "samples": [
+            "\"9-amino-1,2,3,4-tetrahydroacridin-1-ol\", \"velnacrine\"",
+            "Ecstasy, MDMA",
+            "\"( )-cis-3,5-Dimethyl-2-(3-pyridyl)thiazolidin-4-one hydrochloride\", \"130841-70-2\", \"158511-47-8\", \"3,5-dimethyl-2-(3-pyridyl)thiazolidin-4-one\", \"4-Thiazolidinone, 3,5-dimethyl-2-(3-pyridinyl)-, monohydrochloride, cis-(+-)-\", \"AC1L433Y\", \"SM-10661\", \"SM-12502\"",
+            "3-beta-hydroxy-5-androsten-17-one, 5-dehydroepiandrosterone, 5-dhea, dha, dhea, prasterone",
+            "2-[(3S)-1-[2-(3-hydroxy-2,3-dihydro-1-benzofuran-5-yl)ethyl]pyrrolidin-3-yl]-2,2-diphenylacetamide"
+          ],
+          "separators": {
+            "comma": 1443,
+            "semicolon": 12
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Trade Names",
+          "null_rate": 53.34,
+          "samples": [
+            "Fidelin, OVIGYN-D",
+            "\"UK-148,993\", \"UK-148993\"",
+            "Epzicom, Ziagen",
+            "Plenaxis, Plenaxis",
+            "Orencia, Orencia"
+          ],
+          "separators": {
+            "comma": 1210,
+            "semicolon": 3
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Brand Mixtures",
+          "null_rate": 93.21,
+          "samples": [
+            "Kivexa (Abacavir Sulfate + Lamivudine), Trizivir (Abacavir Sulfate + Lamivudine + Zidovudine)",
+            "Amacodone (acetaminophen + hydrocodone bitartrate), Anexsia (acetaminophen + hydrocodone bitartrate), Anodynos (acetaminophen + hydrocodone bitartrate), Anolor (acetaminophen + butalbital + caffeine), Bancap (acetaminophen + hydrocodone bitartrate), CoGesic (acetaminophen + hydrocodone bitartrate), Dolacet (acetaminophen + hydrocodone bitartrate), Duradyne (acetaminophen + hydrocodone bitartrate), Endolor (acetaminophen + butalbital + caffeine), Esgic (acetaminophen + butalbital + caffeine), Fioricet (acetaminophen + butalbital + caffeine), Hydrocet (acetaminophen + hydrocodone bitartrate), Hydrogesic (acetaminophen + hydrocodone bitartrate), Lorcet (acetaminophen + hydrocodone bitartrate), Lortab (acetaminophen + hydrocodone bitartrate), Margesic (acetaminophen + hydrocodone bitartrate), Norcet (acetaminophen + hydrocodone bitartrate), Oxycet (acetaminophen + oxycodone hydrochloride), Percocet (acetaminophen + oxycodone hydrochloride), Roxicet (acetaminophen + oxycodone hydrochloride), Roxilox (acetaminophen + oxycodone hydrochloride), Stagesic (acetaminophen + hydrocodone bitartrate), TGesic (acetaminophen + hydrocodone bitartrate), Tylox (acetaminophen + oxycodone hydrochloride), Vicodin (acetaminophen + hydrocodone bitartrate), Zebutal (acetaminophen + butalbital + caffeine), Zydone (acetaminophen + hydrocodone bitartrate)",
+            "Caverject Sterile Powder - Kit 11.9mcg /Vial (Alprostadil + Water), Caverject Sterile Powder - Kit 23.2mcg/Vial (Alprostadil + Water)",
+            "Alti-Amiloride HCTZ (Amiloride Hcl + Hydrochlorothiazide), Ami-Hydro Tab (Amiloride Hcl + Hydrochlorothiazide), Apo-Amilzide Tab (Amiloride Hcl + Hydrochlorothiazide), Gen-Amilazide (Amiloride Hcl + Hydrochlorothiazide), Moduret (Amiloride Hcl + Hydrochlorothiazide), Novamilor Tab USP (Amiloride Hcl + Hydrochlorothiazide), Nu-Amilzide 5/50 mg Tab (Amiloride Hcl + Hydrochlorothiazide), Riva-Amilzide 5/50 mg (Amiloride Hcl + Hydrochlorothiazide)",
+            "Ami-Nesine Liq (Aminophylline + Guaifenesin), Quiex - Forte Syr (Aminophylline + Guaifenesin), Quiex Liq (Aminophylline + Guaifenesin), Quiex-K1 Syr (Aminophylline + Guaifenesin + Potassium Iodide), Quiex-Pred Sus (Aminophylline + Guaifenesin + Prednisolone)"
+          ],
+          "separators": {
+            "comma": 167,
+            "semicolon": 1
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Type",
+          "null_rate": 0.0,
+          "samples": [
+            "Drug",
+            "Drug, Metabolite",
+            "Drug Class",
+            "Drug, Biological Intermediate",
+            "Prodrug"
+          ],
+          "separators": {
+            "comma": 80
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Cross-references",
+          "null_rate": 30.24,
+          "samples": [
+            "PubChem Compound:23671798",
+            "PubChem Compound:9547222",
+            "PubChem Compound:23671797",
+            "PubChem Compound:23671799",
+            "PubChem Compound:71316159"
+          ],
+          "separators": {
+            "comma": 2135
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "SMILES",
+          "null_rate": 49.05,
+          "samples": [
+            "C1CC(C2=C(C3=CC=CC=C3N=C2C1)N)O",
+            "CC(CC1=CC2=C(C=C1)OCO2)NC",
+            "C[C@H]1C(=O)N([C@H](S1)C2=CN=CC=C2)C.Cl",
+            "C1=CC(=C(N=C1)/C=N/NC(=S)N)N",
+            "C[C@]12CC[C@H]3[C@H]([C@@H]1CCC2=O)CC=C4[C@@]3(CC[C@@H](C4)O)C"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "InChI",
+          "null_rate": 49.05,
+          "samples": [
+            "InChI=1S/C13H14N2O/c14-13-8-4-1-2-5-9(8)15-10-6-3-7-11(16)12(10)13/h1-2,4-5,11,16H,3,6-7H2,(H2,14,15)",
+            "InChI=1S/C11H15NO2/c1-8(12-2)5-9-3-4-10-11(6-9)14-7-13-10/h3-4,6,8,12H,5,7H2,1-2H3",
+            "InChI=1S/C10H12N2OS.ClH/c1-7-9(13)12(2)10(14-7)8-4-3-5-11-6-8;/h3-7,10H,1-2H3;1H/t7-,10+;/m0./s1",
+            "InChI=1S/C7H9N5S/c8-5-2-1-3-10-6(5)4-11-12-7(9)13/h1-4H,8H2,(H3,9,12,13)/b11-4+",
+            "InChI=1S/C19H28O2/c1-18-9-7-13(20)11-12(18)3-4-14-15-5-6-17(21)19(15,2)10-8-16(14)18/h3,13-16,20H,4-11H2,1-2H3/t13-,14-,15-,16-,18-,19-/m0/s1"
+          ],
+          "separators": {
+            "comma": 1894,
+            "semicolon": 92
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Dosing Guideline",
+          "null_rate": 0.0,
+          "samples": [
+            "No",
+            "Yes"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "External Vocabulary",
+          "null_rate": 10.58,
+          "samples": [
+            "MeSH:M0158246",
+            "ATC:C04AA",
+            "ATC:A14AA07, MeSH:C033625, MeSH:C452866",
+            "ATC:G03BA",
+            "ATC:G03BB"
+          ],
+          "separators": {
+            "comma": 2275
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Clinical Annotation Count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "6",
+            "1",
+            "2",
+            "61"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 3770
+          }
+        },
+        {
+          "column": "Variant Annotation Count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "12",
+            "2",
+            "8",
+            "3"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 3770
+          }
+        },
+        {
+          "column": "Pathway Count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "1",
+            "2"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 3770
+          }
+        },
+        {
+          "column": "VIP Count",
+          "null_rate": 0.0,
+          "samples": [
+            "n/a"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Dosing Guideline Sources",
+          "null_rate": 94.32,
+          "samples": [
+            "CPIC, DPWG, RNPGx",
+            "CPIC [no recommendation]",
+            "DPWG, RNPGx",
+            "ACR, CPIC, DPWG, RNPGx",
+            "CPIC"
+          ],
+          "separators": {
+            "comma": 62
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Top Clinical Annotation Level",
+          "null_rate": 82.92,
+          "samples": [
+            "3",
+            "1A",
+            "4",
+            "2B",
+            "2A"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 511
+          }
+        },
+        {
+          "column": "Top FDA Label Testing Level",
+          "null_rate": 90.85,
+          "samples": [
+            "Testing Required",
+            "Actionable PGx",
+            "Informative PGx",
+            "Testing Recommended",
+            "No Clinical PGx"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Top Any Drug Label Testing Level",
+          "null_rate": 89.28,
+          "samples": [
+            "Testing Required",
+            "Actionable PGx",
+            "Informative PGx",
+            "Testing Recommended",
+            "No Clinical PGx"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Label Has Dosing Info",
+          "null_rate": 98.54,
+          "samples": [
+            "Label Has Dosing Info"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "RxNorm Identifiers",
+          "null_rate": 50.72,
+          "samples": [
+            "190521",
+            "301739",
+            "614391",
+            "83929",
+            "1100072"
+          ],
+          "separators": {
+            "comma": 42
+          },
+          "id_matches": {
+            "pmid": 1815
+          }
+        },
+        {
+          "column": "ATC Identifiers",
+          "null_rate": 23.45,
+          "samples": [
+            "C04AA",
+            "A14AA07",
+            "G03BA",
+            "G03BB",
+            "J05AF06"
+          ],
+          "separators": {
+            "comma": 360
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "PubChem Compound Identifiers",
+          "null_rate": 38.51,
+          "samples": [
+            "23671798",
+            "9547222",
+            "23671797",
+            "23671799",
+            "71316159"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 2318
+          }
+        },
+        {
+          "column": "Top CPIC Pairs Level",
+          "null_rate": 91.41,
+          "samples": [
+            "A",
+            "C",
+            "D",
+            "B",
+            "B/C"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "FDA Label has Prescribing Info",
+          "null_rate": 87.51,
+          "samples": [
+            "Yes",
+            "No"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "In FDA PGx Association Sections",
+          "null_rate": 96.98,
+          "samples": [
+            "Pharmacogenetic Associations for which the Data Support Therapeutic Management Recommendations",
+            "Pharmacogenetic Associations for which the Data Indicate a Potential Impact on Safety or Response",
+            "Pharmacogenetic Associations for which the Data Demonstrate a Potential Impact on Pharmacokinetic Properties Only",
+            "Pharmacogenetic Associations for which the Data Support Therapeutic Management Recommendations, Pharmacogenetic Associations for which the Data Indicate a Potential Impact on Safety or Response"
+          ],
+          "separators": {
+            "comma": 3
+          },
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "genes.zip",
+      "file": "genes.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 25041,
+      "columns": [
+        "PharmGKB Accession Id",
+        "NCBI Gene ID",
+        "HGNC ID",
+        "Ensembl Id",
+        "Name",
+        "Symbol",
+        "Alternate Names",
+        "Alternate Symbols",
+        "Is VIP",
+        "Has Variant Annotation",
+        "Cross-references",
+        "Has CPIC Dosing Guideline",
+        "Chromosome",
+        "Chromosomal Start - GRCh37",
+        "Chromosomal Stop - GRCh37",
+        "Chromosomal Start - GRCh38",
+        "Chromosomal Stop - GRCh38"
+      ],
+      "col_stats": [
+        {
+          "column": "PharmGKB Accession Id",
+          "null_rate": 0.0,
+          "samples": [
+            "PA24356",
+            "PA165392995",
+            "PA162375098",
+            "PA24357",
+            "PA142670460"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 25041
+          }
+        },
+        {
+          "column": "NCBI Gene ID",
+          "null_rate": 0.61,
+          "samples": [
+            "1",
+            "503538",
+            "29974",
+            "2",
+            "144568"
+          ],
+          "separators": {
+            "comma": 6
+          },
+          "id_matches": {
+            "pmid": 24883
+          }
+        },
+        {
+          "column": "HGNC ID",
+          "null_rate": 0.04,
+          "samples": [
+            "HGNC:5",
+            "HGNC:37133",
+            "HGNC:24086",
+            "HGNC:7",
+            "HGNC:23336"
+          ],
+          "separators": {
+            "comma": 7
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Ensembl Id",
+          "null_rate": 5.53,
+          "samples": [
+            "ENSG00000121410",
+            "ENSG00000268895",
+            "ENSG00000148584",
+            "ENSG00000175899",
+            "ENSG00000166535"
+          ],
+          "separators": {
+            "comma": 270
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Name",
+          "null_rate": 0.0,
+          "samples": [
+            "alpha-1-B glycoprotein",
+            "A1BG antisense RNA 1",
+            "APOBEC1 complementation factor",
+            "alpha-2-macroglobulin",
+            "alpha-2-macroglobulin like 1"
+          ],
+          "separators": {
+            "comma": 3105,
+            "semicolon": 3
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Symbol",
+          "null_rate": 0.0,
+          "samples": [
+            "A1BG",
+            "A1BG-AS1",
+            "A1CF",
+            "A2M",
+            "A2ML1"
+          ],
+          "separators": {},
+          "id_matches": {
+            "rsid": 1
+          }
+        },
+        {
+          "column": "Alternate Names",
+          "null_rate": 44.87,
+          "samples": [
+            "alpha-2-macroglobulin-like 1",
+            "iGb3 synthase, isoglobotriaosylceramide synthase",
+            "\"CD77 synthase\", \"Gb3 synthase\", \"alpha 1,4-galactosyltransferase\", \"alpha 1,4-galactosyltransferase (P blood group)\", \"globotriaosylceramide synthase\", \"lactosylceramide 4-alpha-galactosyltransferase\"",
+            "\"Allgrove, triple-A\", \"achalasia, adrenocortical insufficiency, alacrimia\", \"adracalin\", \"aladin\"",
+            "acyl-CoA synthetase family member 1"
+          ],
+          "separators": {
+            "comma": 9172,
+            "semicolon": 56
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Alternate Symbols",
+          "null_rate": 20.46,
+          "samples": [
+            "FLJ23569",
+            "ACF, ACF64, ACF65, APOBEC1CF, ASP",
+            "CPAMD5, FWP007, S863-7",
+            "CPAMD9, FLJ25179, p170",
+            "A3GALT2P, IGB3S, IGBS3S"
+          ],
+          "separators": {
+            "comma": 12897
+          },
+          "id_matches": {
+            "rsid": 2
+          }
+        },
+        {
+          "column": "Is VIP",
+          "null_rate": 0.0,
+          "samples": [
+            "Yes"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Has Variant Annotation",
+          "null_rate": 0.0,
+          "samples": [
+            "No",
+            "Yes"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Cross-references",
+          "null_rate": 0.0,
+          "samples": [
+            "Comparative Toxicogenomics Database:1, Ensembl:ENSG00000121410, GenAtlas:A1BG, GeneCard:A1BG, HGNC:HGNC:5, HumanCyc Gene:HS04495, ModBase:P04217, NCBI Gene:1, OMIM:138670, RefSeq DNA:NT_011109, RefSeq Protein:NP_570602, RefSeq RNA:NM_130786, UCSC Genome Browser:NM_130786, UniProtKB:P04217",
+            "Ensembl:ENSG00000268895, GeneCard:A1BG-AS1, HGNC:HGNC:37133, NCBI Gene:503538, RefSeq DNA:NT_011109, RefSeq RNA:NR_015380",
+            "Ensembl:ENSG00000148584, GeneCard:A1CF, HGNC:HGNC:24086, HumanCyc Gene:HS07539, ModBase:Q9NQ94, NCBI Gene:29974, RefSeq DNA:NT_030059, RefSeq Protein:NP_001185747, RefSeq Protein:NP_001185748, RefSeq Protein:NP_001185749, RefSeq Protein:NP_055391, RefSeq Protein:NP_620310, RefSeq Protein:NP_620311, RefSeq RNA:NM_001198818, RefSeq RNA:NM_001198819, RefSeq RNA:NM_001198820, RefSeq RNA:NM_014576, RefSeq RNA:NM_138932, RefSeq RNA:NM_138933, UniProtKB:Q9NQ94",
+            "Comparative Toxicogenomics Database:2, Ensembl:ENSG00000175899, GenAtlas:A2M, GeneCard:A2M, HGNC:HGNC:7, ModBase:P01023, NCBI Gene:2, OMIM:103950, OMIM:104300, RefSeq DNA:NG_011717, RefSeq DNA:NT_009714, RefSeq Protein:NP_000005, RefSeq RNA:NM_000014, UCSC Genome Browser:NM_000014, UniProtKB:P01023",
+            "Ensembl:ENSG00000166535, GeneCard:A2ML1, HGNC:HGNC:23336, NCBI Gene:144568, OMIM:610627, RefSeq DNA:NT_009714, RefSeq Protein:NP_653271, RefSeq RNA:NM_144670, UniProtKB:B3KVV6"
+          ],
+          "separators": {
+            "comma": 24888
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Has CPIC Dosing Guideline",
+          "null_rate": 0.0,
+          "samples": [
+            "No",
+            "Yes"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Chromosome",
+          "null_rate": 3.25,
+          "samples": [
+            "chr19",
+            "chr10",
+            "chr12",
+            "chr1",
+            "chr22"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Chromosomal Start - GRCh37",
+          "null_rate": 2.84,
+          "samples": [
+            "58858172",
+            "58863336",
+            "52559169",
+            "9220304",
+            "8975150"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 24331
+          }
+        },
+        {
+          "column": "Chromosomal Stop - GRCh37",
+          "null_rate": 2.84,
+          "samples": [
+            "58864865",
+            "58866549",
+            "52645435",
+            "9268558",
+            "9029381"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 24331
+          }
+        },
+        {
+          "column": "Chromosomal Start - GRCh38",
+          "null_rate": 2.92,
+          "samples": [
+            "58346806",
+            "58351970",
+            "50799409",
+            "9067708",
+            "8822472"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 24309
+          }
+        },
+        {
+          "column": "Chromosomal Stop - GRCh38",
+          "null_rate": 2.92,
+          "samples": [
+            "58353499",
+            "58355183",
+            "50885681",
+            "9115962",
+            "8887202"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 24309
+          }
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 1,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "guidelineAnnotations.json.zip",
+      "file_type": "JSON archives (individual guideline files)",
+      "record_count": 219,
+      "top_keys": {
+        "citations": 219,
+        "guideline": 219
+      },
+      "sources": {},
+      "total_pmids_cited": 0,
+      "sample_files": [
+        {
+          "id": null,
+          "name": null,
+          "keys": [
+            "citations",
+            "guideline"
+          ]
+        },
+        {
+          "id": null,
+          "name": null,
+          "keys": [
+            "citations",
+            "guideline"
+          ]
+        },
+        {
+          "id": null,
+          "name": null,
+          "keys": [
+            "citations",
+            "guideline"
+          ]
+        }
+      ]
+    },
+    {
+      "zip": "relationships.zip",
+      "file": "relationships.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 246714,
+      "columns": [
+        "Entity1_id",
+        "Entity1_name",
+        "Entity1_type",
+        "Entity2_id",
+        "Entity2_name",
+        "Entity2_type",
+        "Evidence",
+        "Association",
+        "PK",
+        "PD",
+        "PMIDs"
+      ],
+      "col_stats": [
+        {
+          "column": "Entity1_id",
+          "null_rate": 0.0,
+          "samples": [
+            "PA166370005",
+            "PA166390900",
+            "PA31744",
+            "PA166389002",
+            "PA166374322"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 246714
+          }
+        },
+        {
+          "column": "Entity1_name",
+          "null_rate": 0.0,
+          "samples": [
+            "NC_000009.12:g.104941653G=",
+            "MED4 125+938C=",
+            "NQO1",
+            "NC_000005.10:g.148825489A=",
+            "DPYD 1757T="
+          ],
+          "separators": {
+            "comma": 2874
+          },
+          "id_matches": {
+            "rsid": 33113
+          }
+        },
+        {
+          "column": "Entity1_type",
+          "null_rate": 0.0,
+          "samples": [
+            "SNV",
+            "Gene",
+            "Variant",
+            "Phenotype",
+            "Chemical"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Entity2_id",
+          "null_rate": 0.0,
+          "samples": [
+            "PA443796",
+            "PA449053",
+            "PA165817398",
+            "PA446155",
+            "PA450379"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 246714
+          }
+        },
+        {
+          "column": "Entity2_name",
+          "null_rate": 0.0,
+          "samples": [
+            "Coronary Artery Disease",
+            "clopidogrel",
+            "Myelosuppression",
+            "Acute lymphoblastic leukemia",
+            "mercaptopurine"
+          ],
+          "separators": {
+            "comma": 2874
+          },
+          "id_matches": {
+            "rsid": 33113
+          }
+        },
+        {
+          "column": "Entity2_type",
+          "null_rate": 0.0,
+          "samples": [
+            "Phenotype",
+            "Chemical",
+            "Gene",
+            "StarAllele",
+            "Variant"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Evidence",
+          "null_rate": 0.0,
+          "samples": [
+            "VariantAnnotation",
+            "SummaryAnnotation,VariantAnnotation",
+            "MultilinkAnnotation,SummaryAnnotation,VariantAnnotation",
+            "SummaryAnnotation",
+            "MultilinkAnnotation"
+          ],
+          "separators": {
+            "comma": 72124
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Association",
+          "null_rate": 0.0,
+          "samples": [
+            "associated",
+            "not associated",
+            "ambiguous"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "PK",
+          "null_rate": 100.0,
+          "samples": [],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "PD",
+          "null_rate": 72.62,
+          "samples": [
+            "PD"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "PMIDs",
+          "null_rate": 0.69,
+          "samples": [
+            "30487649",
+            "27981573;30487649",
+            "38682355",
+            "34412101;38682355",
+            "17400324"
+          ],
+          "separators": {
+            "semicolon": 49938
+          },
+          "id_matches": {
+            "pmid": 195072
+          }
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 221107
+    },
+    {
+      "zip": "summaryAnnotations.zip",
+      "file": "summary_annotations.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 5192,
+      "columns": [
+        "Summary Annotation ID",
+        "Variant/Haplotypes",
+        "Gene",
+        "Level of Evidence",
+        "Level Override",
+        "Level Modifiers",
+        "Score",
+        "Phenotype Category",
+        "PMID Count",
+        "Evidence Count",
+        "Drug(s)",
+        "Phenotype(s)",
+        "Latest History Date (YYYY-MM-DD)",
+        "URL",
+        "Specialty Population"
+      ],
+      "col_stats": [
+        {
+          "column": "Summary Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "655384602",
+            "655384607",
+            "655384626",
+            "655384635",
+            "655384670"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 660
+          }
+        },
+        {
+          "column": "Variant/Haplotypes",
+          "null_rate": 0.0,
+          "samples": [
+            "rs951439",
+            "rs4149015",
+            "rs58597806",
+            "rs7412",
+            "rs396991"
+          ],
+          "separators": {
+            "comma": 398
+          },
+          "id_matches": {
+            "rsid": 4593
+          }
+        },
+        {
+          "column": "Gene",
+          "null_rate": 4.89,
+          "samples": [
+            "RGS4",
+            "SLCO1B1",
+            "UGT1A9",
+            "APOE",
+            "FCGR3A"
+          ],
+          "separators": {
+            "semicolon": 134
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Level of Evidence",
+          "null_rate": 0.0,
+          "samples": [
+            "3",
+            "4",
+            "2B",
+            "1A",
+            "1B"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 4789
+          }
+        },
+        {
+          "column": "Level Override",
+          "null_rate": 99.73,
+          "samples": [
+            "Yes: Assigned level 1A because variant is included in CPIC guideline",
+            "Yes: Assigned level 1B because variant is not part of the CPIC guideline recommendation, this variant is in high LD with CPIC variant rs12979860.",
+            "Yes: Guideline is no recommendation",
+            "Yes: Assigned level 1B because variant is not specifically mentioned in clinical guidelines or labels, in high LD with rs9923231",
+            "Yes: 19077664, 16642436, 17671280 are on the STARD samples. 17671280 references 16642436 as using the same sample set and 17671280 is a larger analysis of 16642436 with increasing the discovery and replication group; set level to 3"
+          ],
+          "separators": {
+            "comma": 5,
+            "semicolon": 1
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Level Modifiers",
+          "null_rate": 61.96,
+          "samples": [
+            "Tier 1 VIP",
+            "Rare Variant",
+            "Rare Variant; Tier 1 VIP"
+          ],
+          "separators": {
+            "semicolon": 299
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Score",
+          "null_rate": 0.0,
+          "samples": [
+            "1.75",
+            "5.0",
+            "0.0",
+            "3.0",
+            "2.5"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Phenotype Category",
+          "null_rate": 0.0,
+          "samples": [
+            "Efficacy",
+            "Metabolism/PK",
+            "Toxicity",
+            "Dosage",
+            "Other"
+          ],
+          "separators": {
+            "semicolon": 106
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "PMID Count",
+          "null_rate": 0.0,
+          "samples": [
+            "1",
+            "2",
+            "4",
+            "7",
+            "5"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 5192
+          }
+        },
+        {
+          "column": "Evidence Count",
+          "null_rate": 0.0,
+          "samples": [
+            "1",
+            "3",
+            "2",
+            "4",
+            "7"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 5192
+          }
+        },
+        {
+          "column": "Drug(s)",
+          "null_rate": 0.0,
+          "samples": [
+            "risperidone",
+            "antipsychotics;olanzapine;perphenazine;quetiapine;ziprasidone",
+            "pravastatin",
+            "propofol",
+            "Antivirals for treatment of HIV infections, combinations;ritonavir"
+          ],
+          "separators": {
+            "semicolon": 921,
+            "comma": 77
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Phenotype(s)",
+          "null_rate": 19.55,
+          "samples": [
+            "Schizophrenia",
+            "HIV infectious disease;Hyperlipidemias;Hypertriglyceridemia",
+            "Erectile Dysfunction",
+            "Cardiovascular Disease;Coronary Disease;Stroke",
+            "Depressive Disorder;Major Depressive Disorder"
+          ],
+          "separators": {
+            "semicolon": 845,
+            "comma": 194
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Latest History Date (YYYY-MM-DD)",
+          "null_rate": 0.0,
+          "samples": [
+            "2021-03-24",
+            "2021-11-19",
+            "2023-05-31",
+            "2024-09-17",
+            "2024-12-02"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "URL",
+          "null_rate": 0.0,
+          "samples": [
+            "https://www.clinpgx.org/summaryAnnotation/655384602",
+            "https://www.clinpgx.org/summaryAnnotation/655384607",
+            "https://www.clinpgx.org/summaryAnnotation/655384626",
+            "https://www.clinpgx.org/summaryAnnotation/655384635",
+            "https://www.clinpgx.org/summaryAnnotation/655384670"
+          ],
+          "separators": {},
+          "id_matches": {
+            "url": 5192
+          }
+        },
+        {
+          "column": "Specialty Population",
+          "null_rate": 87.89,
+          "samples": [
+            "Pediatric"
+          ],
+          "separators": {},
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "summaryAnnotations.zip",
+      "file": "summary_ann_alleles.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 16122,
+      "columns": [
+        "Summary Annotation ID",
+        "Genotype/Allele",
+        "Annotation Text",
+        "Allele Function"
+      ],
+      "col_stats": [
+        {
+          "column": "Summary Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "655384602",
+            "655384607",
+            "655384626",
+            "655384635",
+            "655384670"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 2026
+          }
+        },
+        {
+          "column": "Genotype/Allele",
+          "null_rate": 0.01,
+          "samples": [
+            "CC",
+            "CT",
+            "TT",
+            "AA",
+            "AG"
+          ],
+          "separators": {
+            "comma": 13
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Annotation Text",
+          "null_rate": 0.0,
+          "samples": [
+            "Patients with the CC genotype may have decreased chance of response to risperidone as compared to patients with the TT genotype. Other genetic and clinical factors may also influence a patients chance of response to risperidone.",
+            "Patients with the CT genotype may have decreased chance of response to risperidone as compared to patients with the TT genotype. Other genetic and clinical factors may also influence a patients chance of response to risperidone.",
+            "Patients with the TT genotype may have increased chance of response to risperidone as compared to patients with CC or CT genotypes. Other genetic and clinical factors may also influence a patients chance of response to risperidone.",
+            "Patients with the CC genotype and schizophrenia: 1) may have increased treatment response with perphanzine and olanzapine treatment 2) may have decreased treatment response with quetiapine and ziprasidone treatment. Other genetic and clinical factors may also influence response to antipsychotics.",
+            "Patients with the CT genotype and schizophrenia may have increased treatment response with olanzapine as compared to perphenazine. Other genetic and clinical factors may also influence response to antipsychotics."
+          ],
+          "separators": {
+            "comma": 6155,
+            "semicolon": 56
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Allele Function",
+          "null_rate": 91.29,
+          "samples": [
+            "Presence",
+            "Normal function",
+            "No function",
+            "Decreased function",
+            "Increased function"
+          ],
+          "separators": {},
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 10930
+    },
+    {
+      "zip": "summaryAnnotations.zip",
+      "file": "summary_ann_history.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 14056,
+      "columns": [
+        "Summary Annotation ID",
+        "Date (YYYY-MM-DD)",
+        "Type",
+        "Comment"
+      ],
+      "col_stats": [
+        {
+          "column": "Summary Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "655384602",
+            "655384607",
+            "655384626",
+            "655384635",
+            "655384670"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 1676
+          }
+        },
+        {
+          "column": "Date (YYYY-MM-DD)",
+          "null_rate": 0.0,
+          "samples": [
+            "2018-11-05",
+            "2021-03-24",
+            "2020-03-02",
+            "2021-11-19",
+            "2023-05-31"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Type",
+          "null_rate": 0.0,
+          "samples": [
+            "Update",
+            "Note",
+            "Create",
+            "Correction",
+            "Publish"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Comment",
+          "null_rate": 18.82,
+          "samples": [
+            "Updated OMB race to appropriate biogeographical group",
+            "CA score added as part of scoring system release. LOE may have automatically changed based on new score but may be subject to further changes upon curator review.",
+            "Removed all links to haplotypes.",
+            "Added PMID 31114289 to evidence and rewrote phenotype descriptions to fit LOE 4 template.",
+            "Added new studies. Decreases to a level 4. Adjusted text to reflect new level."
+          ],
+          "separators": {
+            "comma": 300,
+            "semicolon": 60
+          },
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 8864
+    },
+    {
+      "zip": "summaryAnnotations.zip",
+      "file": "summary_ann_evidence.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 15542,
+      "columns": [
+        "Summary Annotation ID",
+        "Evidence ID",
+        "Evidence Type",
+        "Evidence URL",
+        "PMID",
+        "Summary",
+        "Score"
+      ],
+      "col_stats": [
+        {
+          "column": "Summary Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "655384602",
+            "655384607",
+            "655384626",
+            "655384635",
+            "655384670"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 3503
+          }
+        },
+        {
+          "column": "Evidence ID",
+          "null_rate": 0.0,
+          "samples": [
+            "655387128",
+            "655387127",
+            "655387138",
+            "655387131",
+            "982043099"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 3886,
+            "clinpgx_id": 512
+          }
+        },
+        {
+          "column": "Evidence Type",
+          "null_rate": 0.0,
+          "samples": [
+            "Variant Phenotype Annotation",
+            "Variant Drug Annotation",
+            "Variant Functional Assay Annotation",
+            "Guideline Annotation",
+            "Label Annotation"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Evidence URL",
+          "null_rate": 0.0,
+          "samples": [
+            "https://www.clinpgx.org/variantAnnotation/655387128",
+            "https://www.clinpgx.org/variantAnnotation/655387127",
+            "https://www.clinpgx.org/variantAnnotation/655387138",
+            "https://www.clinpgx.org/variantAnnotation/655387131",
+            "https://www.clinpgx.org/variantAnnotation/982043099"
+          ],
+          "separators": {},
+          "id_matches": {
+            "url": 15542
+          }
+        },
+        {
+          "column": "PMID",
+          "null_rate": 3.29,
+          "samples": [
+            "17588543",
+            "16722833",
+            "15226675",
+            "18816295",
+            "15809899"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 15030
+          }
+        },
+        {
+          "column": "Summary",
+          "null_rate": 0.0,
+          "samples": [
+            "Genotype TT is associated with increased likelihood of response when treated with risperidone in people with Schizophrenia as compared to genotypes CC + CT.",
+            "Genotype CC is associated with increased likelihood of positive response when treated with olanzapine and perphenazine in people with Schizophrenia as compared to genotypes CT + TT.",
+            "Genotype TT is associated with increased response to quetiapine and ziprasidone in people with Schizophrenia as compared to genotype CC.",
+            "Genotype CT is associated with increased likelihood of response when treated with olanzapine in people with Schizophrenia.",
+            "Genotype AG is associated with increased metabolism of pravastatin in children with Hyperlipoproteinemia Type II as compared to genotype GG."
+          ],
+          "separators": {
+            "comma": 3532
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Score",
+          "null_rate": 0.0,
+          "samples": [
+            "1.75",
+            "2.5",
+            "0.0",
+            "1.5",
+            "-1.5"
+          ],
+          "separators": {
+            "comma": 27
+          },
+          "id_matches": {
+            "pmid": 512
+          }
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 10350
+    },
+    {
+      "zip": "variantAnnotations.zip",
+      "file": "var_pheno_ann.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 14560,
+      "columns": [
+        "Variant Annotation ID",
+        "Variant/Haplotypes",
+        "Gene",
+        "Drug(s)",
+        "PMID",
+        "Phenotype Category",
+        "Significance",
+        "Notes",
+        "Sentence",
+        "Alleles",
+        "Specialty Population",
+        "Metabolizer types",
+        "isPlural",
+        "Is/Is Not associated",
+        "Direction of effect",
+        "Side effect/efficacy/other",
+        "Phenotype",
+        "Multiple phenotypes And/or",
+        "When treated with/exposed to/when assayed with",
+        "Multiple drugs And/or",
+        "Population types",
+        "Population Phenotypes or diseases",
+        "Multiple phenotypes or diseases And/or",
+        "Comparison Allele(s) or Genotype(s)",
+        "Comparison Metabolizer types"
+      ],
+      "col_stats": [
+        {
+          "column": "Variant Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "1449169911",
+            "1450813230",
+            "1453086503",
+            "1451833920",
+            "1453086600"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 3712
+          }
+        },
+        {
+          "column": "Variant/Haplotypes",
+          "null_rate": 0.0,
+          "samples": [
+            "HLA-B*35:08",
+            "rs1801272",
+            "UGT1A1*1",
+            "ABCB1 intermediate activity",
+            "HLA-A*02:01"
+          ],
+          "separators": {
+            "comma": 1490
+          },
+          "id_matches": {
+            "rsid": 11087
+          }
+        },
+        {
+          "column": "Gene",
+          "null_rate": 2.86,
+          "samples": [
+            "HLA-B",
+            "CYP2A6",
+            "UGT1A1",
+            "ABCB1",
+            "HLA-A"
+          ],
+          "separators": {
+            "comma": 251
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Drug(s)",
+          "null_rate": 6.46,
+          "samples": [
+            "lamotrigine",
+            "nicotine",
+            "sacituzumab govitecan",
+            "loperamide",
+            "ipilimumab, nivolumab, pembrolizumab"
+          ],
+          "separators": {
+            "comma": 3230
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "PMID",
+          "null_rate": 0.0,
+          "samples": [
+            "29238301",
+            "22046326",
+            "39528547",
+            "35815036",
+            "40155873"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 14560
+          }
+        },
+        {
+          "column": "Phenotype Category",
+          "null_rate": 0.91,
+          "samples": [
+            "Toxicity",
+            "Metabolism/PK",
+            "Efficacy",
+            "Toxicity, Other",
+            "Dosage"
+          ],
+          "separators": {
+            "comma": 526
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Significance",
+          "null_rate": 0.0,
+          "samples": [
+            "no",
+            "yes",
+            "not stated"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Notes",
+          "null_rate": 18.74,
+          "samples": [
+            "The allele was not significant when comparing allele frequency in cases of severe cutaneous adverse reactions (SCAR), Stevens-Johnson Syndrome (SJS) and Maculopapular Exanthema (MPE) (1/15) and controls (individuals without AEs who took lamotrigine) (0/50). The allele was significant when comparing between cases (1/15) and the general population (1/986).",
+            "Referred to in the paper as CYP2A6*2.",
+            "\"Genotype-specific analyses revealed higher incidence of grade 3\u20134 neutropenia in patients with heterozygous and homozygous variant genotypes versus wild type group. Severe neutropenia occurred in 67% of homozygous carriers versus 44% from wild type and 50% from heterozygous groups respectively (P\u2009=\u20090.05, Supplementary Table 3). \"",
+            "A patient with opioid use disorder showed reduced ABCB1 activity on a phenotyping test (Geneva Cocktail for CYP phenotyping). She was genotyped and is a heterozygous carrier of the three tested ABCB1 single nucleotide polymorphisms: 1236 GA (rs1128503); 2677 CA (rs2032582); 3435 GA (rs1045642). Please note that alleles have been complemented to the positive strand.",
+            "\"This study did not find a significant risk association between the presence of HLA-A*02:01 and ICI-induced irHepatitis or endocrine irAEs. Nevertheless, irColitis appeared in 7.9% more cases in the HLA-A*02:01 negative group compared to the HLA-A*02:01 positive group, although this difference was not statistically significant. This observation warrants further investigation to clarify whether HLA-A*02:01 status influences the development of specific irAEs.\" irAEs = immune-related adverse events"
+          ],
+          "separators": {
+            "comma": 6828,
+            "semicolon": 1998,
+            "pipe": 3
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Sentence",
+          "null_rate": 0.0,
+          "samples": [
+            "HLA-B *35:08 is not associated with likelihood of Maculopapular Exanthema, severe cutaneous adverse reactions or Stevens-Johnson Syndrome when treated with lamotrigine in people with Epilepsy.",
+            "Genotypes AA + AT are associated with decreased risk of Tobacco Use Disorder due to nicotine as compared to genotype TT.",
+            "UGT1A1 *1/*28 + *28/*28 is associated with increased severity of Neutropenia when treated with sacituzumab govitecan in people with Breast Neoplasms as compared to UGT1A1 *1/*1.",
+            "ABCB1 intermediate activity is associated with increased risk of Opioid-Related Disorders when exposed to loperamide.",
+            "HLA-A *02:01 is not associated with increased likelihood of adverse events when treated with ipilimumab, nivolumab or pembrolizumab in people with Melanoma and Metastatic neoplasm."
+          ],
+          "separators": {
+            "comma": 3782
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Alleles",
+          "null_rate": 3.41,
+          "samples": [
+            "*35:08",
+            "AA + AT",
+            "*1/*28 + *28/*28",
+            "*02:01",
+            "*39:01"
+          ],
+          "separators": {
+            "comma": 25
+          },
+          "id_matches": {
+            "pmid": 1
+          }
+        },
+        {
+          "column": "Specialty Population",
+          "null_rate": 89.29,
+          "samples": [
+            "Pediatric"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Metabolizer types",
+          "null_rate": 95.36,
+          "samples": [
+            "intermediate activity",
+            "ultrarapid metabolizer",
+            "deficiency",
+            "intermediate metabolizer and poor metabolizer",
+            "poor metabolizer"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "isPlural",
+          "null_rate": 0.0,
+          "samples": [
+            "Is",
+            "Are"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Is/Is Not associated",
+          "null_rate": 0.0,
+          "samples": [
+            "Not associated with",
+            "Associated with"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Direction of effect",
+          "null_rate": 29.31,
+          "samples": [
+            "decreased",
+            "increased"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Side effect/efficacy/other",
+          "null_rate": 28.87,
+          "samples": [
+            "likelihood of",
+            "risk of",
+            "severity of",
+            "age at onset of"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Phenotype",
+          "null_rate": 0.03,
+          "samples": [
+            "Side Effect:Maculopapular Exanthema, Side Effect:Severe Cutaneous Adverse Reactions, Side Effect:Stevens-Johnson Syndrome",
+            "Other:Tobacco Use Disorder",
+            "Side Effect:Neutropenia",
+            "Side Effect:Opioid-Related Disorders",
+            "Side Effect:adverse events"
+          ],
+          "separators": {
+            "comma": 1494
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Multiple phenotypes And/or",
+          "null_rate": 57.64,
+          "samples": [
+            "or",
+            "and"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "When treated with/exposed to/when assayed with",
+          "null_rate": 6.46,
+          "samples": [
+            "when treated with",
+            "due to",
+            "when exposed to",
+            "of",
+            "with"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Multiple drugs And/or",
+          "null_rate": 78.82,
+          "samples": [
+            "or",
+            "and"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Population types",
+          "null_rate": 26.57,
+          "samples": [
+            "in people with",
+            "in children with",
+            "in women with",
+            "in men with",
+            "in women"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Population Phenotypes or diseases",
+          "null_rate": 31.94,
+          "samples": [
+            "Disease:Epilepsy",
+            "Other:Breast Neoplasms",
+            "Other:Melanoma, Other:Metastatic neoplasm",
+            "Other:Fanconi Anemia, Other:Hematopoietic stem cell transplantation",
+            "Other:Schizophrenia, Other:Schizoaffective disorder, Other:Bipolar Disorder, Other:Psychotic Disorder"
+          ],
+          "separators": {
+            "comma": 977
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Multiple phenotypes or diseases And/or",
+          "null_rate": 95.46,
+          "samples": [
+            "and",
+            "or"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Comparison Allele(s) or Genotype(s)",
+          "null_rate": 18.28,
+          "samples": [
+            "TT",
+            "*1/*1",
+            "AA",
+            "GG",
+            "C"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 2
+          }
+        },
+        {
+          "column": "Comparison Metabolizer types",
+          "null_rate": 97.32,
+          "samples": [
+            "normal metabolizer",
+            "normal metabolizer and ultrarapid metabolizer",
+            "intermediate metabolizer and poor metabolizer",
+            "intermediate acetylator and rapid acetylator",
+            "normal metabolizer and intermediate metabolizer"
+          ],
+          "separators": {},
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "variantAnnotations.zip",
+      "file": "var_drug_ann.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 13030,
+      "columns": [
+        "Variant Annotation ID",
+        "Variant/Haplotypes",
+        "Gene",
+        "Drug(s)",
+        "PMID",
+        "Phenotype Category",
+        "Significance",
+        "Notes",
+        "Sentence",
+        "Alleles",
+        "Specialty Population",
+        "Metabolizer types",
+        "isPlural",
+        "Is/Is Not associated",
+        "Direction of effect",
+        "PD/PK terms",
+        "Multiple drugs And/or",
+        "Population types",
+        "Population Phenotypes or diseases",
+        "Multiple phenotypes or diseases And/or",
+        "Comparison Allele(s) or Genotype(s)",
+        "Comparison Metabolizer types"
+      ],
+      "col_stats": [
+        {
+          "column": "Variant Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "1451834452",
+            "1453073660",
+            "1453071582",
+            "1451138786",
+            "1448257202"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 2090
+          }
+        },
+        {
+          "column": "Variant/Haplotypes",
+          "null_rate": 0.0,
+          "samples": [
+            "CYP3A4*1, CYP3A4*17",
+            "rs2909451",
+            "rs706795",
+            "rs16918842",
+            "CYP2C9*1, CYP2C9*3"
+          ],
+          "separators": {
+            "comma": 2035
+          },
+          "id_matches": {
+            "rsid": 10010
+          }
+        },
+        {
+          "column": "Gene",
+          "null_rate": 2.62,
+          "samples": [
+            "CYP3A4",
+            "DPP4",
+            "FAIM2",
+            "OPRK1",
+            "CYP2C9"
+          ],
+          "separators": {
+            "comma": 203
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Drug(s)",
+          "null_rate": 0.0,
+          "samples": [
+            "nifedipine",
+            "sitagliptin",
+            "citalopram, escitalopram, fluoxetine, fluvoxamine, paroxetine, sertraline",
+            "heroin",
+            "warfarin"
+          ],
+          "separators": {
+            "comma": 1848
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "PMID",
+          "null_rate": 0.0,
+          "samples": [
+            "15634941",
+            "39792745",
+            "40054571",
+            "31940240",
+            "27488176"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 13030
+          }
+        },
+        {
+          "column": "Phenotype Category",
+          "null_rate": 0.18,
+          "samples": [
+            "Other, Metabolism/PK",
+            "Efficacy",
+            "Dosage",
+            "Metabolism/PK",
+            "PD"
+          ],
+          "separators": {
+            "comma": 647
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Significance",
+          "null_rate": 0.0,
+          "samples": [
+            "not stated",
+            "yes",
+            "no"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Notes",
+          "null_rate": 12.55,
+          "samples": [
+            "in vitro expression of the recombinant CYP3A4*17 allelic protein and the wild-type protein",
+            "\"Patients with the rs2909451 TT genotype in the study group (treated with sitagliptin) exhibited a median HbA1c improvement of 0.57 (interquartile range [IQR], 0.18\u20130.85), whereas the control group (treated with gliclazide) showed a median improvement of 1.11 (IQR, 0.86\u20131.35; P\u2005<\u2005.001).\"",
+            "\"We observed nominally significant associations between SNPs within the serotonin 1B receptor (5HT1B; SNP rs1778258), SLIT and NTRK- like family member 5 (SLITRK5; SNP rs10450811), and fas apoptotic inhibitory molecule 2 (FAIM2; SNP rs706795), with response to any SSRI, which did not survive multiple comparisons.\" Author response to question about Table 3 \"A1 is the effect allele, so if OR<1, then A1 is protective; if OR>1, then A1 is risk (for response).\"",
+            "No significant difference in allele or genotype frequencies between patients who reported taking >0.5g of heroin per day and those who reported taking <0.5g heroin per day.",
+            "\"For KCNJ11 gene polymorphisms, patients with the rs2285676 CC genotype in the study group had a median HbA1c improvement of 1.02 (IQR, 0.90\u20131.22), while the control group showed 1.31 (IQR, 1.08\u20131.42; P\u2005<\u2005.001), indicating more substantial insulin secretion capability with sitagliptin.\" \"KCNJ11 rs2285676 CC genotypes responded better to sitagliptin.\" Alleles complemented."
+          ],
+          "separators": {
+            "semicolon": 1710,
+            "comma": 6486,
+            "pipe": 7
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Sentence",
+          "null_rate": 0.0,
+          "samples": [
+            "CYP3A4 *17 is associated with decreased metabolism of nifedipine as compared to CYP3A4 *1.",
+            "Genotype TT is associated with decreased response to sitagliptin in people with Diabetes Mellitus, Type 2.",
+            "Allele T is associated with increased response to citalopram, escitalopram, fluoxetine, fluvoxamine, paroxetine or sertraline in people with Obsessive-Compulsive Disorder as compared to allele C.",
+            "Allele T is not associated with dose of heroin in people with Heroin Dependence as compared to allele C.",
+            "CYP2C9 *3 is associated with decreased dose of warfarin as compared to CYP2C9 *1/*1."
+          ],
+          "separators": {
+            "comma": 2681
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Alleles",
+          "null_rate": 4.17,
+          "samples": [
+            "*17",
+            "TT",
+            "T",
+            "*3",
+            "GG"
+          ],
+          "separators": {
+            "comma": 2
+          },
+          "id_matches": {
+            "pmid": 1
+          }
+        },
+        {
+          "column": "Specialty Population",
+          "null_rate": 89.59,
+          "samples": [
+            "Pediatric"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Metabolizer types",
+          "null_rate": 93.74,
+          "samples": [
+            "intermediate metabolizer",
+            "ultrarapid metabolizer",
+            "poor metabolizer",
+            "slow acetylator",
+            "low activity"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "isPlural",
+          "null_rate": 0.0,
+          "samples": [
+            "Is",
+            "Are"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Is/Is Not associated",
+          "null_rate": 0.0,
+          "samples": [
+            "Associated with",
+            "Not associated with"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Direction of effect",
+          "null_rate": 35.86,
+          "samples": [
+            "decreased",
+            "increased"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "PD/PK terms",
+          "null_rate": 0.02,
+          "samples": [
+            "metabolism of",
+            "response to",
+            "dose of",
+            "concentrations of",
+            "trough concentration of"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Multiple drugs And/or",
+          "null_rate": 86.18,
+          "samples": [
+            "or",
+            "and"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Population types",
+          "null_rate": 13.55,
+          "samples": [
+            "in people with",
+            "in healthy individuals",
+            "in women with",
+            "in infants with",
+            "in men with"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Population Phenotypes or diseases",
+          "null_rate": 25.2,
+          "samples": [
+            "Other:Diabetes Mellitus, Type 2",
+            "Other:Obsessive-Compulsive Disorder",
+            "Other:Heroin Dependence",
+            "Disease:HIV infectious disease",
+            "Other:Rheumatoid arthritis"
+          ],
+          "separators": {
+            "comma": 1206
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Multiple phenotypes or diseases And/or",
+          "null_rate": 95.6,
+          "samples": [
+            "and",
+            "or"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Comparison Allele(s) or Genotype(s)",
+          "null_rate": 12.24,
+          "samples": [
+            "*1",
+            "C",
+            "*1/*1",
+            "AA + AG",
+            "G"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 2
+          }
+        },
+        {
+          "column": "Comparison Metabolizer types",
+          "null_rate": 94.74,
+          "samples": [
+            "normal metabolizer",
+            "rapid acetylator",
+            "normal metabolizer and intermediate metabolizer",
+            "high activity",
+            "ultrarapid metabolizer"
+          ],
+          "separators": {},
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "variantAnnotations.zip",
+      "file": "var_fa_ann.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 2189,
+      "columns": [
+        "Variant Annotation ID",
+        "Variant/Haplotypes",
+        "Gene",
+        "Drug(s)",
+        "PMID",
+        "Phenotype Category",
+        "Significance",
+        "Notes",
+        "Sentence",
+        "Alleles",
+        "Specialty Population",
+        "Assay type",
+        "Metabolizer types",
+        "isPlural",
+        "Is/Is Not associated",
+        "Direction of effect",
+        "Functional terms",
+        "Gene/gene product",
+        "When treated with/exposed to/when assayed with",
+        "Multiple drugs And/or",
+        "Cell type",
+        "Comparison Allele(s) or Genotype(s)",
+        "Comparison Metabolizer types"
+      ],
+      "col_stats": [
+        {
+          "column": "Variant Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "1451148445",
+            "1448281185",
+            "1447944475",
+            "1447944483",
+            "1451098400"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 332
+          }
+        },
+        {
+          "column": "Variant/Haplotypes",
+          "null_rate": 0.0,
+          "samples": [
+            "CYP2C19*1, CYP2C19*17",
+            "CYP2B6*1, CYP2B6*6",
+            "CYP2C9*1, CYP2C9*2",
+            "CYP2C9*1, CYP2C9*3",
+            "rs72552763"
+          ],
+          "separators": {
+            "comma": 526
+          },
+          "id_matches": {
+            "rsid": 1568
+          }
+        },
+        {
+          "column": "Gene",
+          "null_rate": 2.28,
+          "samples": [
+            "CYP2C19",
+            "CYP2B6",
+            "CYP2C9",
+            "SLC22A1",
+            "UGT1A1"
+          ],
+          "separators": {
+            "comma": 15
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Drug(s)",
+          "null_rate": 30.38,
+          "samples": [
+            "normeperidine",
+            "bupropion",
+            "warfarin",
+            "ranitidine",
+            "voriconazole"
+          ],
+          "separators": {
+            "comma": 184
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "PMID",
+          "null_rate": 0.0,
+          "samples": [
+            "30902024",
+            "27439448",
+            "25823787",
+            "29236753",
+            "30464555"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 2189
+          }
+        },
+        {
+          "column": "Phenotype Category",
+          "null_rate": 6.76,
+          "samples": [
+            "Efficacy",
+            "Metabolism/PK",
+            "Other",
+            "PD",
+            "Toxicity"
+          ],
+          "separators": {
+            "comma": 23
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Significance",
+          "null_rate": 0.0,
+          "samples": [
+            "not stated",
+            "yes",
+            "no"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Notes",
+          "null_rate": 8.77,
+          "samples": [
+            "In other in vitro experiments, normeperidine formation was significantly correlated with CYP2C19 activity, as measured by S-mephenytoin 4-hydroxylation.",
+            "The ratio of hydroxybupropion versus bupropion (AUC_hyd/ AUC_bup) in terms of area under the time-concentration curve (AUC) was used to assay CYP2B6 activity.",
+            "CYP2C9*1 formed three hydrogen bonds with warfarin (two hydrogen bonds with protein backbone at I205 and S209; and one hydrogen bond with protein side chain, at T301) but CYP2C9*2 only formed one hydrogen bond with the protein side chain at R132. For CYP2C9*1 the distance between the heme cofactor FeO and the C7 was 5.80 \u00c5, for CYP2C9*2 the distance between the FeO and the C7 was 7.02 \u00c5.",
+            "CYP2C9*1 formed three hydrogen bonds with warfarin (two hydrogen bonds with protein backbone at I205 and S209; and one hydrogen bond with protein side chain, at T301) but CYP2C9*3 only formed one hydrogen bond with the protein side chain. For CYP2C9*1 the distance between the heme cofactor FeO and the C7 was 5.80 \u00c5, for CYP2C9*3 the distance between the FeO and the C7 was 7.46 \u00c5.",
+            "as reported for OCT1*2, with Vmax decreased by more than 50%. This shows substrate-specific effect of haplotypes as *2 is considered active for other substrates.; The authors suggest that this haplotype could reduce hepatic uptake of ranitidine."
+          ],
+          "separators": {
+            "comma": 1012,
+            "semicolon": 244
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Sentence",
+          "null_rate": 0.0,
+          "samples": [
+            "CYP2C19 *17/*17 is associated with increased formation of normeperidine as compared to CYP2C19 *1/*1 + *1/*17.",
+            "CYP2B6 *1/*1 is associated with increased activity of CYP2B6 when assayed with bupropion as compared to CYP2B6 *1/*6.",
+            "CYP2C9 *2 is associated with decreased affinity to CYP2C9 of warfarin as compared to CYP2C9 *1.",
+            "CYP2C9 *3 is associated with decreased affinity to CYP2C9 of warfarin as compared to CYP2C9 *1.",
+            "Allele del is associated with decreased transport of ranitidine as compared to allele GAT."
+          ],
+          "separators": {
+            "comma": 60
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Alleles",
+          "null_rate": 0.32,
+          "samples": [
+            "*17/*17",
+            "*1/*1",
+            "*2",
+            "*3",
+            "del"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 2
+          }
+        },
+        {
+          "column": "Specialty Population",
+          "null_rate": 98.4,
+          "samples": [
+            "Pediatric"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Assay type",
+          "null_rate": 65.83,
+          "samples": [
+            "in human liver microsomes",
+            "crystal structure prediction",
+            "Cells",
+            "hydroxylation assay",
+            "yeast microsomes"
+          ],
+          "separators": {
+            "comma": 7,
+            "semicolon": 1
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Metabolizer types",
+          "null_rate": 99.41,
+          "samples": [
+            "normal metabolizer and intermediate metabolizer",
+            "poor metabolizer",
+            "deficiency",
+            "rapid acetylator",
+            "slow acetylator"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "isPlural",
+          "null_rate": 0.0,
+          "samples": [
+            "Is",
+            "Are"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Is/Is Not associated",
+          "null_rate": 0.0,
+          "samples": [
+            "Associated with",
+            "Not associated with"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Direction of effect",
+          "null_rate": 15.12,
+          "samples": [
+            "increased",
+            "decreased"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Functional terms",
+          "null_rate": 0.0,
+          "samples": [
+            "formation of",
+            "activity of",
+            "affinity to",
+            "transport of",
+            "clearance of"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Gene/gene product",
+          "null_rate": 31.29,
+          "samples": [
+            "CYP2B6",
+            "CYP2C9",
+            "CYP2C19",
+            "UGT1A1",
+            "CFTR"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "When treated with/exposed to/when assayed with",
+          "null_rate": 58.25,
+          "samples": [
+            "when assayed with",
+            "of",
+            "with",
+            "when treated with",
+            "protein"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Multiple drugs And/or",
+          "null_rate": 91.59,
+          "samples": [
+            "or",
+            "and"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Cell type",
+          "null_rate": 61.35,
+          "samples": [
+            "in 293FT cells",
+            "in insect microsomes",
+            "expressed in COS-7 cells",
+            "in transfected human hepatoma cell lines",
+            "in E. coli DH5alpha"
+          ],
+          "separators": {
+            "comma": 1
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Comparison Allele(s) or Genotype(s)",
+          "null_rate": 22.61,
+          "samples": [
+            "*1/*1 + *1/*17",
+            "*1/*6",
+            "*1",
+            "GAT",
+            "G"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Comparison Metabolizer types",
+          "null_rate": 99.73,
+          "samples": [
+            "intermediate metabolizer and poor metabolizer",
+            "intermediate acetylator",
+            "slow acetylator",
+            "normal metabolizer",
+            "rapid acetylator"
+          ],
+          "separators": {},
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "variantAnnotations.zip",
+      "file": "study_parameters.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 36083,
+      "columns": [
+        "Study Parameters ID",
+        "Variant Annotation ID",
+        "Study Type",
+        "Study Cases",
+        "Study Controls",
+        "Characteristics",
+        "Characteristics Type",
+        "Frequency In Cases",
+        "Allele Of Frequency In Cases",
+        "Frequency In Controls",
+        "Allele Of Frequency In Controls",
+        "P Value",
+        "Ratio Stat Type",
+        "Ratio Stat",
+        "Confidence Interval Start",
+        "Confidence Interval Stop",
+        "Biogeographical Groups"
+      ],
+      "col_stats": [
+        {
+          "column": "Study Parameters ID",
+          "null_rate": 0.0,
+          "samples": [
+            "1449169927",
+            "1450813235",
+            "1453086511",
+            "1451833980",
+            "1453086620"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 6693
+          }
+        },
+        {
+          "column": "Variant Annotation ID",
+          "null_rate": 0.0,
+          "samples": [
+            "1449169911",
+            "1450813230",
+            "1453086503",
+            "1451833920",
+            "1453086600"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 6794
+          }
+        },
+        {
+          "column": "Study Type",
+          "null_rate": 11.63,
+          "samples": [
+            "case/control",
+            "meta-analysis",
+            "cohort",
+            "retrospective",
+            "case series"
+          ],
+          "separators": {
+            "comma": 4538
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Study Cases",
+          "null_rate": 3.38,
+          "samples": [
+            "15",
+            "126",
+            "1138",
+            "1",
+            "97"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 34864
+          }
+        },
+        {
+          "column": "Study Controls",
+          "null_rate": 80.72,
+          "samples": [
+            "50",
+            "80",
+            "232",
+            "413",
+            "19"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 6956
+          }
+        },
+        {
+          "column": "Characteristics",
+          "null_rate": 21.58,
+          "samples": [
+            "SCAR, MPE, SJS (cases and controls)",
+            "Smokers were classified as cases, while non-smokers were classified as controls. Threshold p-value was set as p = 0.003.",
+            "Grade 3/4 Neutropenia, 5 studies",
+            "Immune-related adverse event",
+            "SCAR, MPE or SJS (cases and controls)"
+          ],
+          "separators": {
+            "comma": 7822,
+            "semicolon": 2423,
+            "pipe": 4
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Characteristics Type",
+          "null_rate": 1.47,
+          "samples": [
+            "Disease",
+            "Study Cohort",
+            "Unknown",
+            "Drug",
+            "Age Group"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Frequency In Cases",
+          "null_rate": 59.83,
+          "samples": [
+            "0.06",
+            "0.068",
+            "0.13",
+            "0.05",
+            "0.24"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Allele Of Frequency In Cases",
+          "null_rate": 59.98,
+          "samples": [
+            "*35:08",
+            "A",
+            "*39:01",
+            "*01:01",
+            "T"
+          ],
+          "separators": {
+            "comma": 1
+          },
+          "id_matches": {
+            "pmid": 14
+          }
+        },
+        {
+          "column": "Frequency In Controls",
+          "null_rate": 87.04,
+          "samples": [
+            "0.001",
+            "0.274",
+            "0.02",
+            "0.03",
+            "0.22"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Allele Of Frequency In Controls",
+          "null_rate": 87.13,
+          "samples": [
+            "*35:08",
+            "A",
+            "*39:01",
+            "*01:01",
+            "*5"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 4
+          }
+        },
+        {
+          "column": "P Value",
+          "null_rate": 15.2,
+          "samples": [
+            "= 0.231",
+            "< 0.001",
+            "= 0.05",
+            "= 0.131",
+            "= 0.19"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Ratio Stat Type",
+          "null_rate": 18.22,
+          "samples": [
+            "OR",
+            "Unknown",
+            "RR",
+            "HR"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Ratio Stat",
+          "null_rate": 70.86,
+          "samples": [
+            "10.45",
+            "7.54",
+            "1.54",
+            "1.13",
+            "3.19"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Confidence Interval Start",
+          "null_rate": 73.13,
+          "samples": [
+            "0.4",
+            "0.63",
+            "1.53",
+            "1.74",
+            "1.72"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Confidence Interval Stop",
+          "null_rate": 73.14,
+          "samples": [
+            "270.41",
+            "89.76",
+            "6.66",
+            "21.8",
+            "7.19"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Biogeographical Groups",
+          "null_rate": 0.39,
+          "samples": [
+            "East Asian",
+            "European",
+            "Multiple groups",
+            "Unknown",
+            "Multiple groups, No race/ethnicity in table1 but discussion states: \"In our cohort, none of the FA patients who developed HC were Black and the only Black patient (who did not develop HC) carried the rs2279343 variant.\""
+          ],
+          "separators": {
+            "comma": 4430,
+            "semicolon": 331
+          },
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    },
+    {
+      "zip": "variants.zip",
+      "file": "variants.tsv",
+      "encoding": "utf-8",
+      "delimiter": "tab (\\t)",
+      "row_count": 7692,
+      "columns": [
+        "Variant ID",
+        "Variant Name",
+        "Gene IDs",
+        "Gene Symbols",
+        "Location",
+        "Variant Annotation count",
+        "Clinical Annotation count",
+        "Level 1/2 Clinical Annotation count",
+        "Guideline Annotation count",
+        "Label Annotation count",
+        "Synonyms"
+      ],
+      "col_stats": [
+        {
+          "column": "Variant ID",
+          "null_rate": 0.0,
+          "samples": [
+            "PA166156302",
+            "PA166208841",
+            "PA166156746",
+            "PA166195421",
+            "PA166177121"
+          ],
+          "separators": {},
+          "id_matches": {
+            "clinpgx_id": 7692
+          }
+        },
+        {
+          "column": "Variant Name",
+          "null_rate": 0.0,
+          "samples": [
+            "rs1000002",
+            "rs10000284",
+            "rs1000113",
+            "rs10006452",
+            "rs10007051"
+          ],
+          "separators": {},
+          "id_matches": {
+            "rsid": 7692
+          }
+        },
+        {
+          "column": "Gene IDs",
+          "null_rate": 9.59,
+          "samples": [
+            "PA395",
+            "PA142671652",
+            "PA361",
+            "PA134884097",
+            "PA37365"
+          ],
+          "separators": {
+            "comma": 629
+          },
+          "id_matches": {
+            "clinpgx_id": 6325
+          }
+        },
+        {
+          "column": "Gene Symbols",
+          "null_rate": 9.59,
+          "samples": [
+            "ABCC5",
+            "IRGM",
+            "UGT2B7",
+            "RABEP1",
+            "WFS1"
+          ],
+          "separators": {
+            "comma": 629
+          },
+          "id_matches": {}
+        },
+        {
+          "column": "Location",
+          "null_rate": 0.12,
+          "samples": [
+            "NC_000003.12:183917980",
+            "NC_000004.12:68803465",
+            "NC_000005.10:150860514",
+            "NC_000004.12:69112090",
+            "NC_000004.12:129244309"
+          ],
+          "separators": {},
+          "id_matches": {}
+        },
+        {
+          "column": "Variant Annotation count",
+          "null_rate": 0.0,
+          "samples": [
+            "1",
+            "2",
+            "5",
+            "3",
+            "4"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 7692
+          }
+        },
+        {
+          "column": "Clinical Annotation count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "8"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 7692
+          }
+        },
+        {
+          "column": "Level 1/2 Clinical Annotation count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "7",
+            "1",
+            "10",
+            "12"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 7692
+          }
+        },
+        {
+          "column": "Guideline Annotation count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "13"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 7692
+          }
+        },
+        {
+          "column": "Label Annotation count",
+          "null_rate": 0.0,
+          "samples": [
+            "0",
+            "1",
+            "28",
+            "3",
+            "12"
+          ],
+          "separators": {},
+          "id_matches": {
+            "pmid": 7692
+          }
+        },
+        {
+          "column": "Synonyms",
+          "null_rate": 0.0,
+          "samples": [
+            "1000002, 17623022, 386508637, 60664316, NC_000003.11:g.183635768=, NC_000003.11:g.183635768C>T, NC_000003.12:g.183917980=, NC_000003.12:g.183917980C>T, NG_047115.1:g.105031=, NG_047115.1:g.105031G>A, PA166156302, rs1000002, rs17623022, rs386508637, rs60664316",
+            "10000284, 13348649, 146596079, 60782226, NC_000004.11:g.69669183=, NC_000004.11:g.69669183T>C, NC_000004.12:g.68803465=, NC_000004.12:g.68803465T>C, PA166208841, rs10000284",
+            "1000113, 58108943, NC_000005.10:g.150860514=, NC_000005.10:g.150860514C>T, NC_000005.9:g.150240076=, NC_000005.9:g.150240076C>T, NG_027809.2:g.18992=, NG_027809.2:g.18992C>T, PA166156746, rs1000113, rs58108943, XM_011537641.1:c.531+11860C>T",
+            "10006452, 58882597, NC_000004.11:g.69977808=, NC_000004.11:g.69977808T>A, NC_000004.11:g.69977808T>C, NC_000004.12:g.69112090=, NC_000004.12:g.69112090T>A, NC_000004.12:g.69112090T>C, PA166195421, rs10006452",
+            "10007051, NC_000004.11:g.130165464=, NC_000004.11:g.130165464C>T, NC_000004.12:g.129244309=, NC_000004.12:g.129244309C>T, PA166177121, rs10007051"
+          ],
+          "separators": {
+            "comma": 7692
+          },
+          "id_matches": {}
+        }
+      ],
+      "species_cols": [],
+      "trailing_whitespace_instances": 0,
+      "duplicate_primary_keys": 0
+    }
+  ],
+  "pubmed": {
+    "file": "data\\raw\\pubmed\\20261030_9a48695d\\batch_0001.xml",
+    "total_records": 41,
+    "record_types": {
+      "PubmedArticle": 39,
+      "PubmedBookArticle": 2
+    },
+    "abstract_types": {
+      "structured": 21,
+      "unstructured": 20
+    },
+    "top_abstract_sections": {
+      "RESULTS": 20,
+      "METHODS": 18,
+      "CONCLUSIONS": 13,
+      "BACKGROUND": 10,
+      "CONCLUSION": 6,
+      "AIMS": 3,
+      "INTRODUCTION": 3,
+      "OBJECTIVE": 2,
+      "OBJECTIVES": 2,
+      "DISCUSSION": 2,
+      "BACKGROUND AND OBJECTIVE": 2,
+      "REGISTRATION": 1,
+      "TRIAL REGISTRATION": 1,
+      "BACKGROUND/OBJECTIVES": 1,
+      "MATERIALS AND METHODS": 1
+    },
+    "has_mesh_count": 19,
+    "has_pub_types_count": 39,
+    "has_doi_count": 39,
+    "has_bookaccession_count": 2,
+    "pubdate_structures": {
+      "Year_Month_Day": 22,
+      "Year": 7,
+      "Year_Month": 10,
+      "Year_Season": 2
+    },
+    "total_pmids_parsed": 41,
+    "book_titles": [
+      "Medical Genetics Summaries",
+      "Medical Genetics Summaries"
+    ],
+    "deleted_count": 0
+  }
+}

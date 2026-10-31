@@ -1,0 +1,308 @@
+{
+  "pubmed_status": {
+    "directories": [
+      "20261030_9a48695d"
+    ],
+    "is_pilot": true,
+    "pilot_selection_rule": "Pilot cap 50 PMIDs partitioned evenly across 4 pairs in esearch return order",
+    "queries": {
+      "CYP2C19_clopidogrel": "(CYP2C19[Title/Abstract] AND clopidogrel[Title/Abstract]) AND hasabstract[text]",
+      "CYP2C9_warfarin": "(CYP2C9[Title/Abstract] AND warfarin[Title/Abstract]) AND hasabstract[text]",
+      "VKORC1_warfarin": "(VKORC1[Title/Abstract] AND warfarin[Title/Abstract]) AND hasabstract[text]",
+      "SLCO1B1_simvastatin": "(SLCO1B1[Title/Abstract] AND simvastatin[Title/Abstract]) AND hasabstract[text]"
+    },
+    "esearch_counts": {
+      "CYP2C19_clopidogrel": 1431,
+      "CYP2C9_warfarin": 1409,
+      "VKORC1_warfarin": 978,
+      "SLCO1B1_simvastatin": 141
+    },
+    "pmids_retrieved_count": 41,
+    "reconciliation": {
+      "total_requested": 41,
+      "total_received": 41,
+      "missing_count": 0,
+      "missing_pmids": [],
+      "reconciled": true
+    },
+    "pmid_to_queries": {
+      "42953922": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42949291": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42938391": [
+        "CYP2C19_clopidogrel",
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "42919684": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42870560": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42865374": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42835306": [
+        "CYP2C19_clopidogrel",
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "42820662": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42822087": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42808920": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42808443": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42807560": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42796033": [
+        "CYP2C19_clopidogrel"
+      ],
+      "42841193": [
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "42813643": [
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "42667590": [
+        "CYP2C9_warfarin"
+      ],
+      "42635959": [
+        "CYP2C9_warfarin"
+      ],
+      "42586461": [
+        "CYP2C9_warfarin"
+      ],
+      "42544696": [
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "28520369": [
+        "CYP2C9_warfarin"
+      ],
+      "42426980": [
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "42416825": [
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "28520347": [
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "42268291": [
+        "CYP2C9_warfarin",
+        "VKORC1_warfarin"
+      ],
+      "42930805": [
+        "VKORC1_warfarin"
+      ],
+      "42927566": [
+        "VKORC1_warfarin"
+      ],
+      "42823629": [
+        "VKORC1_warfarin"
+      ],
+      "42411791": [
+        "VKORC1_warfarin"
+      ],
+      "42666103": [
+        "SLCO1B1_simvastatin"
+      ],
+      "42545959": [
+        "SLCO1B1_simvastatin"
+      ],
+      "42154610": [
+        "SLCO1B1_simvastatin"
+      ],
+      "41910772": [
+        "SLCO1B1_simvastatin"
+      ],
+      "41870846": [
+        "SLCO1B1_simvastatin"
+      ],
+      "41860236": [
+        "SLCO1B1_simvastatin"
+      ],
+      "41696832": [
+        "SLCO1B1_simvastatin"
+      ],
+      "41568406": [
+        "SLCO1B1_simvastatin"
+      ],
+      "41202698": [
+        "SLCO1B1_simvastatin"
+      ],
+      "41020786": [
+        "SLCO1B1_simvastatin"
+      ],
+      "40696379": [
+        "SLCO1B1_simvastatin"
+      ],
+      "40297930": [
+        "SLCO1B1_simvastatin"
+      ],
+      "39971612": [
+        "SLCO1B1_simvastatin"
+      ]
+    }
+  },
+  "drugs_vs_chemicals": {
+    "drugs_count": 3770,
+    "chemicals_count": 5329,
+    "in_both_count": 3770,
+    "only_drugs_count": 0,
+    "only_chemicals_count": 1559,
+    "duplicate_names_count": 0,
+    "sample_duplicate_names": []
+  },
+  "max_field_lengths": {
+    "chemicals.zip#chemicals.tsv": {
+      "max_length_bytes": 148743,
+      "column": "Brand Mixtures"
+    },
+    "clinicalVariants.zip#clinicalVariants.tsv": {
+      "max_length_bytes": 447,
+      "column": "variant"
+    },
+    "drugLabels.zip#drugLabels.tsv": {
+      "max_length_bytes": 1118,
+      "column": "Variants/Haplotypes"
+    },
+    "drugLabels.zip#drugLabels.byGene.tsv": {
+      "max_length_bytes": 11108,
+      "column": "Label Names"
+    },
+    "drugs.zip#drugs.tsv": {
+      "max_length_bytes": 148743,
+      "column": "Brand Mixtures"
+    },
+    "genes.zip#genes.tsv": {
+      "max_length_bytes": 1808,
+      "column": "Cross-references"
+    },
+    "relationships.zip#relationships.tsv": {
+      "max_length_bytes": 3239,
+      "column": "PMIDs"
+    },
+    "summaryAnnotations.zip#summary_annotations.tsv": {
+      "max_length_bytes": 447,
+      "column": "Variant/Haplotypes"
+    },
+    "summaryAnnotations.zip#summary_ann_alleles.tsv": {
+      "max_length_bytes": 1364,
+      "column": "Annotation Text"
+    },
+    "summaryAnnotations.zip#summary_ann_history.tsv": {
+      "max_length_bytes": 436,
+      "column": "Comment"
+    },
+    "summaryAnnotations.zip#summary_ann_evidence.tsv": {
+      "max_length_bytes": 530,
+      "column": "Score"
+    },
+    "variantAnnotations.zip#var_pheno_ann.tsv": {
+      "max_length_bytes": 1816,
+      "column": "Notes"
+    },
+    "variantAnnotations.zip#var_drug_ann.tsv": {
+      "max_length_bytes": 2402,
+      "column": "Notes"
+    },
+    "variantAnnotations.zip#var_fa_ann.tsv": {
+      "max_length_bytes": 1481,
+      "column": "Notes"
+    },
+    "variantAnnotations.zip#study_parameters.tsv": {
+      "max_length_bytes": 777,
+      "column": "Characteristics"
+    },
+    "variants.zip#variants.tsv": {
+      "max_length_bytes": 14181,
+      "column": "Synonyms"
+    }
+  },
+  "star_alleles_and_haplotypes": {
+    "catalog_haplotype_files": [
+      "PharmGKB_ClinVar_Submission_Haplotypes_2021-10-22.xlsx",
+      "clinpgxHaplotypes.zip",
+      "cpic.alleles.csv",
+      "cpic.alleles.json",
+      "haplotypes.zip",
+      "pharmgkb_haplotype_frequencies_AllOfUs.zip",
+      "pharmgkb_haplotype_frequencies_UKBB.zip"
+    ],
+    "variants_with_star_alleles": 0,
+    "variants_with_rsid": 7692,
+    "star_with_gene_context": 0,
+    "bare_star_alleles": 0,
+    "star_to_rsid_links_in_relationships": 0
+  },
+  "trade_names_ambiguity": {
+    "sample_trade_names_with_commas_or_quotes": [
+      "\"UK-148,993\", \"UK-148993\"",
+      "Alti-Acyclovir, Avirax, Vipral, Virorax, Zovir, Zovirax, Zovirax Injection (Zovirax sodium), Zovirax topical",
+      "\"AB-PC\", \"Ab-Pc Sol\", \"Acillin\", \"Adobacillin\", \"Alpen\", \"Amblosin\", \"Amcill\", \"Amfipen\", \"Amfipen V\", \"Amipenix S\", \"Ampen\", \"Ampi\", \"Ampi-Bol\", \"Ampi-Co\", \"Ampi-Tab\", \"Ampichel\", \"Ampicil\", \"Ampicillin A\", \"Ampicin\", \"Ampifarm\", \"Ampikel\", \"Ampimed\", \"Ampipenin\", \"Ampipenin, Nt3\", \"Ampiscel\", \"Ampisyn\", \"Ampivax\", \"Ampivet\", \"Amplacilina\", \"Amplin\", \"Amplipenyl\", \"Amplisom\", \"Amplital\", \"Ampy-Penyl\", \"Austrapen\", \"BRL\", \"Binotal\", \"Bonapicillin\", \"Britacil\", \"Campicillin\", \"Cimex\", \"Copharcilin\", \"D-Cillin\", \"Delcillin\", \"Deripen\", \"Divercillin\", \"Doktacillin\", \"Duphacillin\", \"Geocillin\", \"Grampenil\", \"Guicitrina\", \"Guicitrine\", \"Lifeampil\", \"Morepen\", \"Norobrittin\", \"Novo-Ampicillin\", \"Nuvapen\", \"Olin Kid\", \"Omnipen\", \"Omnipen-N\", \"Orbicilina\", \"Pen A\", \"Pen Ampil\", \"Pen a Oral\", \"Penbristol\", \"Penbritin\", \"Penbritin Paediatric\", \"Penbritin Syrup\", \"Penbritin-S\", \"Penbrock\", \"Penicline\", \"Penimic\", \"Pensyn\", \"Pentrex\", \"Pentrexl\", \"Pentrexyl\", \"Pfizerpen A\", \"Pfizerpen-A\", \"Polycillin\", \"Polycillin-N\", \"Ponecil\", \"Princillin\", \"Principen\", \"Principen '125'\", \"Principen '250'\", \"Principen '500'\", \"Qidamp\", \"Racenacillin\", \"Ro-Ampen\", \"Rosampline\", \"Roscillin\", \"Semicillin\", \"Semicillin R\", \"Servicillin\", \"Sk-Ampicillin\", \"Spectrobid\", \"Sumipanto\", \"Supen\", \"Synpenin\", \"Texcillin\", \"Tokiocillin\", \"Tolomol\", \"Totacillin\", \"Totacillin-N\", \"Totalciclina\", \"Totapen\", \"Trifacilina\", \"Ultrabion\", \"Ultrabron\", \"Vampen\", \"Viccillin\", \"Viccillin S\", \"Wypicil\"",
+      "ATG-Fresenius, ATG-Fresenius S, Genzyme, Genzyme), Thymoglobulin (SangStat Medical, Thymoglobulin SangStat Medical",
+      "\"Ascabin\", \"Ascabiol\", \"Benylate\", \"Benzoic acid benzyl ester\", \"Benzoic acid, benzyl ester\", \"Benzoic acid, phenylmethyl ester\", \"Benzyl alcohol benzoic ester\", \"Benzyl benzenecarboxylate\", \"Benzyl ester\", \"Benzyl phenylformate\", \"Benzylester kyseliny benzoove\", \"Benzylets\", \"Colebenz\", \"Novoscabin\", \"Peruscabin\", \"Scabagen\", \"Scabanca\", \"Scabide\", \"Scabiozon\", \"Scabitox\", \"Scobenol\", \"Vanzoate\", \"Venzoate\", \"Venzonate\"",
+      "\"B-type natriuretic peptide\", \"Brain natriuretic peptide-32\", \"Natriuretic Peptide, Brain\"",
+      "\"CB\", \"Carbachol USP27\", \"Carbachol chloride\", \"Carbachol hydrochloride\", \"Carbacholin\", \"Carbacholine\", \"Carbacholine chloride\", \"Carbacolina\", \"Carbaminocholine chloride\", \"Carbaminoylcholine chloride\", \"Carbamiotin\", \"Carbamoylcholine chloride\", \"Carbamoylcholine-hydrochloride\", \"Carbamylcholine chloride\", \"Carbastat\", \"Carbastat intraocular\", \"Carbochol\", \"Carbocholin\", \"Carbocholine\", \"Carboptic\", \"Carbyl\", \"Carcholin\", \"Choline carbamate chloride\", \"Choline chloride carbamate\", \"Choline chloride, carbamoyl-\", \"Choline chlorine carbamate\", \"Choline, chloride, carbamate\", \"Coletyl\", \"Doryl\", \"Isopto Carbachol\", \"Jestryl\", \"Karbachol\", \"Karbamoylcholin chlorid\", \"Lentin\", \"Lentine\", \"Miostat\", \"Mistura C\", \"Moryl\", \"P. V. Carbachol\", \"Rilentol\", \"Vasoperif\"",
+      "\"Colistin sulfate\", \"Colistin sulfate, nonsterile\", \"Colistin sulphate\", \"Coly-mycin S\", \"Polymyxin E sulfate\", \"Polymyxin E. Sulfate\"",
+      "AR3, Alexan, Arabitin, Arafcyt, Cytarbel, Cytosar, Cytosar-U, Depocyt, Depocyt (liposomal), Erpalfa, Iretin, Spongocytidine, Tarabine, Udicil",
+      "\"ACT\", \"ACT D\", \"ACTINOMYCIN D\", \"ACTO-D\", \"Actactinomycin a Iv\", \"Actinomycin 11 Cosmegen\", \"Actinomycin 7\", \"Actinomycin Aiv\", \"Actinomycin C1\", \"Actinomycin I\", \"Actinomycin I1\", \"Actinomycin Iv\", \"Actinomycin X 1\", \"Actinomycindioic D Acid, Dilactone\", \"Chounghwamycin B\", \"Cosmegen\", \"Dactinomycin D\", \"Dilactone Actinomycin D Acid\", \"Dilactone Actinomycindioic D Acid\", \"HBF 386 Meractinomycin\", \"Lyovac Cosmegen\", \"Meractinomycin\", \"Oncostatin K\", \"Oxamide\""
+    ],
+    "count_potentially_ambiguous": 48
+  },
+  "relationships_profile": {
+    "columns": [
+      "Entity1_id",
+      "Entity1_name",
+      "Entity1_type",
+      "Entity2_id",
+      "Entity2_name",
+      "Entity2_type",
+      "Evidence",
+      "Association",
+      "PK",
+      "PD",
+      "PMIDs"
+    ],
+    "total_rows": 246714,
+    "top_endpoint_type_pairs": {
+      "SNV -> Chemical": 31385,
+      "Chemical -> SNV": 31385,
+      "SNV -> Phenotype": 29670,
+      "Phenotype -> SNV": 29670,
+      "Variant -> Chemical": 17046,
+      "Chemical -> Variant": 17046,
+      "Variant -> Phenotype": 15934,
+      "Phenotype -> Variant": 15934,
+      "Gene -> Chemical": 10425,
+      "Chemical -> Gene": 10425
+    },
+    "association_types": {
+      "associated": 135922,
+      "not associated": 76590,
+      "ambiguous": 34202
+    },
+    "dangling_endpoint1_only": 61956,
+    "dangling_endpoint2_only": 61956,
+    "dangling_both_endpoints": 67554,
+    "total_dangling_rows": 191466
+  }
+}
