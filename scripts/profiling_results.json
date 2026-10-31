@@ -1,0 +1,586 @@
+{
+  "pubmed": {
+    "total_records": 3096,
+    "articles": 3085,
+    "books": 11,
+    "unique_pmids": 3096,
+    "has_abstract": 3096,
+    "no_abstract": 0,
+    "has_mesh": 2678,
+    "no_mesh": 418,
+    "top_abstract_sections": [
+      [
+        "UNLABELED",
+        1591
+      ],
+      [
+        "RESULTS",
+        1213
+      ],
+      [
+        "METHODS",
+        959
+      ],
+      [
+        "CONCLUSIONS",
+        666
+      ],
+      [
+        "CONCLUSION",
+        654
+      ],
+      [
+        "BACKGROUND",
+        598
+      ],
+      [
+        "OBJECTIVE",
+        302
+      ],
+      [
+        "OBJECTIVES",
+        165
+      ],
+      [
+        "PURPOSE",
+        132
+      ],
+      [
+        "INTRODUCTION",
+        126
+      ]
+    ],
+    "top_mesh": [
+      [
+        "Humans",
+        2607
+      ],
+      [
+        "Male",
+        1509
+      ],
+      [
+        "Female",
+        1413
+      ],
+      [
+        "Middle Aged",
+        1229
+      ],
+      [
+        "Genotype",
+        1133
+      ],
+      [
+        "Warfarin",
+        1097
+      ],
+      [
+        "Aged",
+        1067
+      ],
+      [
+        "Clopidogrel",
+        1006
+      ],
+      [
+        "Cytochrome P-450 CYP2C19",
+        995
+      ],
+      [
+        "Platelet Aggregation Inhibitors",
+        951
+      ]
+    ],
+    "year_distribution": {
+      "2015": 186,
+      "2013": 183,
+      "2012": 182,
+      "2014": 171,
+      "2016": 159,
+      "2011": 158,
+      "2020": 156,
+      "2010": 155,
+      "2021": 151,
+      "2022": 148
+    }
+  },
+  "haplotypes": {
+    "clinpgxHaplotypes": {
+      "file": "LICENSE.txt",
+      "row_count": 11,
+      "columns": [
+        "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license."
+      ],
+      "null_rates": {
+        "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.": {
+          "nulls": 0,
+          "pct": 0.0
+        }
+      },
+      "sample": {
+        "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.": "To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/4.0/ or send a letter to"
+      }
+    },
+    "cpic_alleles": {
+      "record_count": 3813,
+      "keys": [
+        "allele",
+        "guidelines"
+      ],
+      "unique_genes": 1,
+      "sample": {
+        "allele": {
+          "accessionId": "PA166180429",
+          "name": "Reference",
+          "gene": {
+            "accessionId": "PA85",
+            "symbol": "CACNA1S"
+          }
+        },
+        "guidelines": []
+      }
+    }
+  },
+  "field_lengths": {
+    "chemicals.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "chemicals.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "chemicals.zip:VERSIONS.txt": {
+      "total_rows": 2,
+      "max_char": 25,
+      "max_col": "col_1",
+      "max_row_idx": 1,
+      "col_count_mismatch": 2
+    },
+    "chemicals.zip:chemicals.tsv": {
+      "total_rows": 5329,
+      "max_char": 148743,
+      "max_col": "Brand Mixtures",
+      "max_row_idx": 4908,
+      "col_count_mismatch": 0
+    },
+    "clinicalVariants.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "clinicalVariants.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "clinicalVariants.zip:clinicalVariants.tsv": {
+      "total_rows": 5192,
+      "max_char": 447,
+      "max_col": "variant",
+      "max_row_idx": 4683,
+      "col_count_mismatch": 0
+    },
+    "drugLabels.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "drugLabels.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "drugLabels.zip:drugLabels.tsv": {
+      "total_rows": 1435,
+      "max_char": 1118,
+      "max_col": "Variants/Haplotypes",
+      "max_row_idx": 1349,
+      "col_count_mismatch": 0
+    },
+    "drugLabels.zip:drugLabels.byGene.tsv": {
+      "total_rows": 239,
+      "max_char": 11108,
+      "max_col": "Label Names",
+      "max_row_idx": 72,
+      "col_count_mismatch": 0
+    },
+    "drugs.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "drugs.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "drugs.zip:VERSIONS.txt": {
+      "total_rows": 2,
+      "max_char": 25,
+      "max_col": "col_1",
+      "max_row_idx": 1,
+      "col_count_mismatch": 2
+    },
+    "drugs.zip:drugs.tsv": {
+      "total_rows": 3770,
+      "max_char": 148743,
+      "max_col": "Brand Mixtures",
+      "max_row_idx": 3425,
+      "col_count_mismatch": 0
+    },
+    "genes.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "genes.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "genes.zip:genes.tsv": {
+      "total_rows": 25041,
+      "max_char": 1808,
+      "max_col": "Cross-references",
+      "max_row_idx": 4869,
+      "col_count_mismatch": 0
+    },
+    "genes.zip:VERSIONS.txt": {
+      "total_rows": 2,
+      "max_char": 25,
+      "max_col": "col_1",
+      "max_row_idx": 1,
+      "col_count_mismatch": 2
+    },
+    "guidelineAnnotations.json.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "guidelineAnnotations.json.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "relationships.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "relationships.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "relationships.zip:relationships.tsv": {
+      "total_rows": 246714,
+      "max_char": 3239,
+      "max_col": "PMIDs",
+      "max_row_idx": 60431,
+      "col_count_mismatch": 0
+    },
+    "summaryAnnotations.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "summaryAnnotations.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "summaryAnnotations.zip:summary_annotations.tsv": {
+      "total_rows": 5192,
+      "max_char": 447,
+      "max_col": "Variant/Haplotypes",
+      "max_row_idx": 4901,
+      "col_count_mismatch": 0
+    },
+    "summaryAnnotations.zip:summary_ann_alleles.tsv": {
+      "total_rows": 16122,
+      "max_char": 1364,
+      "max_col": "Annotation Text",
+      "max_row_idx": 2972,
+      "col_count_mismatch": 0
+    },
+    "summaryAnnotations.zip:summary_ann_history.tsv": {
+      "total_rows": 14056,
+      "max_char": 436,
+      "max_col": "Comment",
+      "max_row_idx": 13168,
+      "col_count_mismatch": 0
+    },
+    "summaryAnnotations.zip:summary_ann_evidence.tsv": {
+      "total_rows": 15542,
+      "max_char": 530,
+      "max_col": "Score",
+      "max_row_idx": 6075,
+      "col_count_mismatch": 0
+    },
+    "variantAnnotations.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "variantAnnotations.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "variantAnnotations.zip:var_pheno_ann.tsv": {
+      "total_rows": 14560,
+      "max_char": 1816,
+      "max_col": "Notes",
+      "max_row_idx": 14394,
+      "col_count_mismatch": 0
+    },
+    "variantAnnotations.zip:var_drug_ann.tsv": {
+      "total_rows": 13030,
+      "max_char": 2402,
+      "max_col": "Notes",
+      "max_row_idx": 2987,
+      "col_count_mismatch": 0
+    },
+    "variantAnnotations.zip:var_fa_ann.tsv": {
+      "total_rows": 2189,
+      "max_char": 1481,
+      "max_col": "Notes",
+      "max_row_idx": 1313,
+      "col_count_mismatch": 0
+    },
+    "variantAnnotations.zip:study_parameters.tsv": {
+      "total_rows": 36083,
+      "max_char": 777,
+      "max_col": "Characteristics",
+      "max_row_idx": 35601,
+      "col_count_mismatch": 0
+    },
+    "variants.zip:LICENSE.txt": {
+      "total_rows": 14,
+      "max_char": 119,
+      "max_col": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license.",
+      "max_row_idx": 6,
+      "col_count_mismatch": 3
+    },
+    "variants.zip:CREATED_2026-10-05.txt": {
+      "total_rows": 0,
+      "max_char": 0,
+      "max_col": "",
+      "max_row_idx": 0,
+      "col_count_mismatch": 0
+    },
+    "variants.zip:variants.tsv": {
+      "total_rows": 7692,
+      "max_char": 14181,
+      "max_col": "Synonyms",
+      "max_row_idx": 6707,
+      "col_count_mismatch": 0
+    },
+    "variants.zip:VERSIONS.txt": {
+      "total_rows": 2,
+      "max_char": 25,
+      "max_col": "col_1",
+      "max_row_idx": 1,
+      "col_count_mismatch": 2
+    }
+  },
+  "synonyms": {
+    "total_accessions": 5329,
+    "colliding_syns_count": 0,
+    "colliding_trades_count": 69,
+    "colliding_all_count": 76,
+    "top_examples": [
+      [
+        "desoxyn",
+        3,
+        [
+          "PA450403 (methamphetamine)",
+          "PA449269 (dextroamphetamine)",
+          "PA448408 (amphetamine)"
+        ]
+      ],
+      [
+        "vitaped",
+        3,
+        [
+          "PA451892 (cyanocobalamin)",
+          "PA451652 (thiamine)",
+          "PA451897 (pyridoxine)"
+        ]
+      ],
+      [
+        "epzicom",
+        2,
+        [
+          "PA450163 (lamivudine)",
+          "PA448004 (abacavir)"
+        ]
+      ],
+      [
+        "darvocet",
+        2,
+        [
+          "PA448015 (acetaminophen)",
+          "PA165290927 (acetaminophen / propoxyphene napsylate)"
+        ]
+      ],
+      [
+        "crystodigin",
+        2,
+        [
+          "PA449316 (digitoxin)",
+          "PA164746246 (acetyldigitoxin)"
+        ]
+      ],
+      [
+        "ceredase",
+        2,
+        [
+          "PA164742934 (imiglucerase)",
+          "PA164748093 (alglucerase)"
+        ]
+      ],
+      [
+        "gestormone",
+        2,
+        [
+          "PA164745307 (allylestrenol)",
+          "PA451123 (progesterone)"
+        ]
+      ],
+      [
+        "doxil",
+        2,
+        [
+          "PA164750492 (almitrine)",
+          "PA449412 (doxorubicin)"
+        ]
+      ],
+      [
+        "dexedrine",
+        2,
+        [
+          "PA449269 (dextroamphetamine)",
+          "PA448408 (amphetamine)"
+        ]
+      ],
+      [
+        "sympamin",
+        2,
+        [
+          "PA449269 (dextroamphetamine)",
+          "PA448408 (amphetamine)"
+        ]
+      ]
+    ]
+  },
+  "relationships": {
+    "total_rows": 246714,
+    "endpoint_types": {
+      "SNV": 122122,
+      "Phenotype": 118704,
+      "Chemical": 127660,
+      "Gene": 40662,
+      "Variant": 66242,
+      "StarAllele": 13052,
+      "HlaAllele": 3580,
+      "Haplotype": 1014,
+      "GeneCopyNumberVariation": 392
+    },
+    "pair_types": {
+      "SNV -- Phenotype": 29670,
+      "SNV -- Chemical": 31385,
+      "Gene -- Chemical": 10425,
+      "Gene -- Phenotype": 9650,
+      "Variant -- Chemical": 17046,
+      "Variant -- Phenotype": 15934,
+      "Phenotype -- Gene": 9650,
+      "Phenotype -- StarAllele": 2763,
+      "Phenotype -- Variant": 15934,
+      "Phenotype -- SNV": 29670,
+      "Chemical -- Variant": 17046,
+      "Chemical -- SNV": 31385,
+      "Chemical -- Gene": 10425,
+      "StarAllele -- Chemical": 3707,
+      "StarAllele -- Phenotype": 2763,
+      "Phenotype -- HlaAllele": 979,
+      "Phenotype -- Haplotype": 233,
+      "Chemical -- StarAllele": 3707,
+      "Chemical -- Haplotype": 273,
+      "HlaAllele -- Chemical": 806,
+      "HlaAllele -- Phenotype": 979,
+      "Phenotype -- GeneCopyNumberVariation": 97,
+      "Chemical -- HlaAllele": 806,
+      "Gene -- Gene": 46,
+      "Haplotype -- Phenotype": 233,
+      "Haplotype -- Chemical": 273,
+      "GeneCopyNumberVariation -- Chemical": 98,
+      "GeneCopyNumberVariation -- Phenotype": 97,
+      "Variant -- Gene": 141,
+      "Chemical -- GeneCopyNumberVariation": 98,
+      "Chemical -- Chemical": 90,
+      "StarAllele -- Gene": 56,
+      "Gene -- StarAllele": 56,
+      "Gene -- Variant": 141,
+      "HlaAllele -- Gene": 5,
+      "Phenotype -- Phenotype": 26,
+      "Gene -- GeneCopyNumberVariation": 1,
+      "SNV -- Gene": 6,
+      "Gene -- SNV": 6,
+      "Gene -- Haplotype": 1,
+      "Gene -- HlaAllele": 5,
+      "Haplotype -- Gene": 1,
+      "GeneCopyNumberVariation -- Gene": 1
+    },
+    "dangling_by_type": {
+      "SNV": 122122,
+      "Phenotype": 118704,
+      "StarAllele": 13052,
+      "Variant": 156,
+      "HlaAllele": 3580,
+      "Haplotype": 1014,
+      "GeneCopyNumberVariation": 392
+    },
+    "total_dangling": 191466
+  }
+}
