@@ -24,7 +24,7 @@ pubmed:
   date_range:
     mindate: null
     maxdate: null
-  max_records_per_pair: 500  # Conservative default; pilot overrides to 12-13 per pair (50 total)
+  max_records_per_pair: 2500  # Conservative ceiling for full run; must exceed largest esearch count (1,431)
   efetch_batch_size: 200     # Batch size for efetch in XML
   rate_limit_rps_default: 2.0  # Safe request rate without API key (NCBI allows max 3)
   rate_limit_rps_with_key: 8.0 # Safe request rate with API key (NCBI allows max 10)
