@@ -163,7 +163,7 @@ def acquire_pubmed(
                 base_params["api_key"] = ncbi_settings.ncbi_api_key
 
             # First page to get total count
-            first_page_params = {**base_params, "retstart": "0", "retmax": "100"}
+            first_page_params = {**base_params, "retstart": "0", "retmax": "500"}
             esearch_url = f"{config.base_url.rstrip('/')}/esearch.fcgi"
 
             def call_esearch(params: dict[str, str] = first_page_params) -> httpx.Response:
@@ -175,18 +175,25 @@ def acquire_pubmed(
             total_count = int(data.get("count", 0))
             manifest.esearch_counts[pair.id] = total_count
 
+            # Hard check: if esearch count exceeds max_records_per_pair in a full run, STOP and report. Never truncate silently.
+            if not is_pilot and total_count > config.max_records_per_pair:
+                raise PubMedAcquisitionError(
+                    f"Pair '{pair.id}' esearch count ({total_count}) exceeds configured max_records_per_pair "
+                    f"({config.max_records_per_pair}). Execution aborted to prevent silent truncation."
+                )
+
             pmids = list(data.get("idlist", []))
 
             # Determine how many records we want to fetch for this pair
             if is_pilot:
                 target_count = math.ceil(pilot_total_cap / len(gene_drug_pairs))
             else:
-                target_count = min(total_count, config.max_records_per_pair)
+                target_count = total_count
 
             # Paginate if needed
             while len(pmids) < target_count and len(pmids) < total_count:
                 retstart = str(len(pmids))
-                retmax = str(min(100, target_count - len(pmids)))
+                retmax = str(min(500, target_count - len(pmids)))
                 page_params = {**base_params, "retstart": retstart, "retmax": retmax}
 
                 def call_page() -> httpx.Response:

@@ -1,0 +1,36 @@
+{
+  "run_id": "20261031_d2a604a2",
+  "source_name": "ClinPGx",
+  "endpoint_url": "https://api.clinpgx.org/v1/data/file/data/?view=min",
+  "retrieval_timestamp_utc": "2026-10-31T12:33:09.296635+00:00",
+  "source_version": "2026-10-05",
+  "license_name": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "license_checked_date": "2026-10-30",
+  "git_commit": "e67b47fd41fba339a2d09f28edeb262037d2ee56",
+  "run_status": "complete",
+  "notes": null,
+  "files": [
+    {
+      "relative_path": "data/raw/clinpgx/20261031_d2a604a2/clinpgx_file_catalog.json",
+      "byte_size": 24943,
+      "sha256": "f62ca3cdf85117d0b2964a802e5f14e64a73bf51103f15ac86cce78279088193",
+      "record_count": 121
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261031_d2a604a2/clinpgxHaplotypes.zip",
+      "byte_size": 16435,
+      "sha256": "91ad9b626dada7b3d17260c3c133eb76d8c3622bc8c4744e12239a19db501858",
+      "record_count": null
+    },
+    {
+      "relative_path": "data/raw/clinpgx/20261031_d2a604a2/cpic.alleles.json",
+      "byte_size": 467792,
+      "sha256": "025dab43ba0f7a9ccfced3650b64db39877ee7b1395a4b078f61d108af0b2e9d",
+      "record_count": null
+    }
+  ],
+  "release_date_as_shown": "2026-10-05T00:37:10-07:00",
+  "catalog_snapshot_file": "data/raw/clinpgx/20261031_d2a604a2/clinpgx_file_catalog.json",
+  "discrepancy_notes": "UI states 'These files are generated on the 6th of every month.' whereas catalog file metadata records lastModified timestamps as 2026-10-05."
+}
