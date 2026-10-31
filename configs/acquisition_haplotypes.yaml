@@ -1,0 +1,16 @@
+# Phase 1b Haplotypes & Alleles Acquisition Configuration
+version: "1.0.0"
+domain: "pharmacogenomics_haplotypes_and_alleles"
+
+clinpgx:
+  base_url: "https://api.clinpgx.org/v1"
+  catalog_endpoint: "/data/file/data/?view=min"
+  download_endpoint_template: "/download/file/data/{file_name}"
+  request_delay_seconds: 0.5
+  selected_files:
+    - "clinpgxHaplotypes.zip"
+    - "cpic.alleles.json"
+
+storage:
+  raw_dir: "data/raw"
+  manifests_dir: "data/manifests"
