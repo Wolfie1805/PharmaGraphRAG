@@ -28,9 +28,11 @@
 6. **CSV Character Field Limit**:
    - Python's `csv.field_size_limit()` counts **characters**, not bytes.
    - Limit is set to **250,000 characters** (measured max across corpus is 148,743 characters in `Brand Mixtures`; this provides a ~68% safety margin while preventing memory exhaustion on runaway corrupt lines).
-7. **Multi-Value Field Parsing**:
-   - Fields containing delimited lists with potential internal commas (`Trade Names`, `Alternate Names`) must be parsed via `csv.reader` (quote-aware parsing), NOT naive string splitting (`.split(',')`).
-   - If a record contains unbalanced quotes or malformed quoting, it is flagged for review.
+7. **Multi-Value Field Parsing & Source Artifacts**:
+   - Fields containing delimited lists (`Trade Names`, `Alternate Names`) must be parsed via `csv.reader(..., skipinitialspace=True)` to preserve quoted multi-word strings and compound codes (e.g. `"UK-148,993"`, `"Benzoic acid, benzyl ester"`).
+   - In `drugs.tsv` and `chemicals.tsv`, exactly **48 rows** contain commas together with quotes or parentheses (34 with quotes, 14 with parentheses).
+   - Parenthetical commas: Quote-aware parsing does NOT protect commas inside parentheses. In 13 rows, parentheses are single-item qualifiers (`Zovirax Injection (Zovirax sodium)`). In 1 row (`PA164743704`, antithymocyte globulin), parenthetical commas are unbalanced in source text.
+   - Malformed artifacts (`PA449283` Diazepam `'Faustan,'`, `PA164743704` Antithymocyte globulin `'Genzyme)'` and `'Thymoglobulin (SangStat Medical'`) are kept verbatim in raw data, flagged with `is_artifact = True`, and excluded from resolver synonyms.
 8. **PubMed Ingestion Scope & Version Locking**:
    - The PubMed parser will strictly reject pilot manifests (`is_pilot == true`).
    - It will consume only the verified full corpus manifest: `manifest_pubmed_20261031_7d1398e0.json` (3,096 records across 16 XML files).
@@ -51,16 +53,18 @@ Empirical profiling established:
 - Drug classification is represented as an attribute (`is_drug: bool`), **never as a second canonical entity or secondary ID**.
 - Primary source key in registry: `(chemical, "PA...")`.
 
-### 2.2 Synonym & Ambiguous Surface Form Collisions
-Profiling revealed **76 distinct surface forms** (69 trade names, 7 alternate names) that map to multiple distinct chemical accessions (e.g. `desoxyn` -> methamphetamine, dextroamphetamine, amphetamine; `darvocet` -> acetaminophen, acetaminophen / propoxyphene napsylate).
+### 2.2 Synonym, Cross-Entity & Ambiguous Surface Form Collisions
+1. **Intra-Chemical Collisions**: Profiling revealed **76 distinct surface forms** (69 trade names, 7 alternate names) that map to multiple distinct chemical accessions (e.g. `desoxyn` -> methamphetamine, dextroamphetamine, amphetamine; `darvocet` -> acetaminophen, acetaminophen / propoxyphene napsylate).
+2. **Cross-Entity Collisions (Gene vs Chemical)**: Case-folding gene symbols and names against chemical names and synonyms revealed **26 cross-entity collisions** (e.g. `ADM`, `APC`, `asparaginase`, `AVIL`, `coagulation factor IX`, `CP`, `CYREN`, `DBH`, `DBI`, `erythropoietin`).
+3. **Source Quirks Recorded as Facts**: Ambiguous source assertions, such as `"doxil"` mapping to both `PA164750492` (almitrine) and `PA449412` (doxorubicin), are recorded as source facts, flagged with `is_ambiguous = True`, without artificial correction.
 
 **Collision Rules**:
 - Ambiguous surface forms are **never** auto-merged into a canonical entity.
-- They are indexed in the synonym cross-reference table with a flag `is_ambiguous = True`.
-- All colliding instances are routed to a human review artifact: `data/review/ambiguous_synonyms.jsonl`.
+- The entity resolver remains strictly type-aware.
+- Colliding instances are cataloged in `data/review/ambiguous_synonyms.jsonl` (intra-chemical) and `data/review/cross_entity_collisions.jsonl` (cross-entity).
 
 ### 2.3 Star Alleles & Haplotypes Modeling
-- **Entities**: Modeled as canonical entities `pg:haplo:<number>` sourced from `clinpgxHaplotypes_star_alleles.tsv` (485 alleles), `clinpgxHaplotypes_named_alleles.tsv` (758 alleles), and `cpic.alleles.json` (3,813 alleles).
+- **Entities**: Modeled as canonical entities `pg:haplo:<number>` sourced from `clinpgxHaplotypes_star_alleles.tsv` (485 alleles), `clinpgxHaplotypes_named_alleles.tsv` (758 alleles), and `cpic.alleles.json` (3,813 alleles across 22 pharmacogenes).
 - **Attributes**:
   - `accession_id`: PharmGKB Accession ID (e.g. `PA165818750`).
   - `gene_symbol`: Pharmacogene symbol (e.g. `CYP2B6`, `CYP2C19`).
@@ -68,7 +72,8 @@ Profiling revealed **76 distinct surface forms** (69 trade names, 7 alternate na
   - `hgvs`: RefSeq genomic HGVS string if provided (e.g. `NG_007929.1:g.5071C>T`).
   - `structural_variation`: Structural variation description if provided.
   - `amp_level`: AMP tier level if classified.
-- **Relational Boundary**: Because no source file explicitly maps star alleles to rsIDs, **zero inferred variant links are generated**. Any downstream variant-allele relationship must be asserted by a future explicit source file.
+- **Relational Boundary**: Because zero source files explicitly map star alleles to rsIDs, **zero inferred variant links are generated**.
+- **Free-Text Rule**: Named alleles such as `"rs2231142 reference (G)"` contain rsID strings embedded in free-text names. In accordance with project rules, **zero rsIDs will be extracted or parsed from allele names or any other free text**. The name is preserved exactly as given.
 
 ### 2.4 Canonical ID Assignment & Git-Tracked Registry
 - **ID Formatting**:
@@ -76,12 +81,27 @@ Profiling revealed **76 distinct surface forms** (69 trade names, 7 alternate na
   - Chemicals/Drugs: `pg:chem:<06d>` (e.g., `pg:chem:000001` through `pg:chem:005329`)
   - Variants: `pg:var:<06d>` (e.g., `pg:var:000001` through `pg:var:007692`)
   - Haplotypes/Alleles: `pg:haplo:<06d>`
+  - Unmodeled Relationship Endpoints: `pg:snv:<06d>`, `pg:pheno:<06d>`, `pg:cnv:<06d>`
 - **Registry Persistence**: `data/entity_registry.jsonl`.
 - **Git Tracking & DVC Isolation**:
   - `data/entity_registry.jsonl` is explicitly un-ignored in `.gitignore` (`!data/entity_registry.jsonl`) and committed to Git.
   - Verified via `git check-ignore -v data/entity_registry.jsonl` (`.gitignore:24:!data/entity_registry.jsonl`).
   - It is outside `data/processed/` and `data/raw/`, and is completely outside DVC.
 - **Rebuild Rule**: Subsequent runs load existing entries from `data/entity_registry.jsonl` and append new entities. Renumbering or reassigning existing IDs is strictly prohibited.
+
+### 2.5 Dangling Relationship Endpoints Architecture (Section B.1 & B.2)
+1. **Decision (Section B.1)**:
+   - For endpoint types not defined by any dedicated file (`Phenotype`, `SNV`, `GeneCopyNumberVariation`, and unlisted `StarAllele`, `HlaAllele`, `Haplotype`, and `Variant` endpoints), entities are created directly from `relationships.tsv` using the `id`, `name`, and `type` the file itself provides.
+   - Assigned attribute: `defined_by = "relationships_only"`, with full provenance.
+   - Type label kept exactly as the source states (zero subclassification).
+   - In `relationships.parquet`, all edges connecting `relationships_only` endpoints are flagged with `is_dangling = True`.
+2. **Investigation & Proposal for SNV Endpoints (Section B.2)**:
+   - SNV endpoint IDs (`PA1663...`) have 0 matches in `variants.tsv` `Variant ID`.
+   - SNV endpoint Names are genomic HGVS coordinate strings.
+   - Testing an exact string join against individual tokens in `variants.tsv` `Synonyms`:
+     - **1,694 SNV Names** match an exact synonym token in `variants.tsv`.
+     - **11,664 SNV Names** do not match (they use reference allele `=` notation or legacy gene-centric coordinates).
+   - **Proposal**: These 1,694 exact source-stated matches are logged to `data/review/snv_variant_exact_matches.jsonl` as candidate links, but the SNV entities remain distinct from `pg:var:` rsID variants until explicit approval.
 
 ---
 

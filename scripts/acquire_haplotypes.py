@@ -22,3 +22,4 @@ print(f"Manifest written to: {manifest_path}")
 print(f"Files acquired: {len(manifest.files)}")
 for f in manifest.files:
     print(f"  - {f.relative_path} ({f.byte_size} bytes, SHA-256: {f.sha256})")
+
