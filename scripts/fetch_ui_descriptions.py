@@ -19,3 +19,4 @@ for s in set(scripts):
                     print("-" * 50)
     except Exception as e:
         print(f"Error fetching {url}: {e}")
+
