@@ -48,7 +48,10 @@ class MeaningSearchIndex:
         self.qdrant_path.mkdir(parents=True, exist_ok=True)
         self.client = QdrantClient(path=str(self.qdrant_path))
         self.encoder = SentenceTransformer(self.model_name)
-        self.vector_dim = self.encoder.get_sentence_embedding_dimension() or 384
+        dim_fn = getattr(self.encoder, "get_embedding_dimension", None) or getattr(
+            self.encoder, "get_sentence_embedding_dimension"
+        )
+        self.vector_dim = dim_fn() or 384
 
     def build_index(self, force_rebuild: bool = False, batch_size: int = 64) -> int:
         """

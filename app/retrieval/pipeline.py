@@ -24,6 +24,10 @@ class PipelineQueryResult(BaseModel):
     graph_columns_used: List[str] = Field(default_factory=list)
     top_evidence: List[FusedHit] = Field(default_factory=list)
 
+    @property
+    def results(self) -> List[FusedHit]:
+        return self.top_evidence
+
 
 class RetrievalPipeline:
     """End-to-end hybrid retrieval core for Demo D1."""
@@ -40,6 +44,9 @@ class RetrievalPipeline:
         )
         self.graph_service = GraphLookupService(config.processed_dir)
         self._con = duckdb.connect(":memory:")
+        self._chunk_entity_map: Dict[str, List[str]] = {
+            rec["chunk_id"]: rec["entity_ids"] for rec in self.bm25_index.chunk_records
+        }
 
     def query(self, question: str) -> PipelineQueryResult:
         """
@@ -96,13 +103,36 @@ class RetrievalPipeline:
                 )
 
         # 6. Reciprocal Rank Fusion (k=60)
-        top_evidence = compute_rrf_fusion(
+        # Retrieve candidate pool for entity-aware tier re-ranking
+        fused_candidates = compute_rrf_fusion(
             keyword_hits=keyword_hits,
             meaning_hits=meaning_hits,
             graph_chunks=graph_chunks,
             k=self.config.rrf_k,
-            top_n=self.config.top_k,
+            top_n=50,
         )
+
+        # 7. Record matched_entities and tier-rank when question resolves to >= 2 entities
+        resolved_cids = [
+            e.canonical_id for e in resolved_entities if e.status == "resolved" and e.canonical_id
+        ]
+
+        for hit in fused_candidates:
+            if not hit.entity_ids and hit.chunk_id in self._chunk_entity_map:
+                hit.entity_ids = self._chunk_entity_map[hit.chunk_id]
+            hit.matched_entities = [cid for cid in resolved_cids if cid in hit.entity_ids]
+
+        if len(resolved_cids) >= 2:
+            # Rank chunks carrying BOTH IDs first, chunks carrying one next, then rest.
+            # Do not hard-drop anything; preserve RRF score within each tier.
+            fused_candidates.sort(
+                key=lambda h: (-len(h.matched_entities), -h.rrf_score, h.chunk_id)
+            )
+
+        # Re-assign rank and cap to top_k
+        top_evidence = fused_candidates[: self.config.top_k]
+        for idx, hit in enumerate(top_evidence, start=1):
+            hit.rank = idx
 
         return PipelineQueryResult(
             question=question,

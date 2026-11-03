@@ -13,7 +13,7 @@ import csv
 import json
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import duckdb
 import pyarrow as pa
@@ -22,6 +22,75 @@ from pydantic import BaseModel, Field
 
 PARQUET_ROW_GROUP_SIZE = 50000
 PARQUET_COMPRESSION = "SNAPPY"
+
+
+def _load_entity_resolver(processed_dir: Path) -> Callable[[str, str], Optional[str]]:
+    """
+    Build in-memory type-aware exact lookup maps from entities.parquet and synonyms.parquet.
+    Strictly exact accession, ID, or symbol/name matching. Disallows ambiguous collisions.
+    """
+    con = duckdb.connect(":memory:")
+    entities_path = processed_dir / "entities.parquet"
+    synonyms_path = processed_dir / "synonyms.parquet"
+
+    accession_map: Dict[str, str] = {}
+    type_term_map: Dict[Tuple[str, str], str] = {}
+    ambiguous_keys: Set[Tuple[str, str]] = set()
+
+    if entities_path.exists():
+        sql = (
+            f"SELECT canonical_id, display_name, normalized_name, primary_source_id, entity_type "
+            f"FROM '{entities_path.as_posix()}'"
+        )
+        for cid, dname, nname, pid, etype in con.execute(sql).fetchall():
+            etype_norm = (etype or "").lower().strip()
+            if pid:
+                p_clean = pid.strip()
+                accession_map[p_clean] = cid
+                if p_clean.startswith("PA"):
+                    accession_map[p_clean[2:]] = cid
+            for t in [dname, nname]:
+                if t:
+                    key = (etype_norm, t.strip().lower())
+                    if key in type_term_map and type_term_map[key] != cid:
+                        ambiguous_keys.add(key)
+                    else:
+                        type_term_map[key] = cid
+
+    if synonyms_path.exists():
+        sql = (
+            f"SELECT canonical_id, synonym_text, normalized_synonym, synonym_type "
+            f"FROM '{synonyms_path.as_posix()}'"
+        )
+        for cid, syn_text, nsyn, stype in con.execute(sql).fetchall():
+            if cid.startswith("pg:chem:"):
+                etype_norm = "chemical"
+            elif cid.startswith("pg:gene:"):
+                etype_norm = "gene"
+            else:
+                etype_norm = "variant"
+
+            for t in [syn_text, nsyn]:
+                if t:
+                    key = (etype_norm, t.strip().lower())
+                    if key in type_term_map and type_term_map[key] != cid:
+                        ambiguous_keys.add(key)
+                    else:
+                        type_term_map[key] = cid
+
+    for k in ambiguous_keys:
+        type_term_map.pop(k, None)
+
+    def resolve(term: str, expected_type: str) -> Optional[str]:
+        clean = term.strip()
+        if not clean:
+            return None
+        if clean in accession_map:
+            return accession_map[clean]
+        key = (expected_type.lower().strip(), clean.lower())
+        return type_term_map.get(key)
+
+    return resolve
 
 
 class ChunkRecord(BaseModel):
@@ -44,10 +113,13 @@ def build_chunks(
     clinpgx_dir: Path = Path("data/raw/clinpgx/20261030_79ff97e7"),
 ) -> List[ChunkRecord]:
     """
-    Construct all retrieval chunks across the four primary text sources.
+    Construct all retrieval chunks across the primary text sources.
+    Populates chunk entity IDs only from explicit structured fields in source rows,
+    joined through the type-aware resolver by exact accession, ID, or symbol/name.
     """
     chunks: List[ChunkRecord] = []
     manifest_id = "20261030_79ff97e7"
+    resolve_fn = _load_entity_resolver(processed_dir)
 
     # 1. PubMed Abstracts
     pubmed_parquet = processed_dir / "publications.parquet"
@@ -133,6 +205,20 @@ def build_chunks(
                             continue
                         content = f"{sentence} {notes}".strip()
                         title = f"Annotation {ann_id}: {gene} - {drug}".strip(" :-")
+
+                        explicit_cids: List[str] = []
+                        if gene:
+                            for g in gene.replace(";", ",").split(","):
+                                cid = resolve_fn(g, "gene")
+                                if cid:
+                                    explicit_cids.append(cid)
+                        if drug:
+                            for d in drug.replace(";", ",").split(","):
+                                cid = resolve_fn(d, "chemical")
+                                if cid:
+                                    explicit_cids.append(cid)
+                        explicit_cids = sorted(list(dict.fromkeys(explicit_cids)))
+
                         chunks.append(
                             ChunkRecord(
                                 chunk_id=f"chunk:annotation:{ann_id}",
@@ -142,7 +228,7 @@ def build_chunks(
                                 content=content,
                                 date="unknown",
                                 date_precision="unknown",
-                                entity_ids=[],  # only explicit ID fields allowed
+                                entity_ids=explicit_cids,
                                 source_manifest=manifest_id,
                                 raw_file_name="var_drug_ann.tsv",
                             )
@@ -185,7 +271,22 @@ def build_chunks(
                             f"Testing Level: {testing}. "
                             f"Prescribing Info: {prescribing} {guidance}."
                         ).strip()
-                        explicit_entities = sorted(list(set(label_to_gene_ids.get(label_id, []))))
+
+                        label_genes = row.get("Genes", "").strip()
+                        label_chems = row.get("Chemicals", "").strip()
+                        explicit_cids = list(label_to_gene_ids.get(label_id, []))
+                        if label_genes:
+                            for g in label_genes.replace(";", ",").split(","):
+                                cid = resolve_fn(g, "gene")
+                                if cid:
+                                    explicit_cids.append(cid)
+                        if label_chems:
+                            for d in label_chems.replace(";", ",").split(","):
+                                cid = resolve_fn(d, "chemical")
+                                if cid:
+                                    explicit_cids.append(cid)
+                        explicit_entities = sorted(list(dict.fromkeys(explicit_cids)))
+
                         chunks.append(
                             ChunkRecord(
                                 chunk_id=f"chunk:drug_label:{label_id}",
@@ -307,3 +408,11 @@ def save_chunks_to_parquet(chunks: List[ChunkRecord], output_path: Path) -> Path
         compression=PARQUET_COMPRESSION,
     )
     return output_path
+
+
+if __name__ == "__main__":
+    out_file = Path("data/processed/chunks.parquet")
+    print(f"Rebuilding {out_file} with populated entity IDs...")
+    all_chunks = build_chunks()
+    save_chunks_to_parquet(all_chunks, out_file)
+    print(f"Successfully wrote {len(all_chunks)} chunks to {out_file}.")

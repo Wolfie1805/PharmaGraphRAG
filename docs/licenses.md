@@ -40,3 +40,10 @@
 - **Copyright Boundaries:**
   - NLM does not claim copyright on PubMed bibliographic records; individual journal publishers and authors typically hold copyright on abstracts.
   - Scope is strictly limited to metadata and abstracts for research grounding. Full text is never fetched.
+  - PubMed abstract excerpts are shown only as short quoted excerpts with source IDs; abstract copyright and NLM terms are "unverified" until I review them.
+
+---
+
+## 4. Privacy & Answer Mode Architecture
+- Default answer mode runs locally with no external service; no ClinPGx-derived text is sent anywhere unless the optional local model mode is used, which also stays on this machine.
+

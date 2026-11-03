@@ -4,7 +4,7 @@ Reports and uses only columns that exist. No multi-hop inference.
 """
 
 from pathlib import Path
-from typing import List, Set
+from typing import List, Optional, Set
 
 import duckdb
 from pydantic import BaseModel, Field
@@ -39,6 +39,7 @@ class GraphEdge(BaseModel):
     entity2_type: str
     association: str
     pmids: List[str] = Field(default_factory=list, description="Explicit PMIDs supporting edge")
+    raw_file_sha256: Optional[str] = Field(default=None, description="Provenance hash")
 
 
 class GraphLookupResult(BaseModel):
@@ -78,7 +79,7 @@ class GraphLookupService:
             sql = f"""
                 SELECT relationship_id, entity1_canonical_id, entity1_name, entity1_type,
                        entity2_canonical_id, entity2_name, entity2_type,
-                       association, pmids
+                       association, pmids, raw_file_sha256
                 FROM '{self.relationships_path.as_posix()}'
                 WHERE entity1_canonical_id IN ({placeholders})
                   AND entity2_canonical_id IN ({placeholders})
@@ -89,7 +90,7 @@ class GraphLookupService:
             sql = f"""
                 SELECT relationship_id, entity1_canonical_id, entity1_name, entity1_type,
                        entity2_canonical_id, entity2_name, entity2_type,
-                       association, pmids
+                       association, pmids, raw_file_sha256
                 FROM '{self.relationships_path.as_posix()}'
                 WHERE entity1_canonical_id = ?
                    OR entity2_canonical_id = ?
@@ -101,7 +102,7 @@ class GraphLookupService:
         all_pmids: Set[str] = set()
 
         for r in rows:
-            rel_id, e1_cid, e1_n, e1_t, e2_cid, e2_n, e2_t, assoc, pmids_raw = r
+            rel_id, e1_cid, e1_n, e1_t, e2_cid, e2_n, e2_t, assoc, pmids_raw, r_sha = r
             if isinstance(pmids_raw, list):
                 pmid_list = [str(p).strip() for p in pmids_raw if str(p).strip()]
             elif isinstance(pmids_raw, str):
@@ -120,6 +121,7 @@ class GraphLookupService:
                     entity2_type=e2_t or "",
                     association=assoc or "",
                     pmids=pmid_list,
+                    raw_file_sha256=r_sha,
                 )
             )
 

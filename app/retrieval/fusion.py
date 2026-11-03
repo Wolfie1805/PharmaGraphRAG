@@ -27,6 +27,10 @@ class FusedHit(BaseModel):
         default_factory=list,
         description="Pathways discovering this evidence: 'keyword', 'meaning', and/or 'graph'",
     )
+    matched_entities: List[str] = Field(
+        default_factory=list,
+        description="Resolved entity canonical IDs matched in this chunk",
+    )
 
 
 def compute_rrf_fusion(
