@@ -71,3 +71,35 @@ To enable the optional local Ollama model mode:
 - `POST /api/ask`: Grounded answer synthesis with evidence bundle, claims, resolved entities, and safety flags.
   CORS is strictly locked to `http://localhost:5173`.
 
+---
+
+## Starting Backend and Frontend on Windows (PowerShell)
+
+The Phase D3 React + TypeScript UI lives in `frontend/` and connects to `http://localhost:8000/api`. Open two PowerShell windows:
+
+### Terminal 1 — Start FastAPI Backend
+```powershell
+cd d:\PharmaRAG
+$env:HF_HUB_OFFLINE = "1"
+$env:TRANSFORMERS_OFFLINE = "1"
+.\.venv\Scripts\uvicorn.exe app.api.app:app --host 127.0.0.1 --port 8000
+```
+
+### Terminal 2 — Install & Start Vite Frontend
+```powershell
+cd d:\PharmaRAG\frontend
+npm install
+npm run dev
+```
+Open `http://localhost:5173` in your browser.
+
+### Frontend Checks (Typecheck, Lint, Tests, Build)
+```powershell
+cd d:\PharmaRAG\frontend
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+```
+
+
