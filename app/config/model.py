@@ -5,6 +5,7 @@ Validated with Pydantic; fails fast on invalid values.
 
 from pathlib import Path
 from typing import Optional
+
 import yaml
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -91,7 +92,7 @@ class AcquisitionConfig(BaseModel):
 
 class NCBISettings(BaseSettings):
     """Loads NCBI credentials from environment variables / .env.
-    
+
     Secrets are never hardcoded and never committed.
     """
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

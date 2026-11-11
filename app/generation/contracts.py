@@ -28,6 +28,7 @@ class EvidenceBundle(BaseModel):
     """Complete bundle of evidence items passed to the generation layer."""
 
     query: str
+    resolved_entity_ids: List[str] = Field(default_factory=list)
     items: List[EvidenceItem] = Field(default_factory=list)
     total_items: int = 0
     has_sufficient_evidence: bool = True
@@ -47,6 +48,7 @@ class LLMOutput(BaseModel):
 
     answer: str
     claims: List[Claim] = Field(default_factory=list)
+    related_claims: List[Claim] = Field(default_factory=list)
     conflicts: str = "None noted."
     limitations: str = ""
     answer_mode: str = "extractive"
@@ -64,6 +66,7 @@ class AskResponse(BaseModel):
     question: str
     answer: str
     claims: List[Claim] = Field(default_factory=list)
+    related_claims: List[Claim] = Field(default_factory=list)
     evidence_bundle: EvidenceBundle
     resolved_entities: List[Dict[str, Any]] = Field(default_factory=list)
     flags: List[str] = Field(default_factory=list)

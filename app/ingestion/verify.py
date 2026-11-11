@@ -11,6 +11,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+
 from app.ingestion.hash_utils import compute_sha256
 
 logger = logging.getLogger(__name__)

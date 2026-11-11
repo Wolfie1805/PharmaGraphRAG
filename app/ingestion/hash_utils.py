@@ -29,19 +29,20 @@ def write_raw_file_atomically(
     allow_overwrite: bool = False,
 ) -> Path:
     """Write raw content to destination atomically using a temp file and os.replace.
-    
+
     Enforces raw immutability: raises FileExistsError if allow_overwrite is False
     and destination file already exists.
     """
     dest = Path(destination_path)
     if not allow_overwrite and dest.exists():
         raise FileExistsError(
-            f"Raw immutability violation: file already exists and cannot be overwritten: {dest.resolve()}"
+            "Raw immutability violation: file already exists and cannot be overwritten: "
+            f"{dest.resolve()}"
         )
-    
+
     dest.parent.mkdir(parents=True, exist_ok=True)
     temp_path = dest.parent / f"{dest.name}.tmp_{os.getpid()}"
-    
+
     try:
         with temp_path.open("wb") as f:
             f.write(content)

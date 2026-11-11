@@ -9,7 +9,8 @@ Handles:
 
 import logging
 import time
-from typing import Callable, Any
+from typing import Callable
+
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ def execute_with_retry(
     retry_on_rate_limit_body: bool = True,
 ) -> httpx.Response:
     """Execute a request callable with exponential backoff.
-    
+
     If response status code is in status_forcelist or response text contains
     rate limit errors, retries up to max_retries.
     """
@@ -39,7 +40,7 @@ def execute_with_retry(
         attempt += 1
         try:
             resp = request_func()
-            
+
             # Check for retryable HTTP status codes
             if resp.status_code in status_forcelist:
                 delay = backoff_factor * (2 ** (attempt - 1))
@@ -56,7 +57,8 @@ def execute_with_retry(
                 if "rate limit exceeded" in body_sample or "api rate limit" in body_sample:
                     delay = backoff_factor * (2 ** (attempt - 1))
                     logger.warning(
-                        "Rate limit message in response body on attempt %d/%d. Backing off for %.2fs...",
+                        "Rate limit message in response body on attempt %d/%d. "
+                        "Backing off for %.2fs...",
                         attempt, max_retries, delay
                     )
                     time.sleep(delay)

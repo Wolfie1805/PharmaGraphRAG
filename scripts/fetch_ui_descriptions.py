@@ -1,6 +1,7 @@
 import re
-import httpx
+
 import certifi
+import httpx
 
 r = httpx.get("https://www.clinpgx.org/downloads", verify=certifi.where(), follow_redirects=True)
 scripts = re.findall(r'src="([^"]+\.js)"', r.text) + re.findall(r'href="([^"]+\.js)"', r.text)

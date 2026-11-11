@@ -13,8 +13,9 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-import httpx
+
 import certifi
+import httpx
 
 from app.config.manifest import ClinPGxRunManifest, ManifestFileEntry, RunStatus
 from app.config.model import ClinPGxConfig, StorageConfig
@@ -95,7 +96,11 @@ def acquire_clinpgx(
                 for item in catalog_items
                 if item.get("fileName") in config.selected_files and item.get("lastModified")
             ]
-            last_mod = max(selected_dates) if selected_dates else catalog_items[0].get("lastModified", "2026-10-05")
+            last_mod = (
+                max(selected_dates)
+                if selected_dates
+                else catalog_items[0].get("lastModified", "2026-10-05")
+            )
             manifest.source_version = last_mod.split("T")[0]
             manifest.release_date_as_shown = last_mod
 

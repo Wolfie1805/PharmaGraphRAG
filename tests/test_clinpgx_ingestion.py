@@ -1,14 +1,12 @@
 """Tests for ClinPGx acquisition connector with mocked HTTP (strictly offline)."""
 
-import json
 from pathlib import Path
+
 import httpx
-import pytest
 import respx
 
 from app.config.model import ClinPGxConfig, StorageConfig
 from app.ingestion.clinpgx import acquire_clinpgx
-
 
 MOCK_CATALOG = {
     "status": "success",

@@ -2,9 +2,9 @@
 Perform complete license audit on all 14 raw ClinPGx files across both manifests.
 """
 
-import zipfile
 import json
 import sys
+import zipfile
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
@@ -48,7 +48,12 @@ for path, src in files:
                     print(f"   Internal License/Readme: {lf}")
                     print(f"   Exact content snippet: {first_line}")
                     for line in sentences:
-                        if "creative commons" in line.lower() or "license" in line.lower() or "commercial" in line.lower():
+                        lower_line = line.lower()
+                        if (
+                            "creative commons" in lower_line
+                            or "license" in lower_line
+                            or "commercial" in lower_line
+                        ):
                             print(f"   Exact license sentence: {line}")
             else:
                 print("   Internal License/Readme: none included")
@@ -60,7 +65,10 @@ for path, src in files:
                 lic = data.get("license") or data.get("terms") or data.get("copyright")
                 print(f"   JSON metadata license: {lic if lic else 'none included'}")
             elif isinstance(data, list):
-                print(f"   JSON array: {len(data)} items, no top-level license key; source CPIC API license is CC0.")
+                print(
+                    f"   JSON array: {len(data)} items, no top-level license key; "
+                    "source CPIC API license is CC0."
+                )
         except Exception as e:
             print(f"   Error reading JSON: {e}")
     print()

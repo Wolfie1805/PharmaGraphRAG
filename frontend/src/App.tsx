@@ -108,7 +108,7 @@ export const App: React.FC = () => {
                 disabled={loading || !question.trim()}
                 aria-label="Submit Question"
               >
-                {loading ? 'Synthesizing...' : 'Ask'}
+                {loading ? 'Searching...' : 'Ask'}
               </button>
             </div>
           </form>
@@ -156,7 +156,7 @@ export const App: React.FC = () => {
         {loading && (
           <div className="loading-state" role="status" aria-live="polite">
             <div className="spinner" aria-hidden="true"></div>
-            <p>Retrieving grounded pharmacogenomics evidence and building deterministic synthesis...</p>
+            <p>Retrieving grounded pharmacogenomics evidence and building extractive summary...</p>
           </div>
         )}
 
@@ -187,6 +187,7 @@ export const App: React.FC = () => {
                   <AnswerPanel
                     answer={response.answer}
                     claims={response.claims}
+                    relatedClaims={response.related_claims ?? []}
                     answerMode={response.answer_mode}
                     flags={response.flags}
                     removedClaimsCount={response.removed_claims_count}
@@ -207,7 +208,14 @@ export const App: React.FC = () => {
       </main>
 
       <footer className="app-footer">
-        <p>PharmaGraph Phase D3 &bull; Grounded Knowledge Graph + Multi-Path RRF Retrieval &bull; Built with React &amp; TypeScript</p>
+        <p className="footer-disclaimer">
+          <strong>Disclaimer:</strong>{' '}
+          {response?.disclaimer_text ??
+            'PharmaGraph is an experimental research system for pharmacogenomics intelligence and does NOT provide medical advice, clinical diagnosis, or dosing recommendations. Always consult a licensed physician, clinical geneticist, or pharmacist for medical decisions.'}
+        </p>
+        <p className="footer-meta">
+          PharmaGraph Phase D3 &bull; Grounded Knowledge Graph + Multi-Path RRF Retrieval &bull; Built with React &amp; TypeScript
+        </p>
       </footer>
     </div>
   );

@@ -1,9 +1,9 @@
 """
 Runner for Stage A:
-Executes the normalization pipeline twice into two separate directories and proves 100% byte-identical outputs.
+Executes the normalization pipeline twice into two separate directories
+and proves 100% byte-identical outputs.
 """
 
-import hashlib
 import json
 import shutil
 import sys

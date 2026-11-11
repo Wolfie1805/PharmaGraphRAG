@@ -36,6 +36,7 @@ export interface EvidenceItem {
 
 export interface EvidenceBundle {
   query: string;
+  resolved_entity_ids?: string[];
   items: EvidenceItem[];
   total_items: number;
   has_sufficient_evidence: boolean;
@@ -52,6 +53,7 @@ export interface AskResponse {
   question: string;
   answer: string;
   claims: Claim[];
+  related_claims?: Claim[];
   evidence_bundle: EvidenceBundle;
   resolved_entities: ResolvedEntity[];
   flags: string[];

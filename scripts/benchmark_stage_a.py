@@ -5,8 +5,6 @@ Benchmark and run Stage A with detailed progress logging.
 import sys
 import time
 from pathlib import Path
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 from app.normalization.pipeline import run_normalization_pipeline
 

@@ -46,6 +46,7 @@ class GenerationConfig(BaseModel):
     )
 
     max_extractive_claims: int = 8
+    max_related_claims: int = 4
     max_excerpt_chars: int = 300
     seed: int = 42
     temperature: float = 0.0

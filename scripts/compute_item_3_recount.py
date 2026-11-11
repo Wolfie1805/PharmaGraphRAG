@@ -6,9 +6,12 @@ Compute exact Item 3 endpoint recount:
 - Final total dangling rows
 """
 
+import csv
+import io
 import sys
-from pathlib import Path
+import zipfile
 from collections import Counter, defaultdict
+from pathlib import Path
 
 from app.normalization.parsers.clinpgx import ClinPGxParser
 from app.normalization.parsers.cpic import CPICParser
@@ -51,23 +54,39 @@ for e in primary_entities:
 # clinpgxHaplotypes_star_alleles.tsv, clinpgxHaplotypes_named_alleles.tsv, cpic.alleles.json
 star_ids = set()
 named_ids = set()
-import zipfile, csv, io
 with zipfile.ZipFile(haplo_dir / "clinpgxHaplotypes.zip") as z:
-    r_star = csv.DictReader(io.StringIO(z.read("clinpgxHaplotypes_star_alleles.tsv").decode("utf-8")), delimiter="\t")
+    r_star = csv.DictReader(
+        io.StringIO(z.read("clinpgxHaplotypes_star_alleles.tsv").decode("utf-8")),
+        delimiter="\t",
+    )
     for r in r_star:
         acc = r.get("Accession ID", "").strip()
-        if acc: star_ids.add(acc)
-    r_named = csv.DictReader(io.StringIO(z.read("clinpgxHaplotypes_named_alleles.tsv").decode("utf-8")), delimiter="\t")
+        if acc:
+            star_ids.add(acc)
+    r_named = csv.DictReader(
+        io.StringIO(z.read("clinpgxHaplotypes_named_alleles.tsv").decode("utf-8")),
+        delimiter="\t",
+    )
     for r in r_named:
         acc = r.get("Accession ID", "").strip()
-        if acc: named_ids.add(acc)
+        if acc:
+            named_ids.add(acc)
 
 print(f"Star allele IDs in file: {len(star_ids)}")
 print(f"Named allele IDs in file: {len(named_ids)}")
 print(f"Overlap between star and named: {len(star_ids & named_ids)}")
 
 # Endpoint analysis in relationships.tsv
-endpoint_stats = defaultdict(lambda: {"total_occurrences": 0, "unique_ids": set(), "resolved_occurrences": 0, "dangling_occurrences": 0, "resolved_unique_ids": set(), "dangling_unique_ids": set()})
+endpoint_stats = defaultdict(
+    lambda: {
+        "total_occurrences": 0,
+        "unique_ids": set(),
+        "resolved_occurrences": 0,
+        "dangling_occurrences": 0,
+        "resolved_unique_ids": set(),
+        "dangling_unique_ids": set(),
+    }
+)
 
 # Also breakdown for Haplotype specifically:
 # How many match star_ids only, named_ids only, both?
@@ -82,7 +101,7 @@ resolved_row_count = 0
 for r in rels:
     t1, id1 = r.entity1_type, r.entity1_id
     t2, id2 = r.entity2_type, r.entity2_id
-    
+
     # Check if endpoint 1 is primary_definition
     # Types can be: Gene, Chemical, Variant, Haplotype, StarAllele, HlaAllele, etc.
     res1 = (id1 in primary_ids_by_type.get(t1.lower(), set()))
@@ -90,17 +109,21 @@ for r in rels:
         res1 = (id1 in primary_ids_by_type.get("chemical", set()))
     elif t1.lower() in ("haplotype", "starallele", "hlaallele"):
         res1 = (id1 in primary_ids_by_type.get("haplotype", set()))
-        if id1 in star_ids: haplo_star_matches.add(id1)
-        if id1 in named_ids: haplo_named_matches.add(id1)
+        if id1 in star_ids:
+            haplo_star_matches.add(id1)
+        if id1 in named_ids:
+            haplo_named_matches.add(id1)
 
     res2 = (id2 in primary_ids_by_type.get(t2.lower(), set()))
     if t2.lower() in ("drug", "chemical"):
         res2 = (id2 in primary_ids_by_type.get("chemical", set()))
     elif t2.lower() in ("haplotype", "starallele", "hlaallele"):
         res2 = (id2 in primary_ids_by_type.get("haplotype", set()))
-        if id2 in star_ids: haplo_star_matches.add(id2)
-        if id2 in named_ids: haplo_named_matches.add(id2)
-    
+        if id2 in star_ids:
+            haplo_star_matches.add(id2)
+        if id2 in named_ids:
+            haplo_named_matches.add(id2)
+
     # Track endpoint 1
     s1 = endpoint_stats[t1]
     s1["total_occurrences"] += 1
@@ -122,7 +145,7 @@ for r in rels:
     else:
         s2["dangling_occurrences"] += 1
         s2["dangling_unique_ids"].add(id2)
-    
+
     # Edge level: is dangling if either endpoint is not resolved
     if not (res1 and res2):
         dangling_row_count += 1
@@ -131,7 +154,11 @@ for r in rels:
         resolved_row_count += 1
 
 print("\n=== ENDPOINT STATS BY TYPE ===")
-print(f"{'Endpoint Type':<25} | {'Unique IDs':<12} | {'Resolved IDs':<12} | {'Dangling IDs':<12} | {'Total Occurrences':<18} | {'Resolved Occ.':<14} | {'Dangling Occ.':<14}")
+print(
+    f"{'Endpoint Type':<25} | {'Unique IDs':<12} | {'Resolved IDs':<12} | "
+    f"{'Dangling IDs':<12} | {'Total Occurrences':<18} | {'Resolved Occ.':<14} | "
+    f"{'Dangling Occ.':<14}"
+)
 print("-" * 125)
 for t in sorted(endpoint_stats.keys()):
     s = endpoint_stats[t]
@@ -147,14 +174,22 @@ print("\n=== HAPLOTYPE SPECIFIC BREAKDOWN ===")
 print(f"Unique Haplotype IDs in relationships: {len(endpoint_stats['Haplotype']['unique_ids'])}")
 print(f"Haplotype IDs matching star alleles only: {len(haplo_star_matches - haplo_named_matches)}")
 print(f"Haplotype IDs matching named alleles only: {len(haplo_named_matches - haplo_star_matches)}")
-print(f"Haplotype IDs matching both star and named: {len(haplo_star_matches & haplo_named_matches)}")
-print(f"Total Haplotype IDs matching star OR named: {len(haplo_star_matches | haplo_named_matches)}")
-print(f"Haplotype IDs unresolved: {len(endpoint_stats['Haplotype']['unique_ids'] - (haplo_star_matches | haplo_named_matches))}")
+both_hap_cnt = len(haplo_star_matches & haplo_named_matches)
+either_hap_cnt = len(haplo_star_matches | haplo_named_matches)
+print(f"Haplotype IDs matching both star and named: {both_hap_cnt}")
+print(f"Total Haplotype IDs matching star OR named: {either_hap_cnt}")
+unresolved_hap = endpoint_stats["Haplotype"]["unique_ids"] - (
+    haplo_star_matches | haplo_named_matches
+)
+print(f"Haplotype IDs unresolved: {len(unresolved_hap)}")
 
-print(f"\n=== DANGLING ROWS BY ENDPOINT TYPE COMBINATION ===")
+print("\n=== DANGLING ROWS BY ENDPOINT TYPE COMBINATION ===")
 print(f"Total rows in relationships.tsv: {len(rels)}")
 print(f"Total resolved relationship rows (both endpoints primary): {resolved_row_count}")
-print(f"Total dangling relationship rows (at least 1 endpoint dangling): {dangling_row_count}")
+print(
+    f"Total dangling relationship rows (at least 1 endpoint dangling): "
+    f"{dangling_row_count}"
+)
 print("\nCombination Breakdown:")
 for (t1, t2), cnt in dangling_combinations.most_common():
     print(f"   {t1:<25} <--> {t2:<25} : {cnt:>6} rows")

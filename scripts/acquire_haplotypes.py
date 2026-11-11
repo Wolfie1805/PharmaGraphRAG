@@ -1,6 +1,7 @@
 """Acquire confirmed haplotype and allele definition files into raw directory."""
 
 from pathlib import Path
+
 from app.config.model import ClinPGxConfig, StorageConfig
 from app.ingestion.clinpgx import acquire_clinpgx
 

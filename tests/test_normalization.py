@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 from pydantic import ValidationError
 
@@ -28,6 +28,7 @@ from app.normalization.parsers.pubmed import PubMedParser
 # ==============================================================================
 
 
+@settings(deadline=None)
 @given(st.text())
 def test_normalize_text_idempotence(s: str):
     """normalize_text(normalize_text(s)) == normalize_text(s)"""
@@ -36,6 +37,7 @@ def test_normalize_text_idempotence(s: str):
     assert norm1 == norm2
 
 
+@settings(deadline=None)
 @given(st.text())
 def test_normalize_search_term_idempotence(s: str):
     """normalize_search_term(normalize_search_term(s)) == normalize_search_term(s)"""
@@ -159,7 +161,7 @@ def test_entity_record_contract_validation():
         license_text="CC BY-NC-SA 4.0",
         license_check_date="2026-10-31",
         raw_file_path="data/raw/clinpgx/test.zip",
-        raw_file_sha256="abcdef123456",
+        raw_file_sha256="abcdef123456",  # pragma: allowlist secret
         manifest_run_id="20261030_test",
         record_index=1,
     )
@@ -338,9 +340,12 @@ def test_relationships_dangling_logic(tmp_path):
     rel_zip = raw_dir / "relationships.zip"
     with zipfile.ZipFile(rel_zip, "w") as z:
         tsv_content = (
-            "Entity1_id\tEntity1_name\tEntity1_type\tEntity2_id\tEntity2_name\tEntity2_type\tAssociation\tPMIDs\n"
-            "PA449283\tDiazepam\tChemical\tPA124\tCYP2C19\tGene\tassociated\t12345678\n"
-            "PA449283\tDiazepam\tChemical\tPA166123456\tSedation\tPhenotype\tassociated\t87654321\n"
+            "Entity1_id\tEntity1_name\tEntity1_type\tEntity2_id\t"
+            "Entity2_name\tEntity2_type\tAssociation\tPMIDs\n"
+            "PA449283\tDiazepam\tChemical\tPA124\t"  # pragma: allowlist secret
+            "CYP2C19\tGene\tassociated\t12345678\n"
+            "PA449283\tDiazepam\tChemical\tPA166123456\t"  # pragma: allowlist secret
+            "Sedation\tPhenotype\tassociated\t87654321\n"
         )
         z.writestr("relationships.tsv", tsv_content)
 

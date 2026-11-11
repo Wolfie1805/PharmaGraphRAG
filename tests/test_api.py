@@ -634,3 +634,224 @@ def test_extractive_offline_socket_blocker(monkeypatch):
     assert resp.builder_calls == 1
     assert len(resp.claims) > 0
 
+
+def test_mirrored_edges_merged_into_single_claim():
+    """Verify mirrored graph edges (A->B and B->A) merge into one claim citing both record IDs."""
+    bundle = EvidenceBundle(
+        query="CYP2C19 clopidogrel",
+        resolved_entity_ids=["pg:gene:124", "pg:chem:449053"],
+        items=[
+            EvidenceItem(
+                source_id="rel:aaa111",
+                source_type="relationship_record",
+                title="Association: CYP2C19 - clopidogrel",
+                chunk_text="Relationship rel:aaa111.",
+                entities=["pg:gene:124", "pg:chem:449053"],
+                matched_entities=["pg:gene:124", "pg:chem:449053"],
+                score=0.05,
+                graph_edges=[
+                    {
+                        "relationship_id": "rel:aaa111",
+                        "entity1_canonical_id": "pg:gene:124",
+                        "entity1_name": "CYP2C19",
+                        "entity1_type": "Gene",
+                        "entity2_canonical_id": "pg:chem:449053",
+                        "entity2_name": "clopidogrel",
+                        "entity2_type": "Chemical",
+                        "association": "associated",
+                        "pmids": [],
+                    }
+                ],
+            ),
+            EvidenceItem(
+                source_id="rel:bbb222",
+                source_type="relationship_record",
+                title="Association: clopidogrel - CYP2C19",
+                chunk_text="Relationship rel:bbb222.",
+                entities=["pg:chem:449053", "pg:gene:124"],
+                matched_entities=["pg:gene:124", "pg:chem:449053"],
+                score=0.05,
+                graph_edges=[
+                    {
+                        "relationship_id": "rel:bbb222",
+                        "entity1_canonical_id": "pg:chem:449053",
+                        "entity1_name": "clopidogrel",
+                        "entity1_type": "Chemical",
+                        "entity2_canonical_id": "pg:gene:124",
+                        "entity2_name": "CYP2C19",
+                        "entity2_type": "Gene",
+                        "association": "associated",
+                        "pmids": [],
+                    }
+                ],
+            ),
+        ],
+        total_items=2,
+    )
+
+    output = ExtractiveAnswerBuilder().build_answer(bundle)
+    edge_claims = [c for c in output.claims if "Stated association" in c.text]
+    assert len(edge_claims) == 1
+    assert set(edge_claims[0].source_ids) == {"rel:aaa111", "rel:bbb222"}
+    assert "Relationship records rel:aaa111, rel:bbb222" in edge_claims[0].text
+
+
+def test_extractive_date_limitation_count_based_and_wording():
+    """Verify count-based date limitation text and 'No date in data' wording."""
+    bundle_mixed = EvidenceBundle(
+        query="test dates",
+        items=[
+            EvidenceItem(
+                source_id="G1",
+                source_type="guideline",
+                title="Guideline 1",
+                chunk_text="Dated guideline statement.",
+                date="2021-03-10",
+                score=0.04,
+            ),
+            EvidenceItem(
+                source_id="A1",
+                source_type="annotation",
+                title="Annotation 1",
+                chunk_text="Undated annotation statement.",
+                date="unknown",
+                score=0.03,
+            ),
+            EvidenceItem(
+                source_id="A2",
+                source_type="annotation",
+                title="Annotation 2",
+                chunk_text="Unspecified annotation statement.",
+                date="unspecified",
+                score=0.02,
+            ),
+        ],
+        total_items=3,
+    )
+
+    out_mixed = ExtractiveAnswerBuilder().build_answer(bundle_mixed)
+    assert (
+        "1 of 3 cited items have a date; range of dated items: 2021-03-10."
+        in out_mixed.limitations
+    )
+    undated_claims = [c for c in out_mixed.claims if "A1" in c.source_ids or "A2" in c.source_ids]
+    assert len(undated_claims) == 2
+    for uc in undated_claims:
+        assert "(Date: No date in data)" in uc.text
+        assert "unspecified" not in uc.text
+
+    bundle_none = EvidenceBundle(
+        query="all undated",
+        items=[
+            EvidenceItem(
+                source_id="U1",
+                source_type="annotation",
+                title="Ann U1",
+                chunk_text="Text U1.",
+                date="unknown",
+                score=0.03,
+            ),
+            EvidenceItem(
+                source_id="U2",
+                source_type="annotation",
+                title="Ann U2",
+                chunk_text="Text U2.",
+                date="",
+                score=0.02,
+            ),
+        ],
+        total_items=2,
+    )
+    out_none = ExtractiveAnswerBuilder().build_answer(bundle_none)
+    assert "0 of 2 cited items have a date." in out_none.limitations
+
+
+def test_multi_entity_off_topic_separation_and_low_coverage_limitation():
+    """
+    Fixture with 1 both-entity item and 5 single-entity items:
+    - Main claim list contains ONLY the both-entity item
+    - Related evidence section contains single-entity items up to cap (default 4)
+    - Nothing is deleted from evidence_bundle.items
+    - Limitations states fewer than 3 both-entity items exist
+    """
+    from app.retrieval.entity_lookup import EntityLookupResult
+    from app.retrieval.fusion import FusedHit
+    from app.retrieval.pipeline import PipelineQueryResult
+
+    both_hit = FusedHit(
+        chunk_id="chunk:both:1",
+        source_id="BOTH_1",
+        source_type="annotation",
+        title="CYP2C19 - clopidogrel",
+        content="CYP2C19 *2 affects clopidogrel active metabolite formation.",
+        date="unknown",
+        date_precision="unknown",
+        entity_ids=["pg:gene:124", "pg:chem:449053"],
+        matched_entities=["pg:gene:124", "pg:chem:449053"],
+        found_by_paths=["keyword", "meaning"],
+        rrf_score=0.0328,
+        rank=1,
+    )
+    single_hits = [
+        FusedHit(
+            chunk_id=f"chunk:single:{i}",
+            source_id=f"SINGLE_{i}",
+            source_type="annotation",
+            title=f"CYP2C19 - metoprolol {i}",
+            content=f"CYP2C19 metabolizes metoprolol #{i}.",
+            date="unknown",
+            date_precision="unknown",
+            entity_ids=["pg:gene:124", f"pg:chem:99{i}"],
+            matched_entities=["pg:gene:124"],
+            found_by_paths=["meaning"],
+            rrf_score=0.016 - (i * 0.0005),
+            rank=i + 1,
+        )
+        for i in range(1, 6)
+    ]
+
+    class OffTopicFixturePipeline:
+        def query(self, question: str):
+            return PipelineQueryResult(
+                question=question,
+                resolved_entities=[
+                    EntityLookupResult(
+                        query="CYP2C19", status="resolved", canonical_id="pg:gene:124"
+                    ),
+                    EntityLookupResult(
+                        query="clopidogrel", status="resolved", canonical_id="pg:chem:449053"
+                    ),
+                ],
+                top_evidence=[both_hit] + single_hits,
+                graph_edges=[],
+            )
+
+    service = AnswerService(
+        config=GenerationConfig(llm_mode="extractive", max_related_claims=4),
+        retrieval_pipeline=OffTopicFixturePipeline(),  # type: ignore
+    )
+    resp = service.answer_question("What is the relationship between CYP2C19 and clopidogrel?")
+
+    # Nothing deleted from evidence_bundle
+    assert resp.evidence_bundle.total_items == 6
+    assert len(resp.evidence_bundle.items) == 6
+
+    # Main claim list contains ONLY the both-entity item
+    assert len(resp.claims) == 1
+    assert resp.claims[0].source_ids == ["BOTH_1"]
+    assert "metoprolol" not in resp.claims[0].text.lower()
+
+    # Related group contains single-entity items capped at 4
+    assert len(resp.related_claims) == 4
+    related_ids = [sid for rc in resp.related_claims for sid in rc.source_ids]
+    assert "BOTH_1" not in related_ids
+    assert all(sid.startswith("SINGLE_") for sid in related_ids)
+
+    # Narrative contains section header and limitations notes < 3 both-entity items
+    assert "Related evidence (matches only one queried entity):" in resp.answer
+    assert (
+        "Fewer than 3 retrieved evidence items carry all queried entities (only 1 found)."
+        in resp.answer
+    )
+
+

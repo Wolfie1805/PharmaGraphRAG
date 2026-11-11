@@ -84,6 +84,7 @@ class RetrievalPipeline:
                 FROM '{chunks_path.as_posix()}'
                 WHERE source_type = 'pubmed'
                   AND source_id IN ({pmid_placeholders})
+                ORDER BY chunk_id ASC
                 LIMIT 50
             """
             rows = self._con.execute(sql, graph_res.source_pmids).fetchall()

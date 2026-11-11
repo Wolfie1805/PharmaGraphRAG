@@ -7,13 +7,13 @@ D. Cross-entity collisions (26 entries, short alias statistics)
 E. Antithymocyte globulin raw inspection and full list-column unbalanced check
 """
 
-import zipfile
-import json
 import csv
 import io
-import re
+import json
 import random
+import re
 import sys
+import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -40,7 +40,7 @@ for path in all_archives:
                 for lf in license_files:
                     try:
                         content = z.read(lf).decode("utf-8", errors="replace")
-                        first_line = [l.strip() for l in content.splitlines() if l.strip()][:3]
+                        first_line = [ln.strip() for ln in content.splitlines() if ln.strip()][:3]
                         sentences.append(f"{lf}: {' '.join(first_line)}")
                     except Exception as e:
                         sentences.append(f"{lf}: (binary/unreadable: {e})")
@@ -63,9 +63,15 @@ haplo_zip = CLINPGX_RAW_DIR_2 / "clinpgxHaplotypes.zip"
 named_alleles_accs = set()
 star_alleles_accs = set()
 with zipfile.ZipFile(haplo_zip) as z:
-    for r in csv.DictReader(io.StringIO(z.read("clinpgxHaplotypes_named_alleles.tsv").decode("utf-8")), delimiter="\t"):
+    for r in csv.DictReader(
+        io.StringIO(z.read("clinpgxHaplotypes_named_alleles.tsv").decode("utf-8")),
+        delimiter="\t",
+    ):
         named_alleles_accs.add(r["Accession ID"].strip())
-    for r in csv.DictReader(io.StringIO(z.read("clinpgxHaplotypes_star_alleles.tsv").decode("utf-8")), delimiter="\t"):
+    for r in csv.DictReader(
+        io.StringIO(z.read("clinpgxHaplotypes_star_alleles.tsv").decode("utf-8")),
+        delimiter="\t",
+    ):
         star_alleles_accs.add(r["Accession ID"].strip())
 
 cpic_json = CLINPGX_RAW_DIR_2 / "cpic.alleles.json"
@@ -74,11 +80,14 @@ with open(cpic_json, "r", encoding="utf-8") as f:
     cpic_data = json.load(f)
     for it in cpic_data:
         acc = it.get("allele", {}).get("accessionId", "").strip()
-        if acc: cpic_allele_accs.add(acc)
+        if acc:
+            cpic_allele_accs.add(acc)
 
 rel_zip = CLINPGX_RAW_DIR_1 / "relationships.zip"
 with zipfile.ZipFile(rel_zip) as z:
-    r_rows = list(csv.DictReader(io.StringIO(z.read("relationships.tsv").decode("utf-8")), delimiter="\t"))
+    r_rows = list(
+        csv.DictReader(io.StringIO(z.read("relationships.tsv").decode("utf-8")), delimiter="\t")
+    )
 
 haplo_endpoints = []
 star_endpoints = []
@@ -87,25 +96,41 @@ for r in r_rows:
     for p in ["Entity1", "Entity2"]:
         t = r[f"{p}_type"].strip()
         i = r[f"{p}_id"].strip()
-        if t == "Haplotype": haplo_endpoints.append(i)
-        elif t == "StarAllele": star_endpoints.append(i)
-        elif t == "HlaAllele": hla_endpoints.append(i)
+        if t == "Haplotype":
+            haplo_endpoints.append(i)
+        elif t == "StarAllele":
+            star_endpoints.append(i)
+        elif t == "HlaAllele":
+            hla_endpoints.append(i)
 
 print(f"Total Haplotype endpoint occurrences: {len(haplo_endpoints)}")
 in_named = sum(1 for i in haplo_endpoints if i in named_alleles_accs)
 in_cpic = sum(1 for i in haplo_endpoints if i in cpic_allele_accs)
 in_both = sum(1 for i in haplo_endpoints if i in named_alleles_accs and i in cpic_allele_accs)
-in_either_named_cpic = sum(1 for i in haplo_endpoints if (i in named_alleles_accs or i in cpic_allele_accs))
+in_either_named_cpic = sum(
+    1 for i in haplo_endpoints if (i in named_alleles_accs or i in cpic_allele_accs)
+)
 in_star = sum(1 for i in haplo_endpoints if i in star_alleles_accs)
-in_all_three = sum(1 for i in haplo_endpoints if (i in named_alleles_accs or i in cpic_allele_accs or i in star_alleles_accs))
+in_all_three = sum(
+    1
+    for i in haplo_endpoints
+    if (i in named_alleles_accs or i in cpic_allele_accs or i in star_alleles_accs)
+)
 
 print(f"  In named_alleles: {in_named}")
 print(f"  In cpic_alleles: {in_cpic}")
 print(f"  In both named and cpic: {in_both}")
-print(f"  In either named or cpic: {in_either_named_cpic} (dangling = {len(haplo_endpoints) - in_either_named_cpic})")
+print(
+    f"  In either named or cpic: {in_either_named_cpic} "
+    f"(dangling = {len(haplo_endpoints) - in_either_named_cpic})"
+)
 print(f"  In star_alleles: {in_star}")
-print(f"  In named OR cpic OR star: {in_all_three} (dangling = {len(haplo_endpoints) - in_all_three})")
-# Notice: 694 + 34 = 728! Exactly 34 Haplotype endpoints in relationships.tsv have IDs defined in clinpgxHaplotypes_star_alleles.tsv!
+print(
+    f"  In named OR cpic OR star: {in_all_three} "
+    f"(dangling = {len(haplo_endpoints) - in_all_three})"
+)
+# Notice: 694 + 34 = 728! Exactly 34 Haplotype endpoints in relationships.tsv
+# have IDs defined in clinpgxHaplotypes_star_alleles.tsv!
 
 
 print("\n=== ITEM B.2: BREAKDOWN OF UNRESOLVED ENDPOINTS BY GENE ===")
@@ -114,26 +139,29 @@ unresolved_star_by_gene = Counter()
 unresolved_hla_by_gene = Counter()
 unresolved_haplo_by_gene = Counter()
 
-# In relationships.tsv, Entity_name often contains the gene or allele symbol (e.g., "CYP2D6*4", "HLA-B*57:01")
+# In relationships.tsv, Entity_name often contains the gene or allele symbol
+# (e.g., "CYP2D6*4", "HLA-B*57:01")
 for r in r_rows:
     for p in ["Entity1", "Entity2"]:
         t = r[f"{p}_type"].strip()
         i = r[f"{p}_id"].strip()
         n = r[f"{p}_name"].strip()
-        
+
         # Check StarAllele
         if t == "StarAllele" and (i not in star_alleles_accs and i not in cpic_allele_accs):
             # Extract gene prefix
             g = n.split("*")[0].strip() if "*" in n else n.split()[0].strip()
             unresolved_star_by_gene[g] += 1
-            
+
         # Check HlaAllele
         if t == "HlaAllele" and (i not in cpic_allele_accs):
             g = n.split("*")[0].strip() if "*" in n else n.split()[0].strip()
             unresolved_hla_by_gene[g] += 1
-            
+
         # Check Haplotype
-        if t == "Haplotype" and (i not in named_alleles_accs and i not in cpic_allele_accs and i not in star_alleles_accs):
+        if t == "Haplotype" and (
+            i not in named_alleles_accs and i not in cpic_allele_accs and i not in star_alleles_accs
+        ):
             g = n.split("*")[0].strip() if "*" in n else n.split()[0].strip()
             unresolved_haplo_by_gene[g] += 1
 
@@ -152,12 +180,18 @@ focus_genes = ["CYP2C19", "CYP2C9", "VKORC1", "SLCO1B1"]
 
 star_by_gene = Counter()
 with zipfile.ZipFile(haplo_zip) as z:
-    for r in csv.DictReader(io.StringIO(z.read("clinpgxHaplotypes_star_alleles.tsv").decode("utf-8")), delimiter="\t"):
+    for r in csv.DictReader(
+        io.StringIO(z.read("clinpgxHaplotypes_star_alleles.tsv").decode("utf-8")),
+        delimiter="\t",
+    ):
         star_by_gene[r["Gene"].strip()] += 1
 
 named_by_gene = Counter()
 with zipfile.ZipFile(haplo_zip) as z:
-    for r in csv.DictReader(io.StringIO(z.read("clinpgxHaplotypes_named_alleles.tsv").decode("utf-8")), delimiter="\t"):
+    for r in csv.DictReader(
+        io.StringIO(z.read("clinpgxHaplotypes_named_alleles.tsv").decode("utf-8")),
+        delimiter="\t",
+    ):
         named_by_gene[r["Gene"].strip()] += 1
 
 cpic_by_gene = Counter()
@@ -179,23 +213,30 @@ for g in focus_genes:
                 gene_prefix = n.split("*")[0].strip() if "*" in n else n.split()[0].strip()
                 if gene_prefix == g:
                     total_endpoints += 1
-                    is_res = (i in star_alleles_accs or i in named_alleles_accs or i in cpic_allele_accs)
+                    is_res = (
+                        i in star_alleles_accs or i in named_alleles_accs or i in cpic_allele_accs
+                    )
                     if not is_res:
                         unres_endpoints += 1
-                        
+
     print(f"Gene {g}:")
     print(f"  Star alleles in clinpgxHaplotypes: {star_by_gene[g]}")
     print(f"  Named alleles in clinpgxHaplotypes: {named_by_gene[g]}")
     print(f"  Alleles in cpic.alleles.json: {cpic_by_gene[g]}")
     print(f"  Relationship endpoints: total={total_endpoints}, unresolved={unres_endpoints}")
-    print(f"  VKORC1 present? star={g in star_by_gene}, named={g in named_by_gene}, cpic={g in cpic_by_gene}")
+    print(
+        f"  VKORC1 present? star={g in star_by_gene}, named={g in named_by_gene}, "
+        f"cpic={g in cpic_by_gene}"
+    )
 
 
 print("\n=== ITEM C: SNV EXACT MATCHES DEEP DIVE ===")
 # Re-read variants.tsv
 variants_zip = CLINPGX_RAW_DIR_1 / "variants.zip"
 with zipfile.ZipFile(variants_zip) as z:
-    var_rows = list(csv.DictReader(io.StringIO(z.read("variants.tsv").decode("utf-8")), delimiter="\t"))
+    var_rows = list(
+        csv.DictReader(io.StringIO(z.read("variants.tsv").decode("utf-8")), delimiter="\t")
+    )
 
 # Map each synonym token to list of variants
 syn_to_variants = defaultdict(list)
@@ -223,7 +264,9 @@ matched_snvs = {k: syn_to_variants[k] for k in snv_endpoints if k in syn_to_vari
 print(f"Matched SNV strings: {len(matched_snvs)}")
 
 # 1. How many SNV strings match >1 rsID variant?
-snv_matching_mult_variants = {k: v for k, v in matched_snvs.items() if len(set(x["Variant ID"] for x in v)) > 1}
+snv_matching_mult_variants = {
+    k: v for k, v in matched_snvs.items() if len(set(x["Variant ID"] for x in v)) > 1
+}
 print(f"SNV strings matching >1 rsID variant: {len(snv_matching_mult_variants)}")
 
 # 2. How many variants are matched by >1 SNV string?
@@ -265,7 +308,11 @@ for k in sampled_snvs:
 
 print("\n10 Seeded Sample Matches:")
 for s in samples_data:
-    print(f"  SNV '{s['snv_name']}' (IDs: {s['snv_ids'][:2]}) -> Variant {s['matched_variant_id']} ({s['matched_variant_name']}) in {s['gene_symbols']} at {s['location']}")
+    print(
+        f"  SNV '{s['snv_name']}' (IDs: {s['snv_ids'][:2]}) -> Variant "
+        f"{s['matched_variant_id']} ({s['matched_variant_name']}) in {s['gene_symbols']} "
+        f"at {s['location']}"
+    )
 
 # Write snv_variant_exact_matches.jsonl
 review_dir = Path("data/review")
@@ -296,8 +343,10 @@ with zipfile.ZipFile(genes_zip) as z:
         gid = r["PharmGKB Accession Id"]
         sym = r["Symbol"].strip()
         name = r["Name"].strip()
-        if sym: gene_map[sym.lower()].add((gid, sym, "symbol"))
-        if name: gene_map[name.lower()].add((gid, name, "name"))
+        if sym:
+            gene_map[sym.lower()].add((gid, sym, "symbol"))
+        if name:
+            gene_map[name.lower()].add((gid, name, "name"))
 
 # Load chemicals & synonyms
 chems_zip = CLINPGX_RAW_DIR_1 / "chemicals.zip"
@@ -309,8 +358,9 @@ with zipfile.ZipFile(chems_zip) as z:
     for r in csv.DictReader(io.StringIO(z.read("chemicals.tsv").decode("utf-8")), delimiter="\t"):
         cid = r["PharmGKB Accession Id"]
         cname = r["Name"].strip()
-        if cname: chem_map[cname.lower()].add((cid, cname, "name"))
-        
+        if cname:
+            chem_map[cname.lower()].add((cid, cname, "name"))
+
         # Synonyms and Trade names
         for field in ["Alternate Names", "Trade Names"]:
             val = r.get(field, "").strip()
@@ -345,7 +395,10 @@ with open(collisions_path, "w", encoding="utf-8") as f:
 
 print(f"Written {len(cross_collisions_list)} cross-entity collisions to {collisions_path}")
 print(f"Total chemical aliases with length <= 3 characters: {len(all_short_aliases)}")
-print(f"Short chemical aliases (<= 3 chars) colliding with gene symbols: {len(short_alias_collisions)}")
+print(
+    f"Short chemical aliases (<= 3 chars) colliding with gene symbols: "
+    f"{len(short_alias_collisions)}"
+)
 print("Short alias collision examples:", short_alias_collisions[:10])
 
 
@@ -365,15 +418,27 @@ with zipfile.ZipFile(drugs_zip) as z:
 
 # 2. Check unbalanced quotes and parens across ALL list-valued columns in ALL files
 list_columns_check = [
-    ("genes.zip", "genes.tsv", ["Alternative Names", "Alternative Symbols", "Cross-references"]),
-    ("drugs.zip", "drugs.tsv", ["Trade Names", "Alternate Names", "Cross-references", "External Vocabulary"]),
-    ("chemicals.zip", "chemicals.tsv", ["Trade Names", "Alternate Names", "Cross-references", "External Vocabulary"]),
+    (
+        "genes.zip",
+        "genes.tsv",
+        ["Alternative Names", "Alternative Symbols", "Cross-references"],
+    ),
+    (
+        "drugs.zip",
+        "drugs.tsv",
+        ["Trade Names", "Alternate Names", "Cross-references", "External Vocabulary"],
+    ),
+    (
+        "chemicals.zip",
+        "chemicals.tsv",
+        ["Trade Names", "Alternate Names", "Cross-references", "External Vocabulary"],
+    ),
     ("variants.zip", "variants.tsv", ["Gene IDs", "Gene Symbols", "Synonyms"]),
     ("clinicalVariants.zip", "clinicalVariants.tsv", ["chemicals", "phenotypes"]),
     ("drugLabels.zip", "drugLabels.tsv", ["Chemicals", "Genes", "Variants/Haplotypes"]),
     ("relationships.zip", "relationships.tsv", ["PMIDs"]),
     ("clinpgxHaplotypes.zip", "clinpgxHaplotypes_star_alleles.tsv", []),
-    ("clinpgxHaplotypes.zip", "clinpgxHaplotypes_named_alleles.tsv", [])
+    ("clinpgxHaplotypes.zip", "clinpgxHaplotypes_named_alleles.tsv", []),
 ]
 
 malformed_artifacts = []
@@ -393,9 +458,14 @@ for zname, fname, cols in list_columns_check:
                 p_close = val.count(')')
                 unb_quotes = (q_count % 2 != 0)
                 unb_parens = (p_open != p_close)
-                
+
                 if unb_quotes or unb_parens:
-                    item_id = r.get("PharmGKB Accession Id") or r.get("Variant ID") or r.get("Accession ID") or f"row_{r_idx+1}"
+                    item_id = (
+                        r.get("PharmGKB Accession Id")
+                        or r.get("Variant ID")
+                        or r.get("Accession ID")
+                        or f"row_{r_idx + 1}"
+                    )
                     malformed_artifacts.append({
                         "file": fname,
                         "column": c,

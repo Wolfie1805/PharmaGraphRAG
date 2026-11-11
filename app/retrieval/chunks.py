@@ -247,10 +247,11 @@ def build_chunks(
                         gene_id = row.get("Gene ID", "").strip()
                         label_ids_str = row.get("Label IDs", "").strip()
                         if gene_id and label_ids_str:
+                            resolved_gene = resolve_fn(gene_id, "gene")
+                            canon = resolved_gene or f"pg:gene:{gene_id.replace('PA', '')}"
                             for lid in label_ids_str.split(";"):
                                 lid = lid.strip()
                                 if lid:
-                                    canon = f"pg:gene:{gene_id}"
                                     label_to_gene_ids.setdefault(lid, []).append(canon)
 
             if "drugLabels.tsv" in zf.namelist():
@@ -327,10 +328,18 @@ def build_chunks(
                         explicit_ids: List[str] = []
                         for gene_obj in g.get("relatedGenes", []):
                             if isinstance(gene_obj, dict) and "id" in gene_obj:
-                                explicit_ids.append(f"pg:gene:{gene_obj['id']}")
+                                raw_gid = str(gene_obj["id"]).strip()
+                                resolved_g = resolve_fn(raw_gid, "gene")
+                                explicit_ids.append(
+                                    resolved_g or f"pg:gene:{raw_gid.replace('PA', '')}"
+                                )
                         for chem_obj in g.get("relatedChemicals", []):
                             if isinstance(chem_obj, dict) and "id" in chem_obj:
-                                explicit_ids.append(f"pg:chem:{chem_obj['id']}")
+                                raw_cid = str(chem_obj["id"]).strip()
+                                resolved_c = resolve_fn(raw_cid, "chemical")
+                                explicit_ids.append(
+                                    resolved_c or f"pg:chem:{raw_cid.replace('PA', '')}"
+                                )
 
                         # Date from latest history item
                         date_val = "unknown"

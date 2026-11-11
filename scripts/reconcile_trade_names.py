@@ -1,7 +1,6 @@
-import zipfile
 import csv
 import io
-import re
+import zipfile
 
 CLINPGX_RAW_DIR = "data/raw/clinpgx/20261030_79ff97e7"
 csv.field_size_limit(2147483647)

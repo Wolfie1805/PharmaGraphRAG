@@ -5,8 +5,8 @@ Strictly enforces requests-per-second ceilings:
 - ClinPGx: configurable request delay
 """
 
-import time
 import threading
+import time
 
 
 class RateLimiter:

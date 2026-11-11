@@ -1,6 +1,6 @@
-import zipfile
 import csv
 import io
+import zipfile
 
 csv.field_size_limit(250000)
 z = zipfile.ZipFile("data/raw/clinpgx/20261030_79ff97e7/drugs.zip")

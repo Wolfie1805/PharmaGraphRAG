@@ -7,7 +7,6 @@ CLI commands:
 """
 
 import argparse
-import json
 import logging
 import sys
 from pathlib import Path
@@ -78,8 +77,12 @@ def cmd_pubmed(args):
     print(f"Unique PMIDs retrieved: {len(manifest.pmids_retrieved)}")
     print(f"Batch files written: {len(manifest.files)}")
     if manifest.reconciliation:
-        print(f"Reconciliation status: {'100% MATCH' if manifest.reconciliation.reconciled else 'MISMATCH'}")
-        print(f"Requested: {manifest.reconciliation.total_requested}, Received in XML: {manifest.reconciliation.total_received}")
+        status_str = "100% MATCH" if manifest.reconciliation.reconciled else "MISMATCH"
+        print(f"Reconciliation status: {status_str}")
+        print(
+            f"Requested: {manifest.reconciliation.total_requested}, "
+            f"Received in XML: {manifest.reconciliation.total_received}"
+        )
         if manifest.reconciliation.missing_pmids:
             print(f"Missing PMIDs: {manifest.reconciliation.missing_pmids}")
     print(f"Manifest written to: {manifest_path}")
@@ -127,8 +130,12 @@ def cmd_verify(args):
 
 def main():
     base_parser = argparse.ArgumentParser(add_help=False)
-    base_parser.add_argument("--config", default="configs/acquisition.yaml", help="Path to acquisition config YAML")
-    base_parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging")
+    base_parser.add_argument(
+        "--config", default="configs/acquisition.yaml", help="Path to acquisition config YAML"
+    )
+    base_parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose debug logging"
+    )
 
     parser = argparse.ArgumentParser(
         description="PharmaGraph Raw Acquisition & Verification CLI",
@@ -138,18 +145,28 @@ def main():
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # ClinPGx acquisition
-    p_clinpgx = subparsers.add_parser("clinpgx", parents=[base_parser], help="Acquire ClinPGx raw archives")
+    p_clinpgx = subparsers.add_parser(
+        "clinpgx", parents=[base_parser], help="Acquire ClinPGx raw archives"
+    )
     p_clinpgx.set_defaults(func=cmd_clinpgx)
 
     # PubMed acquisition
-    p_pubmed = subparsers.add_parser("pubmed", parents=[base_parser], help="Acquire PubMed literature abstracts")
-    p_pubmed.add_argument("--pilot", action="store_true", help="Run in pilot mode with strict cap (default 50)")
+    p_pubmed = subparsers.add_parser(
+        "pubmed", parents=[base_parser], help="Acquire PubMed literature abstracts"
+    )
+    p_pubmed.add_argument(
+        "--pilot", action="store_true", help="Run in pilot mode with strict cap (default 50)"
+    )
     p_pubmed.add_argument("--pilot-cap", type=int, default=50, help="Total PMIDs cap in pilot mode")
-    p_pubmed.add_argument("--resume", type=str, default=None, help="Resume an interrupted run by run_id")
+    p_pubmed.add_argument(
+        "--resume", type=str, default=None, help="Resume an interrupted run by run_id"
+    )
     p_pubmed.set_defaults(func=cmd_pubmed)
 
     # Verify command
-    p_verify = subparsers.add_parser("verify", parents=[base_parser], help="Verify raw data integrity against a manifest")
+    p_verify = subparsers.add_parser(
+        "verify", parents=[base_parser], help="Verify raw data integrity against a manifest"
+    )
     p_verify.add_argument("manifest", help="Path to manifest JSON file")
     p_verify.set_defaults(func=cmd_verify)
 

@@ -35,7 +35,10 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ item, isHighlighted 
       : null;
 
   const dateDisplay =
-    item.date && item.date !== 'unknown' && item.date !== 'unspecified'
+    item.date &&
+    item.date !== 'unknown' &&
+    item.date !== 'unspecified' &&
+    item.date.toLowerCase() !== 'no date in data'
       ? item.date
       : 'No date in data';
 

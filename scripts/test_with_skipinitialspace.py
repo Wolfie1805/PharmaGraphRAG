@@ -1,24 +1,26 @@
-import zipfile
 import csv
 import io
-import re
+import zipfile
 
 csv.field_size_limit(250000)
 
-for filename, path in [("drugs.tsv", "data/raw/clinpgx/20261030_79ff97e7/drugs.zip"), ("chemicals.tsv", "data/raw/clinpgx/20261030_79ff97e7/chemicals.zip")]:
+for filename, path in [
+    ("drugs.tsv", "data/raw/clinpgx/20261030_79ff97e7/drugs.zip"),
+    ("chemicals.tsv", "data/raw/clinpgx/20261030_79ff97e7/chemicals.zip"),
+]:
     z = zipfile.ZipFile(path)
     reader = csv.DictReader(io.StringIO(z.read(filename).decode("utf-8")), delimiter="\t")
-    
+
     flagged_artifacts = []
     total_parsed_names = 0
-    
+
     for r in reader:
         raw = r.get("Trade Names", "").strip()
         if not raw:
             continue
         acc = r["PharmGKB Accession Id"]
         name = r["Name"]
-        
+
         try:
             # Using skipinitialspace=True
             items = list(csv.reader(io.StringIO(raw), skipinitialspace=True))[0]
@@ -39,12 +41,12 @@ for filename, path in [("drugs.tsv", "data/raw/clinpgx/20261030_79ff97e7/drugs.z
                 if '"' in it_clean:
                     is_artifact = True
                     reasons.append("contains_quote")
-                    
+
                 if is_artifact:
                     flagged_artifacts.append((acc, name, it_clean, "|".join(reasons)))
-        except Exception as e:
+        except Exception:
             pass
-            
+
     print(f"=== {filename} WITH skipinitialspace=True ===")
     print(f"Total individual trade names: {total_parsed_names}")
     print(f"Total flagged artifacts: {len(flagged_artifacts)}")

@@ -48,6 +48,7 @@ a:focus-visible {
   padding: 0.65rem 1.25rem;
   border-bottom: 1px solid #fde68a;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   font-size: 0.875rem;
@@ -802,9 +803,143 @@ a:focus-visible {
 /* App Footer */
 .app-footer {
   text-align: center;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
   font-size: 0.8rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border-color);
-  margin-top: 3rem;
+  margin-top: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer-disclaimer {
+  max-width: 960px;
+  margin: 0 auto;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.related-claims-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.insufficient-banner {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.limitations-box {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.limitations-heading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.3rem;
+}
+
+.limitations-text {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.answer-audit-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  font-size: 0.8rem;
+}
+
+.audit-flags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.audit-label {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.audit-flag-tag {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.audit-flag-neutral {
+  background-color: var(--bg-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 600px) {
+  .disclaimer-banner {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .app-header {
+    padding: 1rem;
+  }
+
+  .main-content {
+    margin: 1rem auto;
+    padding: 0 0.75rem;
+  }
+
+  .query-section,
+  .answer-panel,
+  .evidence-panel,
+  .refusal-panel {
+    padding: 1rem;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
+
+  .btn-submit {
+    width: 100%;
+  }
+
+  .answer-header,
+  .evidence-title-group,
+  .refusal-header,
+  .answer-audit-footer {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .cards-grid {
+    max-height: none;
+  }
 }

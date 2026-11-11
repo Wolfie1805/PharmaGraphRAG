@@ -10,10 +10,10 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-sys.stdout.reconfigure(encoding="utf-8")
-
 from app.normalization.parsers.clinpgx import ClinPGxParser
 from app.normalization.parsers.cpic import CPICParser
+
+sys.stdout.reconfigure(encoding="utf-8")
 
 raw_dir = Path("data/raw/clinpgx/20261030_79ff97e7")
 haplo_dir = Path("data/raw/clinpgx/20261031_d2a604a2")

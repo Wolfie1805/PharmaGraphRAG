@@ -137,4 +137,26 @@ describe('AnswerPanel citation highlighting', () => {
     expect(screen.getByText(payload)).toBeInTheDocument();
     expect(document.querySelector('img')).toBeNull();
   });
+
+  it('uses Extractive Evidence Summary heading (no synthesized wording), renders related claims, limitations, flags, and removed claims count', () => {
+    render(
+      <AnswerPanel
+        answer={'Extractive evidence summary (1 records cited):\n- Main claim text.\n\nLimitations: 0 of 2 cited items have a date. Fewer than 3 retrieved evidence items carry all queried entities (only 1 found).'}
+        claims={[{ text: 'Main claim text.', source_ids: ['BOTH_1'] }]}
+        relatedClaims={[{ text: 'Single-entity related claim.', source_ids: ['ONE_1'] }]}
+        answerMode="extractive"
+        flags={['insufficient_evidence']}
+        removedClaimsCount={2}
+        onCitationClick={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('heading', { name: 'Extractive Evidence Summary' })).toBeInTheDocument();
+    expect(screen.queryByText(/synthesized/i)).toBeNull();
+    expect(screen.getByText('Related evidence (matches only one queried entity) (1)')).toBeInTheDocument();
+    expect(screen.getByText('Single-entity related claim.')).toBeInTheDocument();
+    expect(screen.getByText(/0 of 2 cited items have a date/i)).toBeInTheDocument();
+    expect(screen.getByText('insufficient_evidence')).toBeInTheDocument();
+    expect(screen.getByText('Removed ungrounded claims: 2')).toBeInTheDocument();
+    expect(screen.getByText('Verifier removed claims:')).toBeInTheDocument();
+  });
 });

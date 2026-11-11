@@ -11,6 +11,26 @@ from rank_bm25 import BM25Okapi
 
 from app.retrieval.tokenizer import tokenize_biomedical
 
+# English stopwords plus query scaffolding aligned with EntityLookupService
+BM25_STOPWORDS = frozenset(
+    {
+        "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+        "any", "are", "as", "at", "be", "because", "been", "before", "being", "below",
+        "between", "both", "but", "by", "can", "could", "did", "do", "does", "doing",
+        "down", "during", "each", "few", "for", "from", "further", "had", "has", "have",
+        "having", "he", "her", "here", "hers", "herself", "him", "himself", "his", "how",
+        "i", "if", "in", "into", "is", "it", "its", "itself", "just", "me", "might",
+        "more", "most", "must", "my", "myself", "no", "nor", "not", "now", "of", "off",
+        "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out",
+        "over", "own", "relationship", "same", "she", "should", "so", "some", "such",
+        "than", "that", "the", "their", "theirs", "them", "themselves", "then", "there",
+        "these", "they", "this", "those", "through", "to", "too", "under", "until", "up",
+        "very", "was", "we", "were", "what", "when", "where", "which", "while", "who",
+        "whom", "why", "will", "with", "would", "you", "your", "yours", "yourself",
+        "yourselves",
+    }
+)
+
 
 class KeywordHit(BaseModel):
     """BM25 search result hit."""
@@ -62,17 +82,21 @@ class BM25KeywordIndex:
                 "entity_ids": list(eids) if eids else [],
             }
             self.chunk_records.append(rec)
-            # Tokenize title and content together
+            # Tokenize title and content together, excluding common stopwords
             combined_text = f"{rec['title']} {rec['content']}"
-            tokens = tokenize_biomedical(combined_text)
+            tokens = [
+                t for t in tokenize_biomedical(combined_text) if t not in BM25_STOPWORDS
+            ]
             self.corpus_tokens.append(tokens)
 
-        self.bm25 = BM25Okapi(self.corpus_tokens)
+        self.bm25 = BM25Okapi(self.corpus_tokens) if self.corpus_tokens else None
 
     def search(self, query: str, top_k: int = 50) -> List[KeywordHit]:
         """Search chunks with BM25 using biomedical tokenizer."""
-        query_tokens = tokenize_biomedical(query)
-        if not query_tokens:
+        query_tokens = [
+            t for t in tokenize_biomedical(query) if t not in BM25_STOPWORDS
+        ]
+        if not query_tokens or self.bm25 is None:
             return []
 
         scores = self.bm25.get_scores(query_tokens)

@@ -17,13 +17,13 @@ import csv
 import io
 import json
 import re
-import sys
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
-# Increase CSV field size limit to handle large text/annotation fields (Windows C long is 32-bit: 2**31 - 1)
+# Increase CSV field size limit to handle large text/annotation fields
+# (Windows C long is 32-bit: 2**31 - 1)
 csv.field_size_limit(2147483647)
 
 CLINPGX_DIR = Path("data/raw/clinpgx/20261030_79ff97e7")
@@ -311,7 +311,10 @@ def main():
     pubmed_prof = profile_pubmed_xml(PUBMED_XML)
 
     out_file = Path("docs/phase2/raw_profile_data.json")
-    out_file.write_text(json.dumps({"clinpgx": all_profiles, "pubmed": pubmed_prof}, indent=2), encoding="utf-8")
+    out_file.write_text(
+        json.dumps({"clinpgx": all_profiles, "pubmed": pubmed_prof}, indent=2),
+        encoding="utf-8",
+    )
     print(f"Profiling complete. JSON written to {out_file}")
 
 

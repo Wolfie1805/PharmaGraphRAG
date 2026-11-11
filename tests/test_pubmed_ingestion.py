@@ -9,10 +9,9 @@ Covers:
 - Secret redaction in logs and manifests
 """
 
-import json
 from pathlib import Path
+
 import httpx
-import pytest
 import respx
 
 from app.config.model import GeneDrugPair, NCBISettings, PubMedConfig, StorageConfig
@@ -22,7 +21,6 @@ from app.ingestion.pubmed import (
     extract_pmids_from_xml,
     sanitize_url_for_logging,
 )
-
 
 SAMPLE_PUBMED_XML_MATCH = b"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January 2026//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_260101.dtd">
@@ -96,11 +94,18 @@ def test_acquire_pubmed_reconciliation_match(tmp_path):
     ncbi_settings = NCBISettings(NCBI_API_KEY="MOCK_SECRET_KEY", NCBI_EMAIL="test@example.com")
 
     # Mock esearch
-    esearch_route = respx.get(f"{base_url}/esearch.fcgi").respond(
-        json={"esearchresult": {"count": "2", "retmax": "100", "retstart": "0", "idlist": ["1001", "1002"]}}
+    respx.get(f"{base_url}/esearch.fcgi").respond(
+        json={
+            "esearchresult": {
+                "count": "2",
+                "retmax": "100",
+                "retstart": "0",
+                "idlist": ["1001", "1002"],
+            }
+        }
     )
     # Mock efetch
-    efetch_route = respx.post(f"{base_url}/efetch.fcgi").respond(
+    respx.post(f"{base_url}/efetch.fcgi").respond(
         content=SAMPLE_PUBMED_XML_MATCH,
         headers={"Content-Type": "application/xml"},
     )
@@ -147,7 +152,14 @@ def test_acquire_pubmed_reconciliation_missing_pmid(tmp_path):
 
     # esearch returns 1001 and 1002
     respx.get(f"{base_url}/esearch.fcgi").respond(
-        json={"esearchresult": {"count": "2", "retmax": "100", "retstart": "0", "idlist": ["1001", "1002"]}}
+        json={
+            "esearchresult": {
+                "count": "2",
+                "retmax": "100",
+                "retstart": "0",
+                "idlist": ["1001", "1002"],
+            }
+        }
     )
     # efetch returns XML that only has 1001
     respx.post(f"{base_url}/efetch.fcgi").respond(

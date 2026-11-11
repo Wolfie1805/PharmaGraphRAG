@@ -1,6 +1,6 @@
-import zipfile
 import csv
 import io
+import zipfile
 
 drugs_zip = "data/raw/clinpgx/20261030_79ff97e7/drugs.zip"
 chems_zip = "data/raw/clinpgx/20261030_79ff97e7/chemicals.zip"
@@ -16,7 +16,7 @@ for name, p in [("drugs.tsv", drugs_zip), ("chemicals.tsv", chems_zip)]:
     has_quotes = 0
     has_commas = 0
     comma_inside_quoted_name = 0
-    
+
     for r in reader:
         trades = r.get("Trade Names", "").strip()
         if not trades:
@@ -26,17 +26,17 @@ for name, p in [("drugs.tsv", drugs_zip), ("chemicals.tsv", chems_zip)]:
             has_quotes += 1
         if ',' in trades:
             has_commas += 1
-        
+
         try:
             parsed = list(csv.reader(io.StringIO(trades)))[0]
             total_parsed_names += len(parsed)
             for item in parsed:
                 if ',' in item:
                     comma_inside_quoted_name += 1
-        except Exception as e:
+        except Exception:
             unbalanced_quotes += 1
             print(f"Unbalanced quote in {r['PharmGKB Accession Id']}: {trades}")
-            
+
     print(f"=== {name} ===")
     print(f"Total records with trade names: {total_with_trades}")
     print(f"Records with quotes: {has_quotes}")

@@ -1,6 +1,7 @@
 """Tests for HTTP retry and backoff behavior with mocked failures."""
 
 from unittest.mock import MagicMock
+
 import httpx
 import pytest
 

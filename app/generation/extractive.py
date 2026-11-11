@@ -99,22 +99,49 @@ class ExtractiveAnswerBuilder:
 
         bundle_source_ids: Set[str] = {item.source_id for item in bundle.items}
 
-        # Separate chunk items and relationship records
+        # Separate chunk items and relationship records (keep everything in bundle intact)
         chunk_items = [it for it in bundle.items if it.source_type != "relationship_record"]
 
-        # 1. Classify chunk items into priority groups and sort deterministically
-        grouped_items: Dict[int, List[EvidenceItem]] = {}
-        for item in chunk_items:
-            priority, _ = SOURCE_TYPE_PRIORITY.get(item.source_type.lower(), (5, "Other Evidence"))
-            grouped_items.setdefault(priority, []).append(item)
+        resolved_ids = list(dict.fromkeys(cid for cid in bundle.resolved_entity_ids if cid))
+        resolved_set: Set[str] = set(resolved_ids)
+        is_multi_entity = len(resolved_set) >= 2
+        inferred_multi_target = 0
+        if not is_multi_entity and not resolved_set:
+            max_matched = max((len(set(it.matched_entities)) for it in chunk_items), default=0)
+            if max_matched >= 2:
+                is_multi_entity = True
+                inferred_multi_target = max_matched
 
-        # Sort within each group: matched_entities count desc, score desc, source_id asc
-        for prio in grouped_items:
-            grouped_items[prio].sort(
-                key=lambda x: (-len(x.matched_entities), -x.score, x.source_id)
-            )
+        def _match_count(item: EvidenceItem) -> int:
+            if resolved_set:
+                return len(set(item.matched_entities).intersection(resolved_set))
+            return len(set(item.matched_entities))
+
+        if is_multi_entity:
+            required_matches = len(resolved_set) if resolved_set else inferred_multi_target
+            main_chunk_items = [it for it in chunk_items if _match_count(it) >= required_matches]
+            related_chunk_items = [it for it in chunk_items if _match_count(it) == 1]
+        else:
+            main_chunk_items = list(chunk_items)
+            related_chunk_items = []
+
+        def _group_and_sort(items: List[EvidenceItem]) -> Dict[int, List[EvidenceItem]]:
+            grouped: Dict[int, List[EvidenceItem]] = {}
+            for item in items:
+                prio, _ = SOURCE_TYPE_PRIORITY.get(item.source_type.lower(), (5, "Other Evidence"))
+                grouped.setdefault(prio, []).append(item)
+            for prio in grouped:
+                grouped[prio].sort(
+                    key=lambda x: (-len(set(x.matched_entities)), -x.score, x.source_id)
+                )
+            return grouped
+
+        # 1. Classify chunk items into priority groups and sort deterministically
+        grouped_main = _group_and_sort(main_chunk_items)
+        grouped_related = _group_and_sort(related_chunk_items)
 
         claims: List[Claim] = []
+        related_claims: List[Claim] = []
         seen_claim_texts: Set[str] = set()
 
         # 2. Build claims from graph relationship records
@@ -132,6 +159,11 @@ class ExtractiveAnswerBuilder:
                 assoc = edge.get("association", "unspecified")
                 e1_cid = edge.get("entity1_canonical_id") or e1_n
                 e2_cid = edge.get("entity2_canonical_id") or e2_n
+
+                if is_multi_entity and resolved_set:
+                    edge_cids = {str(e1_cid), str(e2_cid)}
+                    if not resolved_set.issubset(edge_cids):
+                        continue
 
                 pair_key = tuple(sorted([str(e1_cid), str(e2_cid)]))
                 group_key = (pair_key, assoc.strip().lower())
@@ -174,31 +206,39 @@ class ExtractiveAnswerBuilder:
                 seen_claim_texts.add(edge_claim_text)
                 claims.append(Claim(text=edge_claim_text, source_ids=cite_ids))
 
-        # 3. Iterate through chunk priority order 1 -> 5
-        sorted_priorities = sorted(grouped_items.keys())
-        for prio in sorted_priorities:
-            if len(claims) >= self.config.max_extractive_claims:
-                break
-
-            items_in_group = grouped_items[prio]
-            for item in items_in_group:
-                if len(claims) >= self.config.max_extractive_claims:
+        def _append_chunk_claims(
+            grouped: Dict[int, List[EvidenceItem]],
+            target_list: List[Claim],
+            cap: int,
+        ) -> None:
+            for prio in sorted(grouped.keys()):
+                if len(target_list) >= cap:
                     break
+                for item in grouped[prio]:
+                    if len(target_list) >= cap:
+                        break
+                    excerpt = truncate_at_word_boundary(
+                        item.chunk_text, max_length=self.config.max_excerpt_chars
+                    )
+                    raw_date = (item.date or "").strip()
+                    date_str = (
+                        "No date in data"
+                        if not raw_date
+                        or raw_date.lower() in {"unknown", "unspecified", "no date in data"}
+                        else raw_date
+                    )
+                    item_claim_text = (
+                        f"[{item.source_type} {item.source_id}] (Date: {date_str}) "
+                        f"Title: '{item.title}'. "
+                        f'Excerpt: "{excerpt}"'
+                    )
+                    if item_claim_text not in seen_claim_texts:
+                        seen_claim_texts.add(item_claim_text)
+                        target_list.append(Claim(text=item_claim_text, source_ids=[item.source_id]))
 
-                excerpt = truncate_at_word_boundary(
-                    item.chunk_text, max_length=self.config.max_excerpt_chars
-                )
-                date_str = item.date or "unspecified"
-
-                item_claim_text = (
-                    f"[{item.source_type} {item.source_id}] (Date: {date_str}) "
-                    f"Title: '{item.title}'. "
-                    f'Excerpt: "{excerpt}"'
-                )
-
-                if item_claim_text not in seen_claim_texts:
-                    seen_claim_texts.add(item_claim_text)
-                    claims.append(Claim(text=item_claim_text, source_ids=[item.source_id]))
+        # 3. Main claims list (only all-entity items when multi-entity) and single-entity group
+        _append_chunk_claims(grouped_main, claims, self.config.max_extractive_claims)
+        _append_chunk_claims(grouped_related, related_claims, self.config.max_related_claims)
 
         # 4. Check conflicts
         conflicts = "None noted."
@@ -236,7 +276,7 @@ class ExtractiveAnswerBuilder:
         # 5. Date Limitation Text
         # Count-based: "N of M cited items have a date; range of dated items: X to Y."
         all_cited_ids: Set[str] = set()
-        for c in claims:
+        for c in claims + related_claims:
             all_cited_ids.update(c.source_ids)
 
         cited_bundle_items = [it for it in bundle.items if it.source_id in all_cited_ids]
@@ -244,12 +284,13 @@ class ExtractiveAnswerBuilder:
         dated_items = [
             it
             for it in cited_bundle_items
-            if it.date and it.date != "unknown" and it.date != "unspecified"
+            if it.date
+            and it.date.strip().lower() not in {"unknown", "unspecified", "no date in data"}
         ]
         n_dated = len(dated_items)
 
         if n_dated > 0:
-            sorted_dates = sorted([it.date for it in dated_items])
+            sorted_dates = sorted([it.date for it in dated_items if it.date])
             min_d = sorted_dates[0]
             max_d = sorted_dates[-1]
             date_range_str = f"{min_d} to {max_d}" if min_d != max_d else f"{min_d}"
@@ -266,9 +307,16 @@ class ExtractiveAnswerBuilder:
             "but has not been joined yet)."
         )
 
+        coverage_note = ""
+        if is_multi_entity and len(main_chunk_items) < 3:
+            coverage_note = (
+                f" Fewer than 3 retrieved evidence items carry all queried entities "
+                f"(only {len(main_chunk_items)} found)."
+            )
+
         limitations = (
             f"The answer lists retrieved evidence and does not synthesize; "
-            f"{date_sentence}{annotation_date_note} "
+            f"{date_sentence}{annotation_date_note}{coverage_note} "
             f"{conflict_explanation}"
         )
 
@@ -278,12 +326,18 @@ class ExtractiveAnswerBuilder:
         ]
         for c in claims:
             answer_lines.append(f"- {c.text}")
+        if related_claims:
+            answer_lines.append("")
+            answer_lines.append("Related evidence (matches only one queried entity):")
+            for rc in related_claims:
+                answer_lines.append(f"- {rc.text}")
 
         answer = "\n".join(answer_lines)
 
         return LLMOutput(
             answer=answer,
             claims=claims,
+            related_claims=related_claims,
             conflicts=conflicts,
             limitations=limitations,
             answer_mode="extractive",

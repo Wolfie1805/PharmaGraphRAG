@@ -103,12 +103,18 @@ class GraphLookupService:
 
         for r in rows:
             rel_id, e1_cid, e1_n, e1_t, e2_cid, e2_n, e2_t, assoc, pmids_raw, r_sha = r
-            if isinstance(pmids_raw, list):
-                pmid_list = [str(p).strip() for p in pmids_raw if str(p).strip()]
-            elif isinstance(pmids_raw, str):
-                pmid_list = [p.strip() for p in pmids_raw.split(",") if p.strip()]
-            else:
-                pmid_list = []
+            raw_items = (
+                pmids_raw
+                if isinstance(pmids_raw, list)
+                else ([pmids_raw] if isinstance(pmids_raw, str) else [])
+            )
+            pmid_list: List[str] = []
+            for entry in raw_items:
+                for p in str(entry).replace(";", ",").split(","):
+                    clean_p = p.strip()
+                    if clean_p:
+                        pmid_list.append(clean_p)
+            pmid_list = list(dict.fromkeys(pmid_list))
             all_pmids.update(pmid_list)
             edges.append(
                 GraphEdge(

@@ -87,6 +87,14 @@ class AnswerService:
                 ent_dict["candidates"] = [c.model_dump() for c in ent.candidates]
             resolved_entities_dicts.append(ent_dict)
 
+        resolved_cids = list(
+            dict.fromkeys(
+                e.canonical_id
+                for e in retrieval_res.resolved_entities
+                if e.status == "resolved" and e.canonical_id
+            )
+        )
+
         flags: List[str] = []
         if any(e.status == "ambiguous" for e in retrieval_res.resolved_entities):
             flags.append("ambiguous_entity")
@@ -151,34 +159,9 @@ class AnswerService:
             )
             evidence_items.append(rel_item)
 
-            # Also ensure supporting PMIDs exist in bundle so citations verify cleanly
-            for pmid in edge.pmids:
-                pmid_str = str(pmid).strip()
-                if pmid_str and not any(it.source_id == pmid_str for it in evidence_items):
-                    evidence_items.append(
-                        EvidenceItem(
-                            source_id=pmid_str,
-                            source_type="publication",
-                            title=f"Supporting Publication PMID {pmid_str}",
-                            chunk_text=(
-                                f"Supporting PubMed reference {pmid_str} "
-                                f"for relationship record {edge.relationship_id}."
-                            ),
-                            entities=[edge.entity1_canonical_id, edge.entity2_canonical_id],
-                            matched_entities=[edge.entity1_canonical_id, edge.entity2_canonical_id],
-                            retrieval_paths=["graph_pmid_lookup"],
-                            score=0.01,
-                            provenance={
-                                "raw_file_name": "relationships.parquet",
-                                "raw_file_sha256": edge.raw_file_sha256 or "",
-                                "source_relationship_id": edge.relationship_id,
-                                "pmid": pmid_str,
-                            },
-                        )
-                    )
-
         bundle = EvidenceBundle(
             query=question,
+            resolved_entity_ids=resolved_cids,
             items=evidence_items,
             total_items=len(evidence_items),
         )
@@ -224,7 +207,11 @@ class AnswerService:
         flags.extend(extra_flags)
 
         # 6. Citation Verification
-        verified_claims, removed_count = CitationVerifier.verify(gen_out.claims, bundle)
+        verified_claims, removed_main = CitationVerifier.verify(gen_out.claims, bundle)
+        verified_related, removed_related = CitationVerifier.verify(
+            gen_out.related_claims, bundle
+        )
+        removed_count = removed_main + removed_related
         if removed_count > 0:
             flags.append(f"unverified_citations_removed_{removed_count}")
 
@@ -239,6 +226,7 @@ class AnswerService:
             question=question,
             answer=final_answer,
             claims=verified_claims,
+            related_claims=verified_related,
             evidence_bundle=bundle,
             resolved_entities=resolved_entities_dicts,
             flags=flags,

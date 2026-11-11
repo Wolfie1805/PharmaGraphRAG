@@ -18,7 +18,9 @@ pubmed_manifest = Path("data/manifests/manifest_pubmed_20261031_7d1398e0.json")
 
 print("Initializing parsers...", flush=True)
 t0 = time.time()
-clinpgx_parser = ClinPGxParser(clinpgx_raw_dir, haplo_raw_dir, "20261030_79ff97e7", "20261031_d2a604a2")
+clinpgx_parser = ClinPGxParser(
+    clinpgx_raw_dir, haplo_raw_dir, "20261030_79ff97e7", "20261031_d2a604a2"
+)
 cpic_parser = CPICParser(haplo_raw_dir / "cpic.alleles.json", "20261031_d2a604a2")
 pubmed_parser = PubMedParser(pubmed_manifest)
 print(f"Init took: {time.time() - t0:.2f}s", flush=True)

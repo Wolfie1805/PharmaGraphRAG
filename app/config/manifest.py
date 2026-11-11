@@ -8,10 +8,12 @@ Adheres strictly to Phase 1 Task 2 requirements:
 - Zero secrets in manifests
 """
 
+import os
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -32,7 +34,9 @@ class BaseRunManifest(BaseModel):
     source_name: str = Field(description="Name of source, e.g. ClinPGx or PubMed")
     endpoint_url: str = Field(description="Endpoint or catalog URL (secrets redacted)")
     retrieval_timestamp_utc: str = Field(description="ISO 8601 UTC timestamp")
-    source_version: str = Field(description="Version or release date as source shows it or 'not provided'")
+    source_version: str = Field(
+        description="Version or release date as source shows it or 'not provided'"
+    )
     license_name: str = Field(description="License identifier, e.g. CC BY-SA 4.0")
     license_url: str = Field(description="Official URL for the license")
     license_checked_date: str = Field(description="ISO date when license was verified")
@@ -48,7 +52,6 @@ class BaseRunManifest(BaseModel):
         manifest_path = target_dir / f"manifest_{self.source_name.lower()}_{self.run_id}.json"
         temp_path = manifest_path.with_suffix(".tmp")
         temp_path.write_text(self.model_dump_json(indent=2), encoding="utf-8")
-        import os
         os.replace(temp_path, manifest_path)
         return manifest_path
 
@@ -66,11 +69,19 @@ class PubMedRunManifest(BaseRunManifest):
     database_name: str = "pubmed"
     is_pilot: bool = False
     pilot_selection_rule: Optional[str] = None
-    queries: dict[str, str] = Field(default_factory=dict, description="query_id -> exact query string")
-    esearch_counts: dict[str, int] = Field(default_factory=dict, description="query_id -> reported esearch count")
-    pmids_retrieved: list[str] = Field(default_factory=list, description="Deduplicated list of PMIDs retrieved")
+    queries: dict[str, str] = Field(
+        default_factory=dict, description="query_id -> exact query string"
+    )
+    esearch_counts: dict[str, int] = Field(
+        default_factory=dict, description="query_id -> reported esearch count"
+    )
+    pmids_retrieved: list[str] = Field(
+        default_factory=list, description="Deduplicated list of PMIDs retrieved"
+    )
     batch_size: int = 200
-    pmid_to_queries: dict[str, list[str]] = Field(default_factory=dict, description="PMID -> list of query_ids matching it")
+    pmid_to_queries: dict[str, list[str]] = Field(
+        default_factory=dict, description="PMID -> list of query_ids matching it"
+    )
     reconciliation: Optional[ReconciliationResult] = None
 
 

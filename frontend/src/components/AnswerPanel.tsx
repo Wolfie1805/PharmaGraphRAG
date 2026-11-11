@@ -4,6 +4,7 @@ import { Claim } from '../types';
 interface AnswerPanelProps {
   answer: string;
   claims: Claim[];
+  relatedClaims?: Claim[];
   answerMode: string;
   flags: string[];
   removedClaimsCount: number;
@@ -67,9 +68,25 @@ function renderPlainAnswerWithCitations(
   });
 }
 
+function splitAnswerAndLimitations(rawAnswer: string): {
+  narrative: string;
+  limitations: string | null;
+} {
+  const marker = '\n\nLimitations: ';
+  const idx = rawAnswer.indexOf(marker);
+  if (idx === -1) {
+    return { narrative: rawAnswer, limitations: null };
+  }
+  return {
+    narrative: rawAnswer.slice(0, idx).trim(),
+    limitations: rawAnswer.slice(idx + marker.length).trim(),
+  };
+}
+
 export const AnswerPanel: React.FC<AnswerPanelProps> = ({
   answer,
   claims,
+  relatedClaims = [],
   answerMode,
   flags,
   removedClaimsCount,
@@ -88,10 +105,12 @@ export const AnswerPanel: React.FC<AnswerPanelProps> = ({
     }
   };
 
-  const allSourceIds = claims.flatMap((c) => c.source_ids);
+  const allSourceIds = [...claims, ...relatedClaims].flatMap((c) => c.source_ids);
+  const { narrative, limitations } = splitAnswerAndLimitations(answer);
+  const isInsufficient = flags.includes('insufficient_evidence');
 
   return (
-    <section className="answer-panel" aria-label="Synthesized Answer">
+    <section className="answer-panel" aria-label="Extractive Evidence Summary">
       <div className="answer-header">
         <div className="answer-mode-indicator">
           <span className="mode-badge" role="status">
@@ -102,18 +121,22 @@ export const AnswerPanel: React.FC<AnswerPanelProps> = ({
           )}
         </div>
 
-        {removedClaimsCount > 0 && (
-          <span className="badge-removed-claims" role="status">
-            Verifier removed {removedClaimsCount} ungrounded claim(s)
-          </span>
-        )}
+        <span className="badge-removed-claims" role="status">
+          Removed ungrounded claims: {removedClaimsCount}
+        </span>
       </div>
 
+      {isInsufficient && (
+        <div className="insufficient-banner" role="alert">
+          <strong>Insufficient Evidence:</strong> Retrieved evidence did not meet minimum threshold requirements for an extractive summary.
+        </div>
+      )}
+
       <div className="answer-body">
-        <h3 className="section-heading">Synthesized Response</h3>
+        <h3 className="section-heading">Extractive Evidence Summary</h3>
         {/* Render answer strictly as plain React text nodes + native buttons (never dangerouslySetInnerHTML or markdown) */}
         <p className="answer-narrative">
-          {renderPlainAnswerWithCitations(answer, allSourceIds, onCitationClick)}
+          {renderPlainAnswerWithCitations(narrative, allSourceIds, onCitationClick)}
         </p>
       </div>
 
@@ -144,6 +167,62 @@ export const AnswerPanel: React.FC<AnswerPanelProps> = ({
           </ol>
         </div>
       )}
+
+      {relatedClaims && relatedClaims.length > 0 && (
+        <div className="related-claims-section">
+          <h4 className="claims-heading">
+            Related evidence (matches only one queried entity) ({relatedClaims.length})
+          </h4>
+          <ol className="claims-list">
+            {relatedClaims.map((claim, idx) => (
+              <li key={`related-claim-${idx}`} className="claim-item">
+                <span className="claim-text">{claim.text}</span>
+                <div className="citation-markers">
+                  <span className="citations-label">Sources:</span>
+                  {claim.source_ids.map((sid) => (
+                    <button
+                      key={sid}
+                      type="button"
+                      className="citation-pill"
+                      onClick={() => onCitationClick(sid)}
+                      title={`Jump to evidence card for ${sid.includes(';') ? 'supporting PMID list' : sid}`}
+                      aria-label={`Related citation ${sid}`}
+                    >
+                      {formatCitationLabel(sid)}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {limitations && (
+        <div className="limitations-box">
+          <h4 className="limitations-heading">Limitations</h4>
+          <p className="limitations-text">{limitations}</p>
+        </div>
+      )}
+
+      <div className="answer-audit-footer" aria-label="Response Audit Metadata">
+        <div className="audit-flags">
+          <span className="audit-label">Flags:</span>
+          {flags.length > 0 ? (
+            flags.map((flag) => (
+              <span key={flag} className="audit-flag-tag">
+                {flag}
+              </span>
+            ))
+          ) : (
+            <span className="audit-flag-neutral">none</span>
+          )}
+        </div>
+        <div className="audit-removed">
+          <span className="audit-label">Verifier removed claims:</span>{' '}
+          <strong className="audit-removed-count">{removedClaimsCount}</strong>
+        </div>
+      </div>
     </section>
   );
 };

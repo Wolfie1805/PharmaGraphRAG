@@ -20,8 +20,9 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
-import httpx
+
 import certifi
+import httpx
 
 from app.config.manifest import (
     ManifestFileEntry,
@@ -29,13 +30,19 @@ from app.config.manifest import (
     ReconciliationResult,
     RunStatus,
 )
-from app.config.model import NCBISettings, PubMedConfig, StorageConfig, GeneDrugPair
+from app.config.model import GeneDrugPair, NCBISettings, PubMedConfig, StorageConfig
 from app.ingestion.git_utils import get_git_commit_hash
 from app.ingestion.hash_utils import compute_sha256, write_raw_file_atomically
 from app.ingestion.rate_limiter import RateLimiter
 from app.ingestion.retry import execute_with_retry
 
 logger = logging.getLogger(__name__)
+
+
+class PubMedAcquisitionError(Exception):
+    """Raised when PubMed acquisition limits or validation fail."""
+
+    pass
 
 
 def build_query_string(
@@ -94,7 +101,9 @@ def acquire_pubmed(
     has_api_key = bool(ncbi_settings.ncbi_api_key)
     rps = config.rate_limit_rps_with_key if has_api_key else config.rate_limit_rps_default
     rate_limiter = RateLimiter(rps)
-    logger.info("PubMed rate limiter initialized at %.1f requests/second (API key: %s)", rps, has_api_key)
+    logger.info(
+        "PubMed rate limiter initialized at %.1f requests/second (API key: %s)", rps, has_api_key
+    )
 
     # Establish run directory
     run_date = datetime.now(timezone.utc).strftime("%Y%m%d")
@@ -175,11 +184,13 @@ def acquire_pubmed(
             total_count = int(data.get("count", 0))
             manifest.esearch_counts[pair.id] = total_count
 
-            # Hard check: if esearch count exceeds max_records_per_pair in a full run, STOP and report. Never truncate silently.
+            # Hard check: if esearch count exceeds max_records_per_pair in a full run,
+            # STOP and report. Never truncate silently.
             if not is_pilot and total_count > config.max_records_per_pair:
                 raise PubMedAcquisitionError(
-                    f"Pair '{pair.id}' esearch count ({total_count}) exceeds configured max_records_per_pair "
-                    f"({config.max_records_per_pair}). Execution aborted to prevent silent truncation."
+                    f"Pair '{pair.id}' esearch count ({total_count}) exceeds configured "
+                    f"max_records_per_pair ({config.max_records_per_pair}). "
+                    "Execution aborted to prevent silent truncation."
                 )
 
             pmids = list(data.get("idlist", []))
@@ -209,7 +220,9 @@ def acquire_pubmed(
             # Truncate to target_count
             pmids = pmids[:target_count]
             query_to_pmids[pair.id] = pmids
-            logger.info("Pair %s: reported count=%d, selected PMIDs=%d", pair.id, total_count, len(pmids))
+            logger.info(
+                "Pair %s: reported count=%d, selected PMIDs=%d", pair.id, total_count, len(pmids)
+            )
 
             for pmid in pmids:
                 pmid_to_queries.setdefault(pmid, []).append(pair.id)
@@ -237,12 +250,15 @@ def acquire_pubmed(
 
         # Large job reminder per NCBI guidelines (>100 requests)
         batch_size = config.efetch_batch_size
-        num_batches = math.ceil(len(ordered_unique_pmids) / batch_size) if ordered_unique_pmids else 0
+        num_batches = (
+            math.ceil(len(ordered_unique_pmids) / batch_size) if ordered_unique_pmids else 0
+        )
         if num_batches > 100:
             logger.warning(
                 "NCBI USAGE POLICY REMINDER: Planned request batch count is %d (>100). "
-                "NCBI requests large bulk runs take place on weekends or 9:00 PM to 5:00 AM US Eastern Time.",
-                num_batches
+                "NCBI requests large bulk runs take place on weekends or "
+                "9:00 PM to 5:00 AM US Eastern Time.",
+                num_batches,
             )
 
         # Step 2: Fetch raw XML batches via efetch
@@ -275,7 +291,12 @@ def acquire_pubmed(
                     )
                     continue
 
-            logger.info("Fetching efetch batch %d/%d (%d PMIDs)...", batch_num, num_batches, len(batch_pmids))
+            logger.info(
+                "Fetching efetch batch %d/%d (%d PMIDs)...",
+                batch_num,
+                num_batches,
+                len(batch_pmids),
+            )
 
             post_data = {
                 "db": config.db,
@@ -323,9 +344,16 @@ def acquire_pubmed(
         )
 
         if missing_pmids:
-            logger.warning("Reconciliation note: %d PMIDs missing from XML response: %s", len(missing_pmids), missing_pmids)
+            logger.warning(
+                "Reconciliation note: %d PMIDs missing from XML response: %s",
+                len(missing_pmids),
+                missing_pmids,
+            )
         else:
-            logger.info("Reconciliation 100%% successful: all %d requested PMIDs accounted for.", len(requested_set))
+            logger.info(
+                "Reconciliation 100%% successful: all %d requested PMIDs accounted for.",
+                len(requested_set),
+            )
 
         # Mark complete
         manifest.run_status = RunStatus.COMPLETE

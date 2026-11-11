@@ -39,9 +39,10 @@ def run_demo(questions: list[str]) -> None:
         start_time = time.perf_counter()
         response = service.answer_question(q)
         elapsed_sec = time.perf_counter() - start_time
-
-        client_calls_query = client.call_count - client_calls_before
-        builder_calls_query = client.builder.call_count - builder_calls_before
+        _ = (
+            client.call_count - client_calls_before,
+            client.builder.call_count - builder_calls_before,
+        )
 
         print(f"\n[RESPONSE TIME]: {elapsed_sec:.4f} seconds")
         print(f"[ANSWER MODE]:   {response.answer_mode}")
@@ -58,12 +59,18 @@ def run_demo(questions: list[str]) -> None:
         print(f"[FIELDS USED]:   Chunk={USED_CHUNK_COLUMNS}, Graph={USED_GRAPH_COLUMNS}")
 
         # Display Top 10 Evidence Items retrieved for inspection
-        print(f"\n[TOP 10 RETRIEVED EVIDENCE ITEMS] (Total in bundle: {response.evidence_bundle.total_items}):")
-        chunk_items = [it for it in response.evidence_bundle.items if it.source_type != "relationship_record"]
+        total_items = response.evidence_bundle.total_items
+        print(f"\n[TOP 10 RETRIEVED EVIDENCE ITEMS] (Total in bundle: {total_items}):")
+        chunk_items = [
+            it
+            for it in response.evidence_bundle.items
+            if it.source_type != "relationship_record"
+        ]
         for idx, item in enumerate(chunk_items[:10], 1):
             print(
-                f"  {idx}. [{item.source_type.upper()}] ID={item.source_id} | Score={item.score:.4f} | "
-                f"Matched={item.matched_entities} | Title: {item.title[:65]}"
+                f"  {idx}. [{item.source_type.upper()}] ID={item.source_id} "
+                f"| Score={item.score:.4f} | Matched={item.matched_entities} "
+                f"| Title: {item.title[:65]}"
             )
 
         print("\n[FULL RESPONSE JSON]:")

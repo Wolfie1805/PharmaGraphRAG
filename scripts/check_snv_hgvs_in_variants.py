@@ -1,14 +1,15 @@
-import zipfile
 import csv
 import io
-import re
+import zipfile
 
 CLINPGX_RAW_DIR = "data/raw/clinpgx/20261030_79ff97e7"
 csv.field_size_limit(250000)
 
 # 1. Collect all SNV endpoint names and IDs from relationships.tsv
 z_rel = zipfile.ZipFile(f"{CLINPGX_RAW_DIR}/relationships.zip")
-reader_rel = csv.DictReader(io.StringIO(z_rel.read("relationships.tsv").decode("utf-8")), delimiter="\t")
+reader_rel = csv.DictReader(
+    io.StringIO(z_rel.read("relationships.tsv").decode("utf-8")), delimiter="\t"
+)
 
 snv_names = set()
 snv_ids = set()
@@ -28,7 +29,9 @@ print(f"Total unique SNV Names (HGVS/coords): {len(snv_names)}")
 
 # 2. Inspect variants.tsv columns
 z_var = zipfile.ZipFile(f"{CLINPGX_RAW_DIR}/variants.zip")
-reader_var = csv.DictReader(io.StringIO(z_var.read("variants.tsv").decode("utf-8")), delimiter="\t")
+reader_var = csv.DictReader(
+    io.StringIO(z_var.read("variants.tsv").decode("utf-8")), delimiter="\t"
+)
 var_rows = list(reader_var)
 
 # Check exact matches against each column in variants.tsv
@@ -54,17 +57,27 @@ for r in var_rows:
 
 print(f"\nTotal individual synonym tokens in variants.tsv: {len(synonym_tokens)}")
 matched_snv_names_in_var_syns = snv_names & synonym_tokens
-print(f"Exact SNV Names matching an individual token in variants.tsv 'Synonyms': {len(matched_snv_names_in_var_syns)}")
+print(
+    "Exact SNV Names matching an individual token in variants.tsv 'Synonyms': "
+    f"{len(matched_snv_names_in_var_syns)}"
+)
 if matched_snv_names_in_var_syns:
-    print("Sample matched SNV names in variants.tsv Synonyms:", list(matched_snv_names_in_var_syns)[:5])
+    print(
+        "Sample matched SNV names in variants.tsv Synonyms:",
+        list(matched_snv_names_in_var_syns)[:5],
+    )
 
-# Also check without the '=' reference allele notation (e.g. g.104941653G= vs g.104941653G>A or coords)
+# Also check without the '=' reference allele notation
+# (e.g. g.104941653G= vs g.104941653G>A or coords)
 snv_names_stripped_eq = set()
 for n in snv_names:
     if n.endswith("="):
         snv_names_stripped_eq.add(n[:-1])
 matched_stripped = snv_names_stripped_eq & synonym_tokens
-print(f"SNV names stripped of trailing '=' matching variants.tsv Synonyms: {len(matched_stripped)}")
+print(
+    "SNV names stripped of trailing '=' matching variants.tsv Synonyms: "
+    f"{len(matched_stripped)}"
+)
 
 # Also check clinpgxHaplotypes HGVS column
 z_haplo = zipfile.ZipFile("data/raw/clinpgx/20261031_d2a604a2/clinpgxHaplotypes.zip")

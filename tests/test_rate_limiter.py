@@ -1,7 +1,9 @@
 """Tests for RateLimiter behavior."""
 
 import time
+
 import pytest
+
 from app.ingestion.rate_limiter import RateLimiter
 
 

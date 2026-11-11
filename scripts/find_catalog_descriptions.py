@@ -1,6 +1,7 @@
 import re
-import httpx
+
 import certifi
+import httpx
 
 resp = httpx.get("https://www.clinpgx.org/downloads", verify=certifi.where(), follow_redirects=True)
 links = re.findall(r'/assets/[a-zA-Z0-9_\-\.]+\.js', resp.text)

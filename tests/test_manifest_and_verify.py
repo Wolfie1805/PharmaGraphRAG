@@ -1,9 +1,5 @@
 """Tests for manifest creation, validation, and hash verification."""
 
-import json
-from pathlib import Path
-import pytest
-
 from app.config.manifest import BaseRunManifest, ManifestFileEntry, RunStatus
 from app.ingestion.hash_utils import compute_sha256
 from app.ingestion.verify import verify_manifest
@@ -86,7 +82,8 @@ def test_verify_detects_tampered_file(tmp_path):
     report = verify_manifest(manifest_path, workspace_root=tmp_path)
     assert report.is_valid is False
     assert len(report.mismatched_hashes) == 1
-    assert report.mismatched_hashes[0]["file"] == str(file1.relative_to(tmp_path)).replace("\\", "/")
+    expected_rel = str(file1.relative_to(tmp_path)).replace("\\", "/")
+    assert report.mismatched_hashes[0]["file"] == expected_rel
 
 
 def test_verify_detects_missing_and_unexpected_files(tmp_path):

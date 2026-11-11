@@ -4,7 +4,6 @@ import csv
 import io
 import json
 import re
-import xml.etree.ElementTree as ET
 import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -92,7 +91,9 @@ def measure_all():
                         for col_idx, cell in enumerate(row):
                             if len(cell) > max_len:
                                 max_len = len(cell)
-                                max_col = header[col_idx] if col_idx < len(header) else f"col_{col_idx}"
+                                max_col = (
+                                    header[col_idx] if col_idx < len(header) else f"col_{col_idx}"
+                                )
                     max_field_lengths[f"{zip_file.name}#{tsv_name}"] = {
                         "max_length_bytes": max_len,
                         "column": max_col,
@@ -104,9 +105,13 @@ def measure_all():
     # B.4 STAR ALLELES & HAPLOTYPES IN SELECTED FILES & CATALOG
     # =========================================================================
     # Catalog check
-    catalog_json = json.loads((CLINPGX_DIR / "clinpgx_file_catalog.json").read_text(encoding="utf-8"))
+    catalog_json = json.loads(
+        (CLINPGX_DIR / "clinpgx_file_catalog.json").read_text(encoding="utf-8")
+    )
     catalog_files = [x["fileName"] for x in catalog_json.get("data", [])]
-    haplotype_files_in_catalog = [f for f in catalog_files if "haplotype" in f.lower() or "allele" in f.lower()]
+    haplotype_files_in_catalog = [
+        f for f in catalog_files if "haplotype" in f.lower() or "allele" in f.lower()
+    ]
 
     # Variants file inspection for star alleles
     star_allele_pat = re.compile(r"\*[0-9]+[A-Za-z]*")
@@ -117,7 +122,9 @@ def measure_all():
 
     with zipfile.ZipFile(CLINPGX_DIR / "variants.zip") as z:
         with z.open("variants.tsv") as f:
-            reader = csv.DictReader(io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t")
+            reader = csv.DictReader(
+                io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t"
+            )
             for row in reader:
                 vname = row.get("Variant Name", "")
                 if star_allele_pat.search(vname):
@@ -134,7 +141,9 @@ def measure_all():
     rel_entity_types = Counter()
     with zipfile.ZipFile(CLINPGX_DIR / "relationships.zip") as z:
         with z.open("relationships.tsv") as f:
-            reader = csv.DictReader(io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t")
+            reader = csv.DictReader(
+                io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t"
+            )
             for row in reader:
                 t1 = row.get("Entity1_type", "")
                 t2 = row.get("Entity2_type", "")
@@ -179,11 +188,21 @@ def measure_all():
     # Load all primary IDs from genes, drugs, chemicals, variants
     with zipfile.ZipFile(CLINPGX_DIR / "genes.zip") as z:
         with z.open("genes.tsv") as f:
-            gene_ids = {row["PharmGKB Accession Id"] for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8"), delimiter="\t")}
+            gene_ids = {
+                row["PharmGKB Accession Id"]
+                for row in csv.DictReader(
+                    io.TextIOWrapper(f, encoding="utf-8"), delimiter="\t"
+                )
+            }
 
     with zipfile.ZipFile(CLINPGX_DIR / "variants.zip") as z:
         with z.open("variants.tsv") as f:
-            variant_ids = {row["Variant ID"] for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t")}
+            variant_ids = {
+                row["Variant ID"]
+                for row in csv.DictReader(
+                    io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t"
+                )
+            }
 
     all_registered_ids = gene_ids | drug_ids | chem_ids | variant_ids
 
@@ -195,14 +214,14 @@ def measure_all():
 
     with zipfile.ZipFile(CLINPGX_DIR / "relationships.zip") as z:
         with z.open("relationships.tsv") as f:
-            reader = csv.DictReader(io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t")
+            reader = csv.DictReader(
+                io.TextIOWrapper(f, encoding="utf-8", errors="replace"), delimiter="\t"
+            )
             rel_cols = reader.fieldnames
             for row in reader:
                 total_rel_rows += 1
                 e1 = row.get("Entity1_id", "")
                 e2 = row.get("Entity2_id", "")
-                t1 = row.get("Entity1_type", "")
-                t2 = row.get("Entity2_type", "")
                 rel = row.get("Association", "")
                 rel_types[rel] += 1
 

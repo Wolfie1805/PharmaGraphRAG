@@ -1,23 +1,25 @@
-import zipfile
 import csv
 import io
-import re
+import zipfile
 
 csv.field_size_limit(250000)
 
-for filename, path in [("drugs.tsv", "data/raw/clinpgx/20261030_79ff97e7/drugs.zip"), ("chemicals.tsv", "data/raw/clinpgx/20261030_79ff97e7/chemicals.zip")]:
+for filename, path in [
+    ("drugs.tsv", "data/raw/clinpgx/20261030_79ff97e7/drugs.zip"),
+    ("chemicals.tsv", "data/raw/clinpgx/20261030_79ff97e7/chemicals.zip"),
+]:
     z = zipfile.ZipFile(path)
     reader = csv.DictReader(io.StringIO(z.read(filename).decode("utf-8")), delimiter="\t")
-    
+
     flagged_artifacts = []
-    
+
     for r in reader:
         raw = r.get("Trade Names", "").strip()
         if not raw:
             continue
         acc = r["PharmGKB Accession Id"]
         name = r["Name"]
-        
+
         try:
             items = list(csv.reader(io.StringIO(raw)))[0]
             for it in items:
@@ -44,12 +46,12 @@ for filename, path in [("drugs.tsv", "data/raw/clinpgx/20261030_79ff97e7/drugs.z
                 if it_clean.count("(") != it_clean.count(")"):
                     is_artifact = True
                     reason.append("unbalanced_parens")
-                    
+
                 if is_artifact:
                     flagged_artifacts.append((acc, name, it_clean, "|".join(reason)))
-        except Exception as e:
+        except Exception:
             pass
-            
+
     print(f"=== {filename} FLAGGED MALFORMED TRADE NAME ARTIFACTS ===")
     print(f"Total flagged artifacts: {len(flagged_artifacts)}")
     for f in flagged_artifacts:
