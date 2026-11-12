@@ -90,7 +90,7 @@ def main() -> int:
         model_name=cfg.embedding_model,
         qdrant_path=args.output_dir,
         collection_name=cfg.collection_name,
-        chunks_path=cfg.processed_dir / "chunks.parquet",
+        chunks_path=cfg.resolved_chunks_path,
     )
 
     try:

@@ -4,6 +4,7 @@ Configuration module for Demo D1 retrieval core.
 
 import os
 from pathlib import Path
+from typing import List
 
 from pydantic import BaseModel, Field
 
@@ -21,6 +22,12 @@ class RetrievalConfig(BaseModel):
         ),
         description="Local disk directory for embedded Qdrant vector database.",
     )
+    chunks_path: Path = Field(
+        default_factory=lambda: Path(
+            os.getenv("PHARMAGRAPH_CHUNKS_PATH", "data/processed/chunks.parquet")
+        ),
+        description="Path to chunks Parquet table.",
+    )
     collection_name: str = Field(
         default="pharmagraph_chunks",
         description="Name of the Qdrant chunk collection.",
@@ -32,6 +39,14 @@ class RetrievalConfig(BaseModel):
     top_k: int = Field(
         default=10,
         description="Top K results to return from fusion.",
+    )
+    curated_slot_reserve: int = Field(
+        default=5,
+        description="Max top_k slots reserved for curated sources carrying all resolved entities.",
+    )
+    curated_source_types: List[str] = Field(
+        default_factory=lambda: ["guideline", "annotation", "drug_label"],
+        description="Curated source types eligible for slot reservation before top_k cut.",
     )
     processed_dir: Path = Field(
         default=Path("data/processed"),
@@ -45,3 +60,12 @@ class RetrievalConfig(BaseModel):
         default=Path("data/raw/clinpgx/20261031_d2a604a2"),
         description="Raw haplotype manifest directory.",
     )
+
+    @property
+    def resolved_chunks_path(self) -> Path:
+        """Resolve chunks Parquet path respecting explicit overrides, env var, or processed_dir."""
+        if "chunks_path" in self.model_fields_set or os.getenv("PHARMAGRAPH_CHUNKS_PATH"):
+            return self.chunks_path
+        if self.processed_dir != Path("data/processed"):
+            return self.processed_dir / "chunks.parquet"
+        return self.chunks_path

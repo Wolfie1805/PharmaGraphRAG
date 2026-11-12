@@ -2,7 +2,7 @@
 Retrieval pipeline orchestrating entity resolution, hybrid search, graph traversal, and RRF fusion.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import duckdb
 from pydantic import BaseModel, Field
@@ -36,13 +36,17 @@ class RetrievalPipeline:
 
     def __init__(self, config: RetrievalConfig = RetrievalConfig()):
         self.config = config
-        self.entity_service = EntityLookupService(config.processed_dir)
-        self.bm25_index = BM25KeywordIndex(config.processed_dir / "chunks.parquet")
+        chunks_path = config.resolved_chunks_path
+        self.entity_service = EntityLookupService(
+            config.processed_dir,
+            raw_haplo_dir=config.raw_haplo_dir,
+        )
+        self.bm25_index = BM25KeywordIndex(chunks_path)
         self.meaning_index = MeaningSearchIndex(
             model_name=config.embedding_model,
             qdrant_path=config.qdrant_path,
             collection_name=config.collection_name,
-            chunks_path=config.processed_dir / "chunks.parquet",
+            chunks_path=chunks_path,
         )
         self.graph_service = GraphLookupService(config.processed_dir)
         self._con = duckdb.connect(":memory:")
@@ -114,7 +118,7 @@ class RetrievalPipeline:
         # 5. Graph edges mapped to source chunks (strictly existing chunks, never stubs)
         graph_chunks: List[Dict[str, Any]] = []
         if graph_res.source_pmids:
-            chunks_path = self.config.processed_dir / "chunks.parquet"
+            chunks_path = self.config.resolved_chunks_path
             pmid_placeholders = ", ".join(["?"] * len(graph_res.source_pmids))
             sql = f"""
                 SELECT chunk_id, source_type, source_id, title, content,
@@ -141,20 +145,31 @@ class RetrievalPipeline:
                     }
                 )
 
-        # 6. Reciprocal Rank Fusion (k=60)
-        # Retrieve candidate pool for entity-aware tier re-ranking
+        # 6. Reciprocal Rank Fusion (k=60), preserving full fused pool for dedup & slot balance
+        pool_limit = max(50, len(keyword_hits) + len(meaning_hits) + len(graph_chunks))
         fused_candidates = compute_rrf_fusion(
             keyword_hits=keyword_hits,
             meaning_hits=meaning_hits,
             graph_chunks=graph_chunks,
             k=self.config.rrf_k,
-            top_n=50,
+            top_n=pool_limit,
         )
 
-        # 7. Record matched_entities + strict linked_via_relationship_pmid, then tier-rank
+        # 6b. Keep at most one chunk per source_id (the one with best fused rank) before top_k
+        seen_source_ids: Set[str] = set()
+        deduped_candidates: List[FusedHit] = []
         for hit in fused_candidates:
-            if not hit.entity_ids and hit.chunk_id in self._chunk_entity_map:
-                hit.entity_ids = self._chunk_entity_map[hit.chunk_id]
+            if hit.source_id in seen_source_ids:
+                continue
+            seen_source_ids.add(hit.source_id)
+            deduped_candidates.append(hit)
+        fused_candidates = deduped_candidates
+
+        # 7. Always resolve entity_ids from the active chunk table by chunk_id
+        # (do not rely on potentially stale Qdrant payload entity_ids), then tier-rank.
+        for hit in fused_candidates:
+            if hit.chunk_id in self._chunk_entity_map:
+                hit.entity_ids = list(self._chunk_entity_map[hit.chunk_id])
             matched_set = {cid for cid in resolved_cids if cid in hit.entity_ids}
 
             if hit.source_type == "pubmed" and hit.source_id in pmid_to_pair_edges:
@@ -179,8 +194,53 @@ class RetrievalPipeline:
                 key=lambda h: (-len(h.matched_entities), -h.rrf_score, h.chunk_id)
             )
 
-        # Re-assign rank and cap to top_k
-        top_evidence = fused_candidates[: self.config.top_k]
+        # 7b. Slot balance before top_k cut:
+        # Reserve up to config.curated_slot_reserve slots for configured curated source types
+        # carrying ALL resolved entity IDs; cap pubmed at (top_k - reserve) only when >= reserve
+        # such curated items exist, otherwise let pubmed fill remaining free slots.
+        top_k = self.config.top_k
+        curated_types = set(self.config.curated_source_types)
+        reserve_target = min(max(0, self.config.curated_slot_reserve), top_k)
+
+        qualifying_curated = (
+            [
+                h
+                for h in fused_candidates
+                if h.source_type in curated_types
+                and len(h.matched_entities) == len(resolved_cids)
+            ]
+            if resolved_cids and reserve_target > 0
+            else []
+        )
+        reserved = qualifying_curated[:reserve_target]
+        reserved_chunk_ids = {h.chunk_id for h in reserved}
+        cap_pubmed_to = (
+            (top_k - reserve_target) if len(qualifying_curated) >= reserve_target else None
+        )
+
+        selected: List[FusedHit] = list(reserved)
+        pubmed_used = sum(1 for h in selected if h.source_type == "pubmed")
+        for hit in fused_candidates:
+            if len(selected) >= top_k:
+                break
+            if hit.chunk_id in reserved_chunk_ids:
+                continue
+            if (
+                cap_pubmed_to is not None
+                and hit.source_type == "pubmed"
+                and pubmed_used >= cap_pubmed_to
+            ):
+                continue
+            selected.append(hit)
+            if hit.source_type == "pubmed":
+                pubmed_used += 1
+
+        # Preserve deterministic candidate order for final top_evidence
+        order_idx = {h.chunk_id: idx for idx, h in enumerate(fused_candidates)}
+        selected.sort(key=lambda h: order_idx[h.chunk_id])
+
+        # Re-assign rank
+        top_evidence = selected[:top_k]
         for idx, hit in enumerate(top_evidence, start=1):
             hit.rank = idx
 

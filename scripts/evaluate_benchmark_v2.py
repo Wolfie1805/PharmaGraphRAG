@@ -4,6 +4,7 @@ NOTE: Metrics computed here are a proxy derived from structured tags in chunks.p
 and are NOT human-verified (verified_by_human: false).
 """
 
+import argparse
 import json
 import sys
 from collections import Counter
@@ -14,6 +15,7 @@ import duckdb
 
 from app.generation.config import GenerationConfig
 from app.generation.service import AnswerService
+from app.retrieval.config import RetrievalConfig
 from app.retrieval.pipeline import RetrievalPipeline
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -35,15 +37,25 @@ def _compute_corpus_relevant_ids(
     return relevant
 
 
-def evaluate_v2(benchmark_path: Path) -> Dict[str, Any]:
+def evaluate_v2(
+    benchmark_path: Path,
+    chunks_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     questions: List[Dict[str, Any]] = json.loads(benchmark_path.read_text(encoding="utf-8"))
+
+    cfg = (
+        RetrievalConfig(chunks_path=chunks_path)
+        if chunks_path is not None
+        else RetrievalConfig()
+    )
+    active_chunks_path = cfg.resolved_chunks_path
 
     con = duckdb.connect(":memory:")
     chunks_rows = con.execute(
-        "SELECT chunk_id, source_type, entity_ids FROM 'data/processed/chunks.parquet'"
+        f"SELECT chunk_id, source_type, entity_ids FROM '{active_chunks_path.as_posix()}'"
     ).fetchall()
 
-    pipeline = RetrievalPipeline()
+    pipeline = RetrievalPipeline(config=cfg)
     service = AnswerService(
         config=GenerationConfig(llm_mode="extractive"),
         retrieval_pipeline=pipeline,
@@ -51,6 +63,7 @@ def evaluate_v2(benchmark_path: Path) -> Dict[str, Any]:
 
     print("=" * 96)
     print(f"BENCHMARK V2 DIAGNOSTIC ({benchmark_path.as_posix()})")
+    print(f"CHUNKS TABLE: {active_chunks_path.as_posix()}")
     print(
         "NOTICE: The relevance rule overlaps with ranking features (entity_ids matching); "
         "these numbers are a pipeline diagnostic and NOT a quality score "
@@ -182,4 +195,20 @@ def evaluate_v2(benchmark_path: Path) -> Dict[str, Any]:
 
 
 if __name__ == "__main__":
-    evaluate_v2(Path("data/benchmark/demo_questions_v2.json"))
+    parser = argparse.ArgumentParser(description="Run Benchmark v2 pipeline diagnostic.")
+    parser.add_argument(
+        "--benchmark-path",
+        type=Path,
+        default=Path("data/benchmark/demo_questions_v2.json"),
+    )
+    parser.add_argument(
+        "--chunks-path",
+        type=Path,
+        default=None,
+        help=(
+            "Optional chunks Parquet path "
+            "(defaults to PHARMAGRAPH_CHUNKS_PATH or data/processed/chunks.parquet)."
+        ),
+    )
+    args = parser.parse_args()
+    evaluate_v2(args.benchmark_path, chunks_path=args.chunks_path)

@@ -1225,5 +1225,566 @@ def test_hla_spacing_lookup_normalization_preserves_stored_names():
     assert {"pg:haplo:165987830", "pg:chem:448004"}.issubset(q07_cids)
 
 
+def test_lowercase_gene_cpic_and_chemical_edge_rule():
+    """
+    Verify D3b Decision 3 Rule 1:
+    - Lowercase <=6-alpha CPIC genes resolve (e.g. dpyd fluorouracil, tpmt azathioprine)
+    - Lowercase non-CPIC genes with no explicit Gene-Chemical edge do NOT resolve
+      and are flagged in possible_gene_names_lowercase (mthfr, cat warfarin)
+    - Stoplist words (impact warfarin) stay filtered without lowercase-gene warning
+    - Uppercase (MTHFR, CAT, IMPACT) and entity_hints behavior remain unchanged
+    """
+    service = EntityLookupService()
+
+    # 1. dpyd fluorouracil -> both resolve
+    res_df, notes_df = service.extract_and_resolve_entities_with_notes("dpyd fluorouracil")
+    cids_df = {r.canonical_id for r in res_df if r.canonical_id}
+    assert {"pg:gene:145", "pg:chem:128406956"}.issubset(cids_df)
+    assert notes_df == []
+
+    # 2. tpmt azathioprine -> both resolve
+    res_ta, notes_ta = service.extract_and_resolve_entities_with_notes("tpmt azathioprine")
+    cids_ta = {r.canonical_id for r in res_ta if r.canonical_id}
+    assert {"pg:gene:356", "pg:chem:448515"}.issubset(cids_ta)
+    assert notes_ta == []
+
+    # 3. mthfr alone (non-CPIC, no chemical) -> unresolved + flagged
+    res_m, notes_m = service.extract_and_resolve_entities_with_notes("mthfr")
+    assert res_m == []
+    assert notes_m == ["mthfr"]
+
+    # 4. cat warfarin (non-CPIC, no CAT-warfarin edge) -> warfarin only + cat flagged
+    res_cw, notes_cw = service.extract_and_resolve_entities_with_notes("cat warfarin")
+    assert [r.canonical_id for r in res_cw] == ["pg:chem:451906"]
+    assert notes_cw == ["cat"]
+
+    # 5. impact warfarin -> warfarin only + no flag (stoplisted prose word)
+    res_iw, notes_iw = service.extract_and_resolve_entities_with_notes("impact warfarin")
+    assert [r.canonical_id for r in res_iw] == ["pg:chem:451906"]
+    assert notes_iw == []
+
+    # 6. Uppercase & entity_hints remain unchanged
+    for term, expected_cid in (
+        ("MTHFR", "pg:gene:245"),
+        ("CAT", "pg:gene:26099"),
+        ("IMPACT", "pg:gene:143485502"),
+    ):
+        r_up, n_up = service.extract_and_resolve_entities_with_notes(term)
+        assert [x.canonical_id for x in r_up] == [expected_cid]
+        assert n_up == []
+
+    r_hint, n_hint = service.extract_and_resolve_entities_with_notes(
+        "mthfr", entity_hints=["pg:gene:245"]
+    )
+    assert [x.canonical_id for x in r_hint] == ["pg:gene:245"]
+    assert n_hint == []
+
+
+def test_source_id_dedup_and_curated_slot_balance(tmp_path: Path, monkeypatch):
+    """
+    Verify D3b Decision 3 Rule 2:
+    - Exactly one chunk per source_id is kept (best fused rank) before top_k cut.
+    - When >= 5 qualifying curated chunks (guideline/annotation/drug_label carrying ALL
+      resolved entity IDs) exist, 5 slots are reserved and pubmed is capped at 5.
+    - When < 5 qualifying curated chunks exist, pubmed fills the remaining free slots.
+    """
+    import numpy as np
+
+    from app.retrieval.config import RetrievalConfig
+    from app.retrieval.pipeline import RetrievalPipeline
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            vecs = []
+            for idx, _t in enumerate(texts):
+                v = np.array([1.0, float(idx + 1) * 0.01, 0.5, 0.25], dtype=np.float32)
+                v = v / np.linalg.norm(v)
+                vecs.append(v)
+            return np.vstack(vecs)
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+
+    def _build_fixture(sub_dir: Path, num_curated: int, num_pubmed_multi_sections: int):
+        sub_dir.mkdir(parents=True, exist_ok=True)
+        ent_schema = pa.schema(
+            [
+                ("canonical_id", pa.string()),
+                ("entity_type", pa.string()),
+                ("primary_source_id", pa.string()),
+                ("display_name", pa.string()),
+                ("normalized_name", pa.string()),
+                ("is_drug", pa.bool_()),
+                ("gene_symbol", pa.string()),
+                ("defined_by", pa.string()),
+                ("is_ambiguous", pa.bool_()),
+            ]
+        )
+        pq.write_table(
+            pa.Table.from_pylist(
+                [
+                    {
+                        "canonical_id": "pg:gene:133787052",
+                        "entity_type": "gene",
+                        "primary_source_id": "PA133787052",
+                        "display_name": "VKORC1",
+                        "normalized_name": "vkorc1",
+                        "is_drug": False,
+                        "gene_symbol": "VKORC1",
+                        "defined_by": "clinpgx_genes",
+                        "is_ambiguous": False,
+                    },
+                    {
+                        "canonical_id": "pg:chem:451906",
+                        "entity_type": "chemical",
+                        "primary_source_id": "PA451906",
+                        "display_name": "warfarin",
+                        "normalized_name": "warfarin",
+                        "is_drug": True,
+                        "gene_symbol": None,
+                        "defined_by": "clinpgx_chemicals",
+                        "is_ambiguous": False,
+                    },
+                ],
+                schema=ent_schema,
+            ),
+            sub_dir / "entities.parquet",
+        )
+        syn_schema = pa.schema(
+            [
+                ("canonical_id", pa.string()),
+                ("synonym_text", pa.string()),
+                ("normalized_synonym", pa.string()),
+                ("synonym_type", pa.string()),
+            ]
+        )
+        pq.write_table(pa.Table.from_pylist([], schema=syn_schema), sub_dir / "synonyms.parquet")
+
+        pmids = [f"80000{i}" for i in range(1, 9)]
+        rel_schema = pa.schema(
+            [
+                ("relationship_id", pa.string()),
+                ("entity1_id", pa.string()),
+                ("entity1_name", pa.string()),
+                ("entity1_type", pa.string()),
+                ("entity1_canonical_id", pa.string()),
+                ("entity2_id", pa.string()),
+                ("entity2_name", pa.string()),
+                ("entity2_type", pa.string()),
+                ("entity2_canonical_id", pa.string()),
+                ("association", pa.string()),
+                ("pmids", pa.list_(pa.string())),
+                ("is_dangling", pa.bool_()),
+                ("raw_file_sha256", pa.string()),
+            ]
+        )
+        pq.write_table(
+            pa.Table.from_pylist(
+                [
+                    {
+                        "relationship_id": "rel:vw01",
+                        "entity1_id": "PA133787052",
+                        "entity1_name": "VKORC1",
+                        "entity1_type": "Gene",
+                        "entity1_canonical_id": "pg:gene:133787052",
+                        "entity2_id": "PA451906",
+                        "entity2_name": "warfarin",
+                        "entity2_type": "Chemical",
+                        "entity2_canonical_id": "pg:chem:451906",
+                        "association": "associated",
+                        "pmids": pmids,
+                        "is_dangling": False,
+                        "raw_file_sha256": "sha_vw",
+                    }
+                ],
+                schema=rel_schema,
+            ),
+            sub_dir / "relationships.parquet",
+        )
+
+        chunks_rows = []
+        # 8 distinct PubMed papers (with multiple sections on first PMID) for graph + BM25 RRF
+        for idx, pmid in enumerate(pmids):
+            sec_count = num_pubmed_multi_sections if idx == 0 else 1
+            for sec in range(sec_count):
+                chunks_rows.append(
+                    {
+                        "chunk_id": f"chunk:pubmed:{pmid}:{sec}",
+                        "source_type": "pubmed",
+                        "source_id": pmid,
+                        "title": "VKORC1 warfarin response pharmacogenetics study",
+                        "content": (
+                            "VKORC1 warfarin VKORC1 warfarin clinical pharmacogenetics paper."
+                        ),
+                        "date": "2020-01-01",
+                        "date_precision": "day",
+                        "entity_ids": [],
+                    }
+                )
+        for j in range(num_curated):
+            st = "guideline" if j == 0 else ("drug_label" if j == 1 else "annotation")
+            chunks_rows.append(
+                {
+                    "chunk_id": f"chunk:{st}:C{j}",
+                    "source_type": st,
+                    "source_id": f"C{j}",
+                    "title": f"VKORC1 - warfarin {st} {j}",
+                    "content": "VKORC1 and warfarin curated relationship entry.",
+                    "date": "2021-01-01",
+                    "date_precision": "day",
+                    "entity_ids": ["pg:gene:133787052", "pg:chem:451906"],
+                }
+            )
+        chunks_schema = pa.schema(
+            [
+                ("chunk_id", pa.string()),
+                ("source_type", pa.string()),
+                ("source_id", pa.string()),
+                ("title", pa.string()),
+                ("content", pa.string()),
+                ("date", pa.string()),
+                ("date_precision", pa.string()),
+                ("entity_ids", pa.list_(pa.string())),
+            ]
+        )
+        pq.write_table(
+            pa.Table.from_pylist(chunks_rows, schema=chunks_schema),
+            sub_dir / "chunks.parquet",
+        )
+        cfg = RetrievalConfig(
+            processed_dir=sub_dir,
+            qdrant_path=sub_dir / "qdrant_db",
+            raw_haplo_dir=sub_dir,
+        )
+        p = RetrievalPipeline(cfg)
+        p.meaning_index.build_index(force_rebuild=True, batch_size=8)
+        return p
+
+    # Case A: 7 qualifying curated items (>=5) + 8 PubMed papers (with 4 sections for PMID 800001)
+    p_full = _build_fixture(tmp_path / "case_a", num_curated=7, num_pubmed_multi_sections=4)
+    try:
+        res_a = p_full.query("VKORC1 warfarin")
+        assert len(res_a.top_evidence) == 10
+        # 1. source_id uniqueness
+        sids_a = [h.source_id for h in res_a.top_evidence]
+        assert len(sids_a) == len(set(sids_a))
+        # 2. >= 5 curated reserved and pubmed capped at <= 5
+        curated_set = {"guideline", "annotation", "drug_label"}
+        curated_cnt_a = sum(
+            1 for h in res_a.top_evidence if h.source_type in curated_set
+        )
+        pubmed_cnt_a = sum(1 for h in res_a.top_evidence if h.source_type == "pubmed")
+        assert curated_cnt_a >= 5
+        assert pubmed_cnt_a <= 5
+    finally:
+        p_full.meaning_index.close()
+
+    # Case B: only 2 qualifying curated items (<5) + 8 PubMed papers -> pubmed fills 8 free slots
+    p_few = _build_fixture(tmp_path / "case_b", num_curated=2, num_pubmed_multi_sections=3)
+    try:
+        res_b = p_few.query("VKORC1 warfarin")
+        assert len(res_b.top_evidence) == 10
+        sids_b = [h.source_id for h in res_b.top_evidence]
+        assert len(sids_b) == len(set(sids_b))
+        curated_cnt_b = sum(
+            1 for h in res_b.top_evidence if h.source_type in curated_set
+        )
+        pubmed_cnt_b = sum(1 for h in res_b.top_evidence if h.source_type == "pubmed")
+        assert curated_cnt_b == 2
+        assert pubmed_cnt_b == 8
+    finally:
+        p_few.meaning_index.close()
+
+
+def test_chunks_path_override_reads_entity_ids_without_rebuilding_qdrant(
+    tmp_path: Path, monkeypatch
+):
+    """
+    Verify D3b Decision 3 Rule 3:
+    - PHARMAGRAPH_CHUNKS_PATH overrides RetrievalConfig.resolved_chunks_path.
+    - Changing entity_ids in the active chunks table updates hit.entity_ids and
+      hit.matched_entities on RetrievalPipeline.query WITHOUT rebuilding Qdrant
+      (even when Qdrant payload still carries stale entity_ids).
+    """
+    import numpy as np
+
+    from app.retrieval.config import RetrievalConfig
+    from app.retrieval.pipeline import RetrievalPipeline
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            vecs = []
+            for idx, _t in enumerate(texts):
+                v = np.array([1.0, float(idx + 1) * 0.1, 0.5, 0.25], dtype=np.float32)
+                v = v / np.linalg.norm(v)
+                vecs.append(v)
+            return np.vstack(vecs)
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+
+    monkeypatch.setenv("PHARMAGRAPH_CHUNKS_PATH", str(tmp_path / "custom_chunks.parquet"))
+    env_cfg = RetrievalConfig()
+    assert env_cfg.resolved_chunks_path == tmp_path / "custom_chunks.parquet"
+    monkeypatch.delenv("PHARMAGRAPH_CHUNKS_PATH", raising=False)
+
+    ent_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("entity_type", pa.string()),
+            ("primary_source_id", pa.string()),
+            ("display_name", pa.string()),
+            ("normalized_name", pa.string()),
+            ("is_drug", pa.bool_()),
+            ("gene_symbol", pa.string()),
+            ("defined_by", pa.string()),
+            ("is_ambiguous", pa.bool_()),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "canonical_id": "pg:gene:124",
+                    "entity_type": "gene",
+                    "primary_source_id": "PA124",
+                    "display_name": "CYP2C19",
+                    "normalized_name": "cyp2c19",
+                    "is_drug": False,
+                    "gene_symbol": "CYP2C19",
+                    "defined_by": "clinpgx_genes",
+                    "is_ambiguous": False,
+                },
+                {
+                    "canonical_id": "pg:var:166154053",
+                    "entity_type": "variant",
+                    "primary_source_id": "PA166154053",
+                    "display_name": "rs4244285",
+                    "normalized_name": "rs4244285",
+                    "is_drug": False,
+                    "gene_symbol": "CYP2C19",
+                    "defined_by": "clinpgx_variants",
+                    "is_ambiguous": False,
+                },
+            ],
+            schema=ent_schema,
+        ),
+        tmp_path / "entities.parquet",
+    )
+    syn_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("synonym_text", pa.string()),
+            ("normalized_synonym", pa.string()),
+            ("synonym_type", pa.string()),
+        ]
+    )
+    pq.write_table(pa.Table.from_pylist([], schema=syn_schema), tmp_path / "synonyms.parquet")
+    rel_schema = pa.schema(
+        [
+            ("relationship_id", pa.string()),
+            ("entity1_id", pa.string()),
+            ("entity1_name", pa.string()),
+            ("entity1_type", pa.string()),
+            ("entity1_canonical_id", pa.string()),
+            ("entity2_id", pa.string()),
+            ("entity2_name", pa.string()),
+            ("entity2_type", pa.string()),
+            ("entity2_canonical_id", pa.string()),
+            ("association", pa.string()),
+            ("pmids", pa.list_(pa.string())),
+            ("is_dangling", pa.bool_()),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
+    pq.write_table(pa.Table.from_pylist([], schema=rel_schema), tmp_path / "relationships.parquet")
+
+    chunks_schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    v1_path = tmp_path / "chunks.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "chunk_id": "chunk:annotation:A1",
+                    "source_type": "annotation",
+                    "source_id": "A1",
+                    "title": "CYP2C19 rs4244285 annotation",
+                    "content": "Patient annotation without variant entity_id yet.",
+                    "date": "unknown",
+                    "date_precision": "unknown",
+                    "entity_ids": ["pg:gene:124"],
+                }
+            ],
+            schema=chunks_schema,
+        ),
+        v1_path,
+    )
+
+    qdrant_dir = tmp_path / "qdrant_db"
+    p1 = RetrievalPipeline(RetrievalConfig(processed_dir=tmp_path, qdrant_path=qdrant_dir))
+    p1.meaning_index.build_index(force_rebuild=True, batch_size=4)
+    res1 = p1.query("CYP2C19 rs4244285")
+    assert res1.top_evidence[0].entity_ids == ["pg:gene:124"]
+    assert res1.top_evidence[0].matched_entities == ["pg:gene:124"]
+    p1.meaning_index.close()
+
+    # Now write chunks_v2 with updated entity_ids WITHOUT rebuilding Qdrant
+    v2_path = tmp_path / "chunks_v2.parquet"
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "chunk_id": "chunk:annotation:A1",
+                    "source_type": "annotation",
+                    "source_id": "A1",
+                    "title": "CYP2C19 rs4244285 annotation",
+                    "content": "Patient annotation without variant entity_id yet.",
+                    "date": "unknown",
+                    "date_precision": "unknown",
+                    "entity_ids": ["pg:gene:124", "pg:var:166154053"],
+                }
+            ],
+            schema=chunks_schema,
+        ),
+        v2_path,
+    )
+
+    p2 = RetrievalPipeline(
+        RetrievalConfig(
+            processed_dir=tmp_path,
+            chunks_path=v2_path,
+            qdrant_path=qdrant_dir,
+        )
+    )
+    res2 = p2.query("CYP2C19 rs4244285")
+    assert res2.top_evidence[0].entity_ids == ["pg:gene:124", "pg:var:166154053"]
+    assert res2.top_evidence[0].matched_entities == ["pg:gene:124", "pg:var:166154053"]
+    p2.meaning_index.close()
+
+
+def test_coverage_reports_annotation_zero_for_short_stage_manifest(tmp_path: Path, monkeypatch):
+    """
+    Verify D3b Decision 3 Rule 4:
+    When Qdrant index is built with source_types=['drug_label', 'guideline'] only,
+    coverage summary reports annotation indexed=0, expected>0, complete=False.
+    """
+    import numpy as np
+
+    from app.retrieval.meaning_search import MeaningSearchIndex
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            return np.ones((len(texts), 4), dtype=np.float32) * 0.5
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+
+    chunks_path = tmp_path / "chunks.parquet"
+    schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "chunk_id": "chunk:annotation:1",
+                    "source_type": "annotation",
+                    "source_id": "A1",
+                    "title": "Ann 1",
+                    "content": "Annotation content",
+                    "date": "unknown",
+                    "date_precision": "unknown",
+                    "entity_ids": [],
+                },
+                {
+                    "chunk_id": "chunk:drug_label:1",
+                    "source_type": "drug_label",
+                    "source_id": "DL1",
+                    "title": "Label 1",
+                    "content": "Label content",
+                    "date": "2021-01-01",
+                    "date_precision": "day",
+                    "entity_ids": [],
+                },
+                {
+                    "chunk_id": "chunk:guideline:1",
+                    "source_type": "guideline",
+                    "source_id": "G1",
+                    "title": "Guideline 1",
+                    "content": "Guideline content",
+                    "date": "2022-01-01",
+                    "date_precision": "day",
+                    "entity_ids": [],
+                },
+            ],
+            schema=schema,
+        ),
+        chunks_path,
+    )
+
+    idx = MeaningSearchIndex(
+        qdrant_path=tmp_path / "qdrant_db_full",
+        chunks_path=chunks_path,
+    )
+    idx.build_index(force_rebuild=True, batch_size=4, source_types=["drug_label", "guideline"])
+    summary = idx.get_coverage_summary(force_refresh=True)
+    idx.close()
+
+    assert summary["is_partial"] is True
+    assert summary["covered_source_types"] == ["drug_label", "guideline"]
+    assert summary["complete_source_types"] == ["drug_label", "guideline"]
+    assert summary["per_source_type"]["annotation"] == {
+        "indexed": 0,
+        "expected": 1,
+        "complete": False,
+    }
+    assert summary["per_source_type"]["drug_label"] == {
+        "indexed": 1,
+        "expected": 1,
+        "complete": True,
+    }
+    assert summary["per_source_type"]["guideline"] == {
+        "indexed": 1,
+        "expected": 1,
+        "complete": True,
+    }
+
+
+
 
 

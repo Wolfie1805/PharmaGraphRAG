@@ -93,7 +93,7 @@ class AnswerService:
                     has_sufficient_evidence=False,
                 ),
                 resolved_entities=[],
-                flags=["refused", f"refusal_{category}", *partial_flags],
+                flags=["refused", f"refusal_{category}"],
                 removed_claims_count=0,
                 disclaimer_text=self.config.disclaimer_text,
                 answer_mode=self.config.llm_mode,

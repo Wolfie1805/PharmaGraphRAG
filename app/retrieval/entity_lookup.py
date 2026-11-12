@@ -3,6 +3,7 @@ Entity lookup module: exact and normalized-key matching over entities and synony
 Enforces strict ambiguous/unresolved status and disallows fuzzy matching.
 """
 
+import json
 import re
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
@@ -141,11 +142,60 @@ class EntityLookupResult(BaseModel):
 class EntityLookupService:
     """Exact and normalized-key entity resolution service over Parquet tables."""
 
-    def __init__(self, processed_dir: Path = Path("data/processed")):
+    def __init__(
+        self,
+        processed_dir: Path = Path("data/processed"),
+        raw_haplo_dir: Optional[Path] = Path("data/raw/clinpgx/20261031_d2a604a2"),
+    ):
         self.processed_dir = processed_dir
         self.entities_path = processed_dir / "entities.parquet"
         self.synonyms_path = processed_dir / "synonyms.parquet"
+        self.relationships_path = processed_dir / "relationships.parquet"
+        self.cpic_alleles_path = (
+            raw_haplo_dir / "cpic.alleles.json" if raw_haplo_dir is not None else None
+        )
         self._con = duckdb.connect(":memory:")
+        self._cpic_genes: Set[str] = self._load_cpic_genes()
+        self._gene_chemical_edges: Set[Tuple[str, str]] = self._load_gene_chemical_edges()
+
+    def _load_cpic_genes(self) -> Set[str]:
+        """Load distinct CPIC gene symbols dynamically from cpic.alleles.json."""
+        if self.cpic_alleles_path is None or not self.cpic_alleles_path.exists():
+            return set()
+        try:
+            data = json.loads(self.cpic_alleles_path.read_text(encoding="utf-8"))
+            genes = {
+                str((row.get("allele") or {}).get("gene", {}).get("symbol") or "").strip().upper()
+                for row in data
+                if isinstance(row, dict)
+            }
+            genes.discard("")
+            return genes
+        except Exception:
+            return set()
+
+    def _load_gene_chemical_edges(self) -> Set[Tuple[str, str]]:
+        """Load explicit Gene-Chemical canonical ID pairs from relationships.parquet."""
+        if not self.relationships_path.exists():
+            return set()
+        try:
+            rows = self._con.execute(
+                f"""
+                SELECT entity1_canonical_id, LOWER(COALESCE(entity1_type, '')),
+                       entity2_canonical_id, LOWER(COALESCE(entity2_type, ''))
+                FROM '{self.relationships_path.as_posix()}'
+                WHERE NOT COALESCE(is_dangling, FALSE)
+                """
+            ).fetchall()
+            pairs: Set[Tuple[str, str]] = set()
+            for c1, t1, c2, t2 in rows:
+                if t1 == "gene" and t2 == "chemical" and c1 and c2:
+                    pairs.add((str(c1), str(c2)))
+                elif t1 == "chemical" and t2 == "gene" and c1 and c2:
+                    pairs.add((str(c2), str(c1)))
+            return pairs
+        except Exception:
+            return set()
 
     def lookup(self, term: str) -> EntityLookupResult:
         """
@@ -356,6 +406,7 @@ class EntityLookupService:
         results: List[EntityLookupResult] = []
         seen_canonical_ids: Set[str] = set()
         hinted_words_lower: Set[str] = set()
+        resolved_chemical_ids: Set[str] = set()
         possible_gene_names_lowercase: List[str] = []
         seen_lower_gene_words: Set[str] = set()
 
@@ -368,20 +419,44 @@ class EntityLookupService:
                         hinted_words_lower.add(c.display_name.lower())
                         if c.gene_symbol:
                             hinted_words_lower.add(c.gene_symbol.lower())
+                        if c.entity_type.lower() == "chemical":
+                            resolved_chemical_ids.add(c.canonical_id)
 
+        # Pass 1: Lookup candidates, resolve non-filtered entities, and collect resolved chemicals
+        raw_lookups: List[Tuple[str, List[ResolvedEntity], List[ResolvedEntity]]] = []
         for cand in candidates_to_check:
             res = self.lookup(cand)
             if res.status == "unresolved":
                 continue
 
-            # Filter candidates according to the uppercase <=6-alpha gene rule
-            kept_candidates: List[ResolvedEntity] = []
-            filtered_gene = False
+            immediate_kept: List[ResolvedEntity] = []
+            pending_lower_genes: List[ResolvedEntity] = []
             for c in res.candidates:
                 if self._is_short_alpha_gene_filtered(cand, c):
-                    filtered_gene = True
+                    pending_lower_genes.append(c)
                 else:
+                    immediate_kept.append(c)
+
+            if len(immediate_kept) == 1 and immediate_kept[0].entity_type.lower() == "chemical":
+                resolved_chemical_ids.add(immediate_kept[0].canonical_id)
+
+            raw_lookups.append((cand, immediate_kept, pending_lower_genes))
+
+        # Pass 2: Evaluate lowercase <=6-alpha gene rule against resolved chemicals or CPIC list
+        for cand, immediate_kept, pending_lower_genes in raw_lookups:
+            kept_candidates: List[ResolvedEntity] = list(immediate_kept)
+            filtered_gene = False
+            for c in pending_lower_genes:
+                sym_up = (c.gene_symbol or c.display_name or "").strip().upper()
+                in_cpic = sym_up in self._cpic_genes
+                has_chem_edge = bool(resolved_chemical_ids) and any(
+                    (c.canonical_id, chem_cid) in self._gene_chemical_edges
+                    for chem_cid in resolved_chemical_ids
+                )
+                if in_cpic or has_chem_edge:
                     kept_candidates.append(c)
+                else:
+                    filtered_gene = True
 
             if not kept_candidates:
                 if (
