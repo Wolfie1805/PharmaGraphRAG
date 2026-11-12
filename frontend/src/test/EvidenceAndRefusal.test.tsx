@@ -84,6 +84,35 @@ describe('Evidence cards, badges, and refusal rendering', () => {
     expect(screen.queryByText(longText)).toBeNull();
     fireEvent.click(toggleBtn);
     expect(screen.getByText(longText)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Paper cited by a ClinPGx relationship record for this pair/i)
+    ).toBeNull();
+  });
+
+  it('displays relationship PMID provenance label only on linked PubMed cards', () => {
+    render(
+      <EvidenceCard
+        isHighlighted={false}
+        item={{
+          source_id: '20801977',
+          source_type: 'pubmed',
+          title: 'CYP2C19 polymorphism and clopidogrel response',
+          date: '2010-09-02',
+          chunk_text: 'Abstract content.',
+          entities: [],
+          matched_entities: ['pg:gene:124', 'pg:chem:449053'],
+          retrieval_paths: ['graph', 'linked_via_relationship_pmid'],
+          score: 0.032,
+          provenance: {
+            linked_via_relationship_pmid: true,
+            relationship_id: 'rel:c13d31a1998926cc484b972337da816e',
+          },
+        }}
+      />
+    );
+    expect(
+      screen.getByText('Paper cited by a ClinPGx relationship record for this pair')
+    ).toBeInTheDocument();
   });
 
   it('splits semicolon-joined numeric PMIDs into clickable PubMed links with toggle', () => {

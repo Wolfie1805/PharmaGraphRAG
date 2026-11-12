@@ -31,6 +31,10 @@ class FusedHit(BaseModel):
         default_factory=list,
         description="Resolved entity canonical IDs matched in this chunk",
     )
+    provenance: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional structured provenance (e.g. relationship_id links)",
+    )
 
 
 def compute_rrf_fusion(

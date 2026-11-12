@@ -58,6 +58,10 @@ class AskRequest(BaseModel):
     """Incoming query request for the API."""
 
     question: str = Field(..., max_length=10000, description="Biomedical question")
+    entity_hints: Optional[List[str]] = Field(
+        default=None,
+        description="Optional canonical entity IDs to resolve without ambiguity.",
+    )
 
 
 class AskResponse(BaseModel):
@@ -73,6 +77,7 @@ class AskResponse(BaseModel):
     removed_claims_count: int = 0
     disclaimer_text: str
     answer_mode: str = "extractive"
+    meaning_coverage: Dict[str, Any] = Field(default_factory=dict)
     llm_calls: int = 0
     network_calls: int = 0
     builder_calls: int = 0

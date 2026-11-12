@@ -82,6 +82,11 @@ def test_input_guard_refusals():
     assert refused is False
     assert cat is None
 
+    # 6. Unknown drug/brand names must pass InputGuard to reach unrecognized_entity gate
+    for brand_q in ("dolo 650", "paracetamol", "flexon", "xyzzy", "FakeGeneZ with FakeDrugZ"):
+        refused_b, cat_b, _ = InputGuard.evaluate(brand_q)
+        assert refused_b is False, f"{brand_q} should not be refused as {cat_b}"
+
 
 def test_insufficient_evidence_threshold():
     """Verify sufficiency evaluation enforces item count and top score constraints."""
@@ -297,6 +302,22 @@ def test_zero_builder_and_model_calls_on_refusal_and_insufficiency():
 
     class MockEmptyPipeline:
         def query(self, question: str):
+            from app.retrieval.entity_lookup import EntityLookupResult
+            from app.retrieval.pipeline import PipelineQueryResult
+
+            return PipelineQueryResult(
+                question=question,
+                resolved_entities=[
+                    EntityLookupResult(
+                        query="CYP2C19", status="resolved", canonical_id="pg:gene:124"
+                    )
+                ],
+                top_evidence=[],
+                graph_edges=[],
+            )
+
+    class MockNoEntityPipeline:
+        def query(self, question: str):
             from app.retrieval.pipeline import PipelineQueryResult
 
             return PipelineQueryResult(
@@ -319,7 +340,7 @@ def test_zero_builder_and_model_calls_on_refusal_and_insufficiency():
     assert extractive_client.call_count == 0
     assert extractive_client.builder.call_count == 0
 
-    # 2. Insufficient evidence query
+    # 2. Insufficient evidence query (resolved entity, 0 chunks and 0 edges)
     mock_client = MockLLMClient()
     service_insuff = AnswerService(
         config=config,
@@ -328,6 +349,22 @@ def test_zero_builder_and_model_calls_on_refusal_and_insufficiency():
     )
     resp_empty = service_insuff.answer_question("CYP2C19 clopidogrel")
     assert "insufficient_evidence" in resp_empty.flags
+    assert resp_empty.claims == []
+    assert mock_client.call_count == 0
+
+    # 3. Unrecognized entity query (0 resolved and 0 ambiguous entities -> Stage B1)
+    service_unrec = AnswerService(
+        config=config,
+        retrieval_pipeline=MockNoEntityPipeline(),  # type: ignore
+        llm_client=mock_client,
+    )
+    resp_unrec = service_unrec.answer_question("dolo 650")
+    assert "unrecognized_entity" in resp_unrec.flags
+    assert resp_unrec.claims == []
+    assert resp_unrec.evidence_bundle.items == []
+    assert resp_unrec.evidence_bundle.total_items == 0
+    assert resp_unrec.evidence_bundle.has_sufficient_evidence is False
+    assert "ClinPGx data used by this prototype" in resp_unrec.answer
     assert mock_client.call_count == 0
 
 
@@ -567,7 +604,7 @@ def test_extractive_offline_socket_blocker(monkeypatch):
             return PipelineQueryResult(
                 question=question,
                 resolved_entities=[
-                    EntityLookupResult(query="CYP2C19", status="exact", canonical_id="PA124")
+                    EntityLookupResult(query="CYP2C19", status="resolved", canonical_id="PA124")
                 ],
                 top_evidence=[
                     FusedHit(
@@ -578,6 +615,8 @@ def test_extractive_offline_socket_blocker(monkeypatch):
                         content="Guideline text.",
                         date="2022-01-01",
                         date_precision="year",
+                        entity_ids=["PA124"],
+                        matched_entities=["PA124"],
                         rrf_score=0.08,
                         rank=1,
                     ),
@@ -589,6 +628,8 @@ def test_extractive_offline_socket_blocker(monkeypatch):
                         content="Annotation text.",
                         date="unspecified",
                         date_precision="unspecified",
+                        entity_ids=["PA124"],
+                        matched_entities=["PA124"],
                         rrf_score=0.06,
                         rank=2,
                     ),
@@ -600,6 +641,8 @@ def test_extractive_offline_socket_blocker(monkeypatch):
                         content="Label text.",
                         date="2020",
                         date_precision="year",
+                        entity_ids=["PA124"],
+                        matched_entities=["PA124"],
                         rrf_score=0.05,
                         rank=3,
                     ),
@@ -849,9 +892,288 @@ def test_multi_entity_off_topic_separation_and_low_coverage_limitation():
 
     # Narrative contains section header and limitations notes < 3 both-entity items
     assert "Related evidence (matches only one queried entity):" in resp.answer
-    assert (
-        "Fewer than 3 retrieved evidence items carry all queried entities (only 1 found)."
-        in resp.answer
+    assert "Fewer than 3 retrieved evidence items carry all queried entities (only 1 found)." in (
+        resp.answer
     )
+
+
+def test_evidence_bundle_items_map_to_real_rows():
+    """
+    Verify synthetic PMID stub creation is absent and every item in an evidence bundle
+    maps to a real row in chunks.parquet or relationships.parquet.
+    """
+    from pathlib import Path
+
+    import duckdb
+
+    from app.retrieval.entity_lookup import EntityLookupResult
+    from app.retrieval.fusion import FusedHit
+    from app.retrieval.graph_lookup import GraphEdge
+    from app.retrieval.pipeline import PipelineQueryResult
+
+    # 1. Regression check: graph edge PMIDs not in chunks must NOT generate stub items
+    fake_unindexed_pmid = "99999991"
+
+    class StubNoFabricationPipeline:
+        def query(self, question: str):
+            return PipelineQueryResult(
+                question=question,
+                resolved_entities=[
+                    EntityLookupResult(
+                        query="CYP2C19", status="resolved", canonical_id="pg:gene:124"
+                    ),
+                    EntityLookupResult(
+                        query="clopidogrel", status="resolved", canonical_id="pg:chem:449053"
+                    ),
+                ],
+                top_evidence=[
+                    FusedHit(
+                        chunk_id="chunk:annotation:1183491857",
+                        source_id="1183491857",
+                        source_type="annotation",
+                        title="Annotation 1183491857: CYP2C19 - clopidogrel",
+                        content="Annotation text.",
+                        date="unknown",
+                        date_precision="unknown",
+                        entity_ids=["pg:gene:124", "pg:chem:449053"],
+                        matched_entities=["pg:gene:124", "pg:chem:449053"],
+                        rrf_score=0.05,
+                        rank=1,
+                    )
+                ],
+                graph_edges=[
+                    GraphEdge(
+                        relationship_id="rel:c13d31a1998926cc484b972337da816e",
+                        entity1_canonical_id="pg:gene:124",
+                        entity1_name="CYP2C19",
+                        entity1_type="Gene",
+                        entity2_canonical_id="pg:chem:449053",
+                        entity2_name="clopidogrel",
+                        entity2_type="Chemical",
+                        association="associated",
+                        pmids=[fake_unindexed_pmid],
+                        raw_file_sha256="abc",
+                    )
+                ],
+            )
+
+    stub_svc = AnswerService(
+        config=GenerationConfig(llm_mode="extractive", min_evidence_items=1),
+        retrieval_pipeline=StubNoFabricationPipeline(),  # type: ignore
+    )
+    stub_resp = stub_svc.answer_question("CYP2C19 clopidogrel")
+    bundle_ids = {it.source_id for it in stub_resp.evidence_bundle.items}
+    assert fake_unindexed_pmid not in bundle_ids
+    assert not any(
+        it.title.startswith("Supporting Publication PMID ")
+        for it in stub_resp.evidence_bundle.items
+    )
+
+    # 2. Real corpus provenance check via the initialized app answer_service
+    chunks_path = Path("data/processed/chunks.parquet")
+    rels_path = Path("data/processed/relationships.parquet")
+    if chunks_path.exists() and rels_path.exists():
+        from app.api.app import answer_service
+
+        con = duckdb.connect(":memory:")
+        real_chunks = set(
+            con.execute(f"SELECT source_type, source_id FROM '{chunks_path.as_posix()}'").fetchall()
+        )
+        real_rels = {
+            r[0]
+            for r in con.execute(
+                f"SELECT relationship_id FROM '{rels_path.as_posix()}'"
+            ).fetchall()
+        }
+
+        real_resp = answer_service.answer_question(
+            "What is the relationship between CYP2C19 and clopidogrel?"
+        )
+        assert real_resp.evidence_bundle.total_items > 0
+        for item in real_resp.evidence_bundle.items:
+            if item.source_type == "relationship_record":
+                assert item.source_id in real_rels, (
+                    f"Bundle item {item.source_id} not in relationships.parquet"
+                )
+            else:
+                assert (item.source_type, item.source_id) in real_chunks, (
+                    f"Bundle item ({item.source_type}, {item.source_id}) not in chunks.parquet"
+                )
+
+
+def test_relevance_gate_zero_grounded_chunks_and_meaning_coverage_honesty():
+    """
+    Verify:
+    - Gate B2: resolved entity + off-topic dense hits (0 matched_entities) + 0 graph edges
+      triggers insufficient_evidence with 0 claims.
+    - Coverage honesty A5: meaning_coverage populated and meaning_search_partial flag emitted
+      when any source_type is incomplete (and omitted when all types are complete).
+    """
+    from app.retrieval.entity_lookup import EntityLookupResult
+    from app.retrieval.fusion import FusedHit
+    from app.retrieval.pipeline import PipelineQueryResult
+
+    class _ZeroGroundedPipeline:
+        def __init__(self, partial: bool):
+            self._partial = partial
+
+        def get_meaning_coverage(self):
+            covered = ["annotation"] if self._partial else ["annotation", "pubmed"]
+            return {
+                "per_source_type": {
+                    "annotation": {
+                        "indexed": 512 if self._partial else 13030,
+                        "expected": 13030,
+                        "complete": not self._partial,
+                    },
+                    "pubmed": {
+                        "indexed": 0 if self._partial else 7819,
+                        "expected": 7819,
+                        "complete": not self._partial,
+                    },
+                },
+                "is_partial": self._partial,
+                "covered_source_types": covered,
+                "complete_source_types": [] if self._partial else covered,
+            }
+
+        def query(self, question: str):
+            return PipelineQueryResult(
+                question=question,
+                resolved_entities=[
+                    EntityLookupResult(
+                        query="TPMT", status="resolved", canonical_id="pg:gene:356"
+                    )
+                ],
+                top_evidence=[
+                    FusedHit(
+                        chunk_id=f"c:{i}",
+                        source_id=f"ANN_{i}",
+                        source_type="annotation",
+                        title="Unrelated CYP2C19 item",
+                        content="Unrelated content.",
+                        date="unknown",
+                        date_precision="unknown",
+                        entity_ids=["pg:gene:124"],
+                        matched_entities=[],
+                        found_by_paths=["meaning"],
+                        rrf_score=0.0164 - (i * 0.0001),
+                        rank=i + 1,
+                    )
+                    for i in range(5)
+                ],
+                graph_edges=[],
+            )
+
+    svc_partial = AnswerService(
+        config=GenerationConfig(llm_mode="extractive"),
+        retrieval_pipeline=_ZeroGroundedPipeline(partial=True),  # type: ignore
+    )
+    resp_partial = svc_partial.answer_question("TPMT")
+    assert "insufficient_evidence" in resp_partial.flags
+    assert resp_partial.claims == []
+    assert resp_partial.builder_calls == 0
+    assert resp_partial.meaning_coverage["annotation"]["indexed"] == 512
+    assert "meaning_search_partial:annotation" in resp_partial.flags
+
+    svc_complete = AnswerService(
+        config=GenerationConfig(llm_mode="extractive"),
+        retrieval_pipeline=_ZeroGroundedPipeline(partial=False),  # type: ignore
+    )
+    resp_complete = svc_complete.answer_question("TPMT")
+    assert not any(f.startswith("meaning_search_partial") for f in resp_complete.flags)
+    assert resp_complete.meaning_coverage["pubmed"]["complete"] is True
+
+
+def test_linked_pubmed_ordered_after_guideline_annotation_and_drug_label():
+    """Verify Section D ordering puts linked pubmed after guideline, annotation, drug_label."""
+    bundle = EvidenceBundle(
+        query="CYP2C19 clopidogrel",
+        resolved_entity_ids=["pg:gene:124", "pg:chem:449053"],
+        items=[
+            EvidenceItem(
+                source_id="19955249",
+                source_type="pubmed",
+                title="PubMed paper",
+                chunk_text="Linked PubMed abstract.",
+                date="2010-01-01",
+                entities=[],
+                matched_entities=["pg:gene:124", "pg:chem:449053"],
+                retrieval_paths=["graph", "linked_via_relationship_pmid"],
+                score=0.09,  # intentionally highest score
+                provenance={"linked_via_relationship_pmid": True, "relationship_id": "rel:1"},
+            ),
+            EvidenceItem(
+                source_id="LBL_1",
+                source_type="drug_label",
+                title="Drug label",
+                chunk_text="Drug label text.",
+                date="2020-01-01",
+                entities=["pg:gene:124", "pg:chem:449053"],
+                matched_entities=["pg:gene:124", "pg:chem:449053"],
+                score=0.03,
+            ),
+            EvidenceItem(
+                source_id="ANN_1",
+                source_type="annotation",
+                title="Annotation 1",
+                chunk_text="Annotation text.",
+                date="unknown",
+                entities=["pg:gene:124", "pg:chem:449053"],
+                matched_entities=["pg:gene:124", "pg:chem:449053"],
+                score=0.04,
+            ),
+            EvidenceItem(
+                source_id="GL_1",
+                source_type="guideline",
+                title="CPIC Guideline",
+                chunk_text="Guideline text.",
+                date="2022-01-01",
+                entities=["pg:gene:124", "pg:chem:449053"],
+                matched_entities=["pg:gene:124", "pg:chem:449053"],
+                score=0.02,
+            ),
+        ],
+        total_items=4,
+    )
+
+    out = ExtractiveAnswerBuilder().build_answer(bundle)
+    ordered_ids = [c.source_ids[0] for c in out.claims]
+    assert ordered_ids == ["GL_1", "ANN_1", "LBL_1", "19955249"]
+
+
+def test_api_section_c_question_words_and_lowercase_gene_flag(test_client):
+    """
+    Verify API integration for Section C rules:
+    - 'impact' alone does not resolve and hits unrecognized_entity
+    - 'cat' does not resolve as gene and includes 'possible_gene_name_lowercase:cat' flag
+    - 'IMPACT' resolves to pg:gene:143485502
+    - 'dolo 650' reaches unrecognized_entity (not refused as out_of_scope)
+    """
+    r_impact = test_client.post("/api/ask", json={"question": "impact"}).json()
+    assert "unrecognized_entity" in r_impact["flags"]
+    assert r_impact["resolved_entities"] == []
+    assert r_impact["claims"] == []
+    assert "meaning_coverage" in r_impact
+    assert any(f.startswith("meaning_search_partial:") for f in r_impact["flags"])
+
+    r_cat = test_client.post("/api/ask", json={"question": "cat"}).json()
+    assert "unrecognized_entity" in r_cat["flags"]
+    assert "possible_gene_name_lowercase:cat" in r_cat["flags"]
+    assert r_cat["resolved_entities"] == []
+
+    r_upper = test_client.post("/api/ask", json={"question": "IMPACT"}).json()
+    assert any(
+        e.get("canonical_id") == "pg:gene:143485502" for e in r_upper["resolved_entities"]
+    )
+    assert "unrecognized_entity" not in r_upper["flags"]
+
+    r_dolo = test_client.post("/api/ask", json={"question": "dolo 650"}).json()
+    assert "refused" not in r_dolo["flags"]
+    assert "unrecognized_entity" in r_dolo["flags"]
+    assert r_dolo["claims"] == []
+    assert r_dolo["evidence_bundle"]["items"] == []
+    assert r_dolo["evidence_bundle"]["has_sufficient_evidence"] is False
+
 
 

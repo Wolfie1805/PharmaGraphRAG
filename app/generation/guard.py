@@ -26,48 +26,23 @@ PROMPT_INJECTION_PATTERNS = [
     r"(\bprint the key\b|\breveal your instructions\b|\bbypass constraints\b)",
 ]
 
-# Keywords indicating a biomedical, pharmacological, or genomic context
-BIOMEDICAL_KEYWORDS = [
-    "gene",
-    "variant",
-    "allele",
-    "cyp",
-    "hla",
-    "vkorc1",
-    "dpyd",
-    "tpmt",
-    "ugt1a1",
-    "slco1b1",
-    "clopidogrel",
-    "warfarin",
-    "fluorouracil",
-    "irinotecan",
-    "abacavir",
-    "codeine",
-    "tamoxifen",
-    "simvastatin",
-    "phenprocoumon",
-    "acenocoumarol",
-    "drug",
-    "pharmacogenomic",
-    "metabolism",
-    "clearance",
-    "efficacy",
-    "toxicity",
-    "interaction",
-    "phenotype",
-    "genotype",
-    "rs",
-    "guideline",
-    "cpic",
-    "fda",
-    "pharmacokinetics",
-    "pharmacodynamics",
-    "inhibitor",
-    "inducer",
-    "substrate",
-    "mutation",
-    "polymorphism",
+# Clearly non-biomedical domain patterns refused as out-of-scope (Section B4).
+# Unknown medicine/brand names (e.g. "dolo 650", "flexon", "paracetamol") do NOT
+# match these patterns and proceed to retrieval / unrecognized_entity gate.
+OUT_OF_SCOPE_PATTERNS = [
+    (
+        r"\b(capital of|prime minister|president of|tourist attractions?|"
+        r"travel guide|geography|continent|population of)\b"
+    ),
+    (
+        r"\b(python|javascript|typescript|html|css|sql|compiler|git commit|"
+        r"pip|npm|programming|coding|software)\b"
+    ),
+    r"\binstall\b.*\bpackage\b",
+    (
+        r"\b(weather|forecast|recipe|cooking|football|basketball|soccer|"
+        r"cricket|movie|movies|music|stock market)\b"
+    ),
 ]
 
 ADVICE_REFUSAL_MESSAGE = (
@@ -144,14 +119,9 @@ class InputGuard:
                 msg = ADVICE_REFUSAL_MESSAGE + (EMERGENCY_ADVISORY if has_symptoms else "")
                 return True, "personal_advice", msg
 
-        # 4. Out-of-scope Non-Biomedical Check
-        # Check if question contains biomedical keywords, identifier patterns, or entity symbols
-        has_bio_keyword = any(kw in cleaned_lower for kw in BIOMEDICAL_KEYWORDS)
-        has_identifier = bool(re.search(r"\b(rs\d+|cyp\w+|\*|\d+:\d+)\b", cleaned_lower))
-        is_short_symbol = bool(re.match(r"^[A-Za-z0-9_*:-]{2,12}$", cleaned))
-
-        # If query has no biomedical context and is not a potential entity symbol
-        if not has_bio_keyword and not has_identifier and not is_short_symbol:
-            return True, "out_of_scope", OUT_OF_SCOPE_REFUSAL_MESSAGE
+        # 4. Out-of-scope Clearly Non-Biomedical Check
+        for pat in OUT_OF_SCOPE_PATTERNS:
+            if re.search(pat, cleaned_lower):
+                return True, "out_of_scope", OUT_OF_SCOPE_REFUSAL_MESSAGE
 
         return False, None, None

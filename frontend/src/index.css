@@ -737,6 +737,18 @@ a:focus-visible {
   line-height: 1.35;
 }
 
+.relationship-pmid-badge {
+  display: inline-block;
+  background-color: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+  border-radius: 4px;
+  font-size: 0.775rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .evidence-excerpt {
   margin-bottom: 0.75rem;
 }

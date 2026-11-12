@@ -35,16 +35,36 @@ class AnswerService:
         else:
             self.llm_client = get_llm_client(self.config, mock=mock_llm)
 
-    def answer_question(self, question: str) -> AskResponse:
+    def _coverage_metadata(self) -> tuple[Dict[str, Any], List[str]]:
+        """Return (meaning_coverage_dict, partial_flags) safely for real or mock pipelines."""
+        coverage_fn = getattr(self.retrieval_pipeline, "get_meaning_coverage", None)
+        if not callable(coverage_fn):
+            return {}, []
+        summary = coverage_fn() or {}
+        per_type = summary.get("per_source_type", {})
+        partial_flags: List[str] = []
+        if summary.get("is_partial"):
+            covered = summary.get("covered_source_types", [])
+            covered_label = ",".join(covered) if covered else "none"
+            partial_flags.append(f"meaning_search_partial:{covered_label}")
+        return per_type, partial_flags
+
+    def answer_question(
+        self,
+        question: str,
+        entity_hints: Optional[List[str]] = None,
+    ) -> AskResponse:
         """
         Execute full answer generation pipeline:
-        1. Input Guard (refuses advice, dosing, non-biomedical queries with 0 generation calls)
+        1. Input Guard (refuses advice, dosing, clearly non-biomedical queries with 0 calls)
         2. Retrieval Pipeline (hybrid retrieval + graph lookup + RRF)
-        3. Evidence Bundling
-        4. Basic Checks (sufficiency, conflicts)
+        3. Unrecognized-entity & zero-grounded-evidence gates
+        4. Evidence Bundling & Basic Checks (sufficiency, conflicts)
         5. Answer Generation (extractive, ollama, or mock)
         6. Citation Verification (always executed)
         """
+        meaning_coverage, partial_flags = self._coverage_metadata()
+
         # 1. Input Guard
         is_refused, category, message = InputGuard.evaluate(question)
         if is_refused:
@@ -59,17 +79,24 @@ class AnswerService:
                     has_sufficient_evidence=False,
                 ),
                 resolved_entities=[],
-                flags=["refused", f"refusal_{category}"],
+                flags=["refused", f"refusal_{category}", *partial_flags],
                 removed_claims_count=0,
                 disclaimer_text=self.config.disclaimer_text,
                 answer_mode=self.config.llm_mode,
+                meaning_coverage=meaning_coverage,
                 llm_calls=0,
                 network_calls=0,
                 builder_calls=0,
             )
 
         # 2. Retrieval Pipeline
-        retrieval_res = self.retrieval_pipeline.query(question)
+        if entity_hints is not None:
+            retrieval_res = self.retrieval_pipeline.query(question, entity_hints=entity_hints)
+        else:
+            retrieval_res = self.retrieval_pipeline.query(question)
+
+        if not meaning_coverage and getattr(retrieval_res, "meaning_coverage", None):
+            meaning_coverage = retrieval_res.meaning_coverage
 
         # Format resolved entities for API response
         resolved_entities_dicts: List[Dict[str, Any]] = []
@@ -94,10 +121,45 @@ class AnswerService:
                 if e.status == "resolved" and e.canonical_id
             )
         )
+        has_ambiguous = any(e.status == "ambiguous" for e in retrieval_res.resolved_entities)
 
         flags: List[str] = []
-        if any(e.status == "ambiguous" for e in retrieval_res.resolved_entities):
+        if has_ambiguous:
             flags.append("ambiguous_entity")
+        for low_word in getattr(retrieval_res, "possible_gene_names_lowercase", []) or []:
+            flags.append(f"possible_gene_name_lowercase:{low_word}")
+
+        # 2b. Gate Stage B1: No resolved or ambiguous entity found
+        if not resolved_cids and not has_ambiguous:
+            flags.append("unrecognized_entity")
+            flags.extend(partial_flags)
+            unrecognized_message = (
+                "No recognized gene, variant or chemical was found in your question in the "
+                "ClinPGx data used by this prototype. Check the spelling or try the generic "
+                "(ingredient) name, often printed in the composition line on the medicine strip."
+            )
+            return AskResponse(
+                question=question,
+                answer=unrecognized_message,
+                claims=[],
+                related_claims=[],
+                evidence_bundle=EvidenceBundle(
+                    query=question,
+                    resolved_entity_ids=[],
+                    items=[],
+                    total_items=0,
+                    has_sufficient_evidence=False,
+                ),
+                resolved_entities=resolved_entities_dicts,
+                flags=flags,
+                removed_claims_count=0,
+                disclaimer_text=self.config.disclaimer_text,
+                answer_mode=self.config.llm_mode,
+                meaning_coverage=meaning_coverage,
+                llm_calls=0,
+                network_calls=0,
+                builder_calls=0,
+            )
 
         # 3. Evidence Bundling
         evidence_items: List[EvidenceItem] = []
@@ -108,6 +170,7 @@ class AnswerService:
             score_val = getattr(r, "rrf_score", None) or getattr(r, "fused_score", 0.0)
             paths = getattr(r, "found_by_paths", None) or getattr(r, "retrieval_paths", [])
             matched = getattr(r, "matched_entities", [])
+            item_prov = dict(getattr(r, "provenance", {}) or {})
 
             # Map associated graph edges for this chunk
             attached_edges = [
@@ -130,6 +193,7 @@ class AnswerService:
                 retrieval_paths=paths,
                 score=score_val,
                 graph_edges=attached_edges,
+                provenance=item_prov,
             )
             evidence_items.append(item)
 
@@ -166,19 +230,33 @@ class AnswerService:
             total_items=len(evidence_items),
         )
 
-        # 4. Basic Checks
-        is_sufficient, suff_reason = evaluate_evidence_sufficiency(
+        # 4. Basic Checks & Gate Stage B2
+        # Gate Stage B2: Resolved entities present, but 0 retrieved chunks carry any
+        # resolved entity ID AND there are 0 graph edges -> insufficient evidence.
+        has_grounded_chunk = any(
+            bool(it.matched_entities)
+            for it in evidence_items
+            if it.source_type != "relationship_record"
+        )
+        has_graph_edges = len(retrieval_res.graph_edges) > 0
+
+        is_sufficient, _suff_reason = evaluate_evidence_sufficiency(
             bundle,
             min_items=self.config.min_evidence_items,
             min_top_score=self.config.min_top_score,
         )
-        bundle.has_sufficient_evidence = is_sufficient
+        if not has_grounded_chunk and not has_graph_edges:
+            is_sufficient = False
+            bundle.has_sufficient_evidence = False
+
         if not is_sufficient:
             flags.append("insufficient_evidence")
 
-        has_conflicts, conflict_info = detect_evidence_conflicts(bundle)
+        has_conflicts, _conflict_info = detect_evidence_conflicts(bundle)
         if has_conflicts:
             flags.append("conflicts_detected")
+
+        flags.extend(partial_flags)
 
         # If evidence is insufficient, return answer without calling generation
         if not is_sufficient:
@@ -197,6 +275,7 @@ class AnswerService:
                 removed_claims_count=0,
                 disclaimer_text=self.config.disclaimer_text,
                 answer_mode=self.config.llm_mode,
+                meaning_coverage=meaning_coverage,
                 llm_calls=0,
                 network_calls=0,
                 builder_calls=0,
@@ -233,6 +312,7 @@ class AnswerService:
             removed_claims_count=removed_count,
             disclaimer_text=self.config.disclaimer_text,
             answer_mode=gen_out.answer_mode,
+            meaning_coverage=meaning_coverage,
             llm_calls=self.llm_client.llm_calls,
             network_calls=self.llm_client.network_calls,
             builder_calls=self.llm_client.builder_calls,

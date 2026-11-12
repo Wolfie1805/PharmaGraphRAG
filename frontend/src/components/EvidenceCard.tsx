@@ -53,6 +53,11 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ item, isHighlighted 
       ? `Supporting Publications (${semicolonPmids.length} PMIDs)`
       : item.title;
 
+  const isLinkedViaRelPmid =
+    isPubMedSource &&
+    (item.provenance?.linked_via_relationship_pmid === true ||
+      item.retrieval_paths.includes('linked_via_relationship_pmid'));
+
   const visiblePmids = showAllPmids ? semicolonPmids : semicolonPmids.slice(0, 4);
 
   return (
@@ -125,6 +130,12 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ item, isHighlighted 
       <h4 id={`evidence-title-${item.source_id}`} className="evidence-title">
         {displayedTitle}
       </h4>
+
+      {isLinkedViaRelPmid && (
+        <div className="relationship-pmid-badge">
+          Paper cited by a ClinPGx relationship record for this pair
+        </div>
+      )}
 
       <div className="evidence-excerpt">
         {/* Render chunk text strictly as a plain React text node */}

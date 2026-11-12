@@ -409,3 +409,544 @@ def test_chunks_resolver_handles_pa_accessions_and_records_matched_entities(tmp_
     assert by_id["35016407"].matched_entities == []
 
 
+def test_meaning_index_checkpoint_resume_and_verify(tmp_path: Path, monkeypatch):
+    """Verify MeaningSearchIndex checkpoint, restart/resume without duplicates, and verify."""
+    import json
+
+    import numpy as np
+
+    from app.ingestion.hash_utils import compute_sha256
+    from app.retrieval.meaning_search import MeaningSearchIndex
+
+    encoded_batches: List[List[str]] = []
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            encoded_batches.append(list(texts))
+            vecs = []
+            for idx, _t in enumerate(texts):
+                v = np.array([1.0, float(idx + 1), 0.5, 0.25], dtype=np.float32)
+                v = v / np.linalg.norm(v)
+                vecs.append(v)
+            return np.vstack(vecs)
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+
+    chunks_path = tmp_path / "chunks.parquet"
+    schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    rows = [
+        {
+            "chunk_id": f"chunk:test:{i:02d}",
+            "source_type": "annotation" if i % 2 == 0 else "pubmed",
+            "source_id": f"S{i:02d}",
+            "title": f"Title {i}",
+            "content": f"Content {i}",
+            "date": "2022-01-01" if i % 2 == 1 else "unknown",
+            "date_precision": "day" if i % 2 == 1 else "unknown",
+            "entity_ids": ["pg:gene:124"] if i % 2 == 0 else [],
+        }
+        for i in range(10)
+    ]
+    pq.write_table(pa.Table.from_pylist(rows, schema=schema), chunks_path)
+    expected_sha = compute_sha256(chunks_path)
+
+    qdrant_dir = tmp_path / "qdrant_db"
+
+    # Part 1: Build only 2 batches (4 items with batch_size=2) and stop cleanly
+    idx1 = MeaningSearchIndex(
+        model_name="BAAI/bge-small-en-v1.5",
+        qdrant_path=qdrant_dir,
+        chunks_path=chunks_path,
+    )
+    count_partial = idx1.build_index(
+        force_rebuild=True, batch_size=2, checkpoint_every=1, max_batches=2
+    )
+    assert count_partial == 4
+    assert idx1.checkpoint_path.exists()
+    assert not idx1.manifest_path.exists()
+    ckpt = json.loads(idx1.checkpoint_path.read_text(encoding="utf-8"))
+    assert ckpt["next_idx"] == 4
+    assert ckpt["chunks_parquet_sha256"] == expected_sha
+    idx1.close()
+
+    # Clear call tracker and simulate a fresh process resuming from disk
+    encoded_batches.clear()
+    idx2 = MeaningSearchIndex(
+        model_name="BAAI/bge-small-en-v1.5",
+        qdrant_path=qdrant_dir,
+        chunks_path=chunks_path,
+    )
+    count_full = idx2.build_index(force_rebuild=False, batch_size=2, checkpoint_every=1)
+    assert count_full == 10
+    # Only the remaining 6 items (3 batches of 2) should have been encoded
+    assert sum(len(b) for b in encoded_batches) == 6
+    assert not idx2.checkpoint_path.exists()
+    assert idx2.manifest_path.exists()
+
+    manifest = json.loads(idx2.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["total_points"] == 10
+    assert manifest["chunks_parquet_sha256"] == expected_sha
+    assert manifest["model_version"] == "1.5"
+    assert manifest["points_per_source_type"] == {"annotation": 5, "pubmed": 5}
+
+    report = idx2.verify_index()
+    assert report["is_exact_match"] is True
+    assert report["unique_chunk_ids"] == 10
+    assert report["duplicate_count"] == 0
+    idx2.close()
+
+
+def test_meaning_index_staged_append_and_verify(tmp_path: Path, monkeypatch):
+    """
+    Verify two-stage Qdrant build with --source-types:
+    Stage 1 (annotation,drug_label,guideline) followed by Stage 2 (pubmed)
+    appends without recreating or overwriting Stage 1 points, updates per-type
+    completeness in manifest, and verifies both per-stage and full-corpus 1:1 matches.
+    """
+    import json
+
+    import numpy as np
+
+    from app.retrieval.meaning_search import MeaningSearchIndex
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            vecs = []
+            for idx, _t in enumerate(texts):
+                v = np.array([1.0, float(idx + 1), 0.5, 0.25], dtype=np.float32)
+                v = v / np.linalg.norm(v)
+                vecs.append(v)
+            return np.vstack(vecs)
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+
+    chunks_path = tmp_path / "chunks.parquet"
+    schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    rows = [
+        {
+            "chunk_id": "chunk:guideline:G1",
+            "source_type": "guideline",
+            "source_id": "G1",
+            "title": "Guideline 1",
+            "content": "Guideline content one",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124"],
+        },
+        {
+            "chunk_id": "chunk:drug_label:L1",
+            "source_type": "drug_label",
+            "source_id": "L1",
+            "title": "Label 1",
+            "content": "Drug label content",
+            "date": "2021-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:chem:449053"],
+        },
+        {
+            "chunk_id": "chunk:annotation:A1",
+            "source_type": "annotation",
+            "source_id": "A1",
+            "title": "Ann 1",
+            "content": "Annotation one",
+            "date": "unknown",
+            "date_precision": "unknown",
+            "entity_ids": ["pg:gene:124", "pg:chem:449053"],
+        },
+        {
+            "chunk_id": "chunk:annotation:A2",
+            "source_type": "annotation",
+            "source_id": "A2",
+            "title": "Ann 2",
+            "content": "Annotation two longer text",
+            "date": "unknown",
+            "date_precision": "unknown",
+            "entity_ids": ["pg:gene:124"],
+        },
+        {
+            "chunk_id": "chunk:pubmed:P1:0",
+            "source_type": "pubmed",
+            "source_id": "900001",
+            "title": "PubMed 1",
+            "content": "Abstract text one",
+            "date": "2020-05-01",
+            "date_precision": "day",
+            "entity_ids": [],
+        },
+        {
+            "chunk_id": "chunk:pubmed:P2:0",
+            "source_type": "pubmed",
+            "source_id": "900002",
+            "title": "PubMed 2",
+            "content": "Abstract text two longer",
+            "date": "2021-06-01",
+            "date_precision": "day",
+            "entity_ids": [],
+        },
+    ]
+    pq.write_table(pa.Table.from_pylist(rows, schema=schema), chunks_path)
+
+    qdrant_dir = tmp_path / "qdrant_db_full"
+    idx = MeaningSearchIndex(
+        model_name="BAAI/bge-small-en-v1.5",
+        qdrant_path=qdrant_dir,
+        chunks_path=chunks_path,
+    )
+
+    # Stage 1: annotation, drug_label, guideline (4 points total)
+    c1 = idx.build_index(
+        force_rebuild=False,
+        batch_size=2,
+        checkpoint_every=1,
+        source_types=["annotation", "drug_label", "guideline"],
+    )
+    assert c1 == 4
+    manifest_s1 = json.loads(idx.manifest_path.read_text(encoding="utf-8"))
+    assert manifest_s1["points_per_source_type"] == {
+        "annotation": 2,
+        "drug_label": 1,
+        "guideline": 1,
+        "pubmed": 0,
+    }
+    assert manifest_s1["complete_per_source_type"] == {
+        "annotation": True,
+        "drug_label": True,
+        "guideline": True,
+        "pubmed": False,
+    }
+    rep_s1 = idx.verify_index(source_types=["annotation", "drug_label", "guideline"])
+    assert rep_s1["is_exact_match"] is True
+    assert rep_s1["coverage_per_source_type"]["pubmed"]["complete"] is False
+
+    # Coverage summary while partial
+    cov_s1 = idx.get_coverage_summary(force_refresh=True)
+    assert cov_s1["is_partial"] is True
+    assert cov_s1["covered_source_types"] == ["annotation", "drug_label", "guideline"]
+
+    # Stage 2: pubmed appended cleanly without wiping Stage 1
+    c2 = idx.build_index(
+        force_rebuild=False,
+        batch_size=2,
+        checkpoint_every=1,
+        source_types=["pubmed"],
+    )
+    assert c2 == 6
+    manifest_s2 = json.loads(idx.manifest_path.read_text(encoding="utf-8"))
+    assert manifest_s2["complete_per_source_type"] == {
+        "annotation": True,
+        "drug_label": True,
+        "guideline": True,
+        "pubmed": True,
+    }
+    rep_s2 = idx.verify_index(source_types=["pubmed"])
+    assert rep_s2["is_exact_match"] is True
+    rep_full = idx.verify_index()
+    assert rep_full["is_exact_match"] is True
+    assert rep_full["qdrant_count"] == 6
+    assert rep_full["duplicate_count"] == 0
+    cov_full = idx.get_coverage_summary(force_refresh=True)
+    assert cov_full["is_partial"] is False
+    idx.close()
+
+
+def test_entity_lookup_stoplist_and_uppercase_alpha_gene_rule():
+    """
+    Verify Section C extraction rules against the real ClinPGx registry:
+    - 'impact' does not resolve from free text (stoplist + lowercase <=6 alpha gene)
+    - 'IMPACT' resolves to pg:gene:143485502
+    - 'vkorc1' lowercase still resolves (contains a digit)
+    - 'cat' lowercase does not resolve as a gene and flags possible_gene_name_lowercase
+    - entity_hints resolves explicit canonical IDs even if free text has lowercase name
+    """
+    service = EntityLookupService()
+
+    res_impact_lower, notes_impact = service.extract_and_resolve_entities_with_notes("impact")
+    assert res_impact_lower == []
+    assert notes_impact == []
+
+    res_q05, notes_q05 = service.extract_and_resolve_entities_with_notes(
+        "What clinical impact does CYP2C19*2 have on clopidogrel efficacy?"
+    )
+    resolved_q05_ids = {r.canonical_id for r in res_q05 if r.canonical_id}
+    assert "pg:gene:143485502" not in resolved_q05_ids
+    assert "pg:chem:449053" in resolved_q05_ids
+    assert notes_q05 == []
+
+    res_impact_upper, _ = service.extract_and_resolve_entities_with_notes("IMPACT")
+    assert len(res_impact_upper) == 1
+    assert res_impact_upper[0].canonical_id == "pg:gene:143485502"
+
+    res_vkorc1_lower, _ = service.extract_and_resolve_entities_with_notes("vkorc1")
+    assert len(res_vkorc1_lower) == 1
+    assert res_vkorc1_lower[0].canonical_id == "pg:gene:133787052"
+
+    res_cat_lower, notes_cat = service.extract_and_resolve_entities_with_notes("cat")
+    assert res_cat_lower == []
+    assert notes_cat == ["cat"]
+
+    res_cat_hint, notes_cat_hint = service.extract_and_resolve_entities_with_notes(
+        "cat", entity_hints=["pg:gene:26099"]
+    )
+    assert len(res_cat_hint) == 1
+    assert res_cat_hint[0].canonical_id == "pg:gene:26099"
+    assert notes_cat_hint == []
+
+
+def test_pubmed_relationship_pmid_linking_strictness(tmp_path: Path, monkeypatch):
+    """
+    Verify Section D strict PubMed PMID linking:
+    - A PubMed paper listed on NO resolved-pair edge is NEVER linked.
+    - Unindexed PMIDs listed on an edge create NO stub/fake items.
+    - A PubMed chunk whose PMID IS listed on a resolved-pair edge receives matched_entities
+      strictly from that edge's resolved endpoints plus relationship_id provenance.
+    """
+    import numpy as np
+
+    from app.retrieval.config import RetrievalConfig
+    from app.retrieval.pipeline import RetrievalPipeline
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            vecs = []
+            for idx, _t in enumerate(texts):
+                v = np.array([1.0, float(idx + 1), 0.5, 0.25], dtype=np.float32)
+                v = v / np.linalg.norm(v)
+                vecs.append(v)
+            return np.vstack(vecs)
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+
+    # 1. Entities & empty synonyms
+    entities_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("entity_type", pa.string()),
+            ("primary_source_id", pa.string()),
+            ("display_name", pa.string()),
+            ("normalized_name", pa.string()),
+            ("is_drug", pa.bool_()),
+            ("gene_symbol", pa.string()),
+            ("defined_by", pa.string()),
+            ("is_ambiguous", pa.bool_()),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "canonical_id": "pg:gene:124",
+                    "entity_type": "gene",
+                    "primary_source_id": "PA124",
+                    "display_name": "CYP2C19",
+                    "normalized_name": "cyp2c19",
+                    "is_drug": False,
+                    "gene_symbol": "CYP2C19",
+                    "defined_by": "clinpgx_genes",
+                    "is_ambiguous": False,
+                },
+                {
+                    "canonical_id": "pg:chem:449053",
+                    "entity_type": "chemical",
+                    "primary_source_id": "PA449053",
+                    "display_name": "clopidogrel",
+                    "normalized_name": "clopidogrel",
+                    "is_drug": True,
+                    "gene_symbol": None,
+                    "defined_by": "clinpgx_chemicals",
+                    "is_ambiguous": False,
+                },
+            ],
+            schema=entities_schema,
+        ),
+        tmp_path / "entities.parquet",
+    )
+    syn_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("synonym_text", pa.string()),
+            ("normalized_synonym", pa.string()),
+            ("synonym_type", pa.string()),
+        ]
+    )
+    pq.write_table(pa.Table.from_pylist([], schema=syn_schema), tmp_path / "synonyms.parquet")
+
+    # 2. Relationships: one pair edge citing indexed PMID 111111 + unindexed PMID 999999,
+    # and one single-entity edge citing PMID 222222 whose second endpoint is NOT resolved
+    rel_schema = pa.schema(
+        [
+            ("relationship_id", pa.string()),
+            ("entity1_id", pa.string()),
+            ("entity1_name", pa.string()),
+            ("entity1_type", pa.string()),
+            ("entity1_canonical_id", pa.string()),
+            ("entity2_id", pa.string()),
+            ("entity2_name", pa.string()),
+            ("entity2_type", pa.string()),
+            ("entity2_canonical_id", pa.string()),
+            ("association", pa.string()),
+            ("pmids", pa.list_(pa.string())),
+            ("is_dangling", pa.bool_()),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "relationship_id": "rel:pair01",
+                    "entity1_id": "PA124",
+                    "entity1_name": "CYP2C19",
+                    "entity1_type": "Gene",
+                    "entity1_canonical_id": "pg:gene:124",
+                    "entity2_id": "PA449053",
+                    "entity2_name": "clopidogrel",
+                    "entity2_type": "Chemical",
+                    "entity2_canonical_id": "pg:chem:449053",
+                    "association": "associated",
+                    "pmids": ["111111", "999999"],
+                    "is_dangling": False,
+                    "raw_file_sha256": "sha1",
+                },
+                {
+                    "relationship_id": "rel:other01",
+                    "entity1_id": "PA124",
+                    "entity1_name": "CYP2C19",
+                    "entity1_type": "Gene",
+                    "entity1_canonical_id": "pg:gene:124",
+                    "entity2_id": "PA999999",
+                    "entity2_name": "omeprazole",
+                    "entity2_type": "Chemical",
+                    "entity2_canonical_id": "pg:chem:999999",
+                    "association": "associated",
+                    "pmids": ["222222"],
+                    "is_dangling": False,
+                    "raw_file_sha256": "sha2",
+                },
+            ],
+            schema=rel_schema,
+        ),
+        tmp_path / "relationships.parquet",
+    )
+
+    # 3. Chunks: linked 111111, unlinked 222222, unlinked 333333 (PMID 999999 absent)
+    chunks_schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "chunk_id": "chunk:pubmed:111111:0",
+                    "source_type": "pubmed",
+                    "source_id": "111111",
+                    "title": "CYP2C19 and clopidogrel study",
+                    "content": "Abstract discussing CYP2C19 and clopidogrel.",
+                    "date": "2019-03-01",
+                    "date_precision": "day",
+                    "entity_ids": [],
+                },
+                {
+                    "chunk_id": "chunk:pubmed:222222:0",
+                    "source_type": "pubmed",
+                    "source_id": "222222",
+                    "title": "CYP2C19 and omeprazole",
+                    "content": "Abstract mentioning CYP2C19 and clopidogrel comparator.",
+                    "date": "2020-01-01",
+                    "date_precision": "day",
+                    "entity_ids": [],
+                },
+                {
+                    "chunk_id": "chunk:pubmed:333333:0",
+                    "source_type": "pubmed",
+                    "source_id": "333333",
+                    "title": "Unrelated paper",
+                    "content": "CYP2C19 and clopidogrel background mention only.",
+                    "date": "2021-01-01",
+                    "date_precision": "day",
+                    "entity_ids": [],
+                },
+            ],
+            schema=chunks_schema,
+        ),
+        tmp_path / "chunks.parquet",
+    )
+
+    qdrant_dir = tmp_path / "qdrant_db"
+    cfg = RetrievalConfig(processed_dir=tmp_path, qdrant_path=qdrant_dir)
+    pipeline = RetrievalPipeline(config=cfg)
+    pipeline.meaning_index.build_index(force_rebuild=True, batch_size=4)
+
+    res = pipeline.query("What is the relationship between CYP2C19 and clopidogrel?")
+    by_sid = {h.source_id: h for h in res.top_evidence}
+
+    # Unindexed PMID 999999 must never produce an item
+    assert "999999" not in by_sid
+
+    # Paper 111111 is cited on rel:pair01 where both CYP2C19 and clopidogrel resolved -> linked
+    assert "111111" in by_sid
+    p111 = by_sid["111111"]
+    assert p111.matched_entities == ["pg:gene:124", "pg:chem:449053"]
+    assert p111.provenance.get("linked_via_relationship_pmid") is True
+    assert p111.provenance.get("relationship_id") == "rel:pair01"
+    assert "linked_via_relationship_pmid" in p111.found_by_paths
+
+    # Papers 222222 (other edge) and 333333 (no edge) must NEVER be linked
+    for unlinked_id in ("222222", "333333"):
+        if unlinked_id in by_sid:
+            assert by_sid[unlinked_id].matched_entities == []
+            assert not by_sid[unlinked_id].provenance.get("linked_via_relationship_pmid")
+            assert "linked_via_relationship_pmid" not in by_sid[unlinked_id].found_by_paths
+
+    pipeline.meaning_index.close()
+
+
+

@@ -49,6 +49,12 @@ export interface Claim {
   source_ids: string[];
 }
 
+export interface MeaningSourceCoverage {
+  indexed: number;
+  expected: number;
+  complete: boolean;
+}
+
 export interface AskResponse {
   question: string;
   answer: string;
@@ -60,6 +66,7 @@ export interface AskResponse {
   removed_claims_count: number;
   disclaimer_text: string;
   answer_mode: string;
+  meaning_coverage?: Record<string, MeaningSourceCoverage>;
   llm_calls: number;
   network_calls: number;
   builder_calls: number;

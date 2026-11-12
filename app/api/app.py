@@ -112,7 +112,9 @@ async def ask_question(req: AskRequest, request: Request) -> AskResponse:
         # Run synchronous service inside threadpool with timeout protection
         loop = asyncio.get_event_loop()
         response = await asyncio.wait_for(
-            loop.run_in_executor(None, answer_service.answer_question, req.question),
+            loop.run_in_executor(
+                None, answer_service.answer_question, req.question, req.entity_hints
+            ),
             timeout=config.request_timeout_seconds,
         )
         return response

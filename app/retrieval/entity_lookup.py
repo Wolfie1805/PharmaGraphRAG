@@ -3,13 +3,115 @@ Entity lookup module: exact and normalized-key matching over entities and synony
 Enforces strict ambiguous/unresolved status and disallows fuzzy matching.
 """
 
+import re
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Set, Tuple
 
 import duckdb
 from pydantic import BaseModel, Field
 
 from app.normalization.normalize import normalize_search_term
+
+# Documented question-words and prose framing stoplist (Phase D3b Section C).
+# Non-uppercase tokens matching these words are never matched as entities from free text.
+# Note: exact uppercase tokens matching a real gene symbol (e.g. "IMPACT") bypass this
+# lowercase prose filter so explicit gene queries remain resolvable.
+QUESTION_WORD_STOPLIST = frozenset(
+    {
+        # Interrogatives and auxiliaries
+        "what",
+        "which",
+        "who",
+        "whom",
+        "whose",
+        "where",
+        "when",
+        "why",
+        "how",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "do",
+        "does",
+        "did",
+        "have",
+        "has",
+        "had",
+        "can",
+        "could",
+        "should",
+        "would",
+        "may",
+        "might",
+        "will",
+        "shall",
+        "must",
+        # Articles, conjunctions, prepositions, pronouns
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "but",
+        "if",
+        "not",
+        "no",
+        "nor",
+        "in",
+        "on",
+        "at",
+        "by",
+        "for",
+        "with",
+        "from",
+        "into",
+        "of",
+        "to",
+        "about",
+        "as",
+        "than",
+        "that",
+        "this",
+        "these",
+        "those",
+        "between",
+        # Question / biomedical framing prose words (including "impact")
+        "relationship",
+        "impact",
+        "effect",
+        "effects",
+        "clinical",
+        "interaction",
+        "interactions",
+        "role",
+        "influence",
+        "affect",
+        "affects",
+        "response",
+        "efficacy",
+        "safety",
+        "risk",
+        "dose",
+        "dosage",
+        "metabolism",
+        "therapy",
+        "treatment",
+        "patient",
+        "patients",
+        "associated",
+        "association",
+        "study",
+        "studies",
+        "evidence",
+    }
+)
+
+# Purely alphabetic gene symbols of 1..6 letters (no digits, hyphens, or asterisks)
+_SHORT_ALPHA_GENE_RE = re.compile(r"^[A-Za-z]{1,6}$")
 
 
 class ResolvedEntity(BaseModel):
@@ -140,40 +242,170 @@ class EntityLookupService:
             candidates=candidates,
         )
 
-    def extract_and_resolve_entities(self, text: str) -> List[EntityLookupResult]:
+    def lookup_by_canonical_ids(self, canonical_ids: List[str]) -> List[EntityLookupResult]:
+        """Directly resolve entities by explicit canonical IDs (e.g. from entity_hints)."""
+        clean_ids = [c.strip() for c in canonical_ids if c and c.strip()]
+        if not clean_ids:
+            return []
+        unique_ids = list(dict.fromkeys(clean_ids))
+        placeholders = ", ".join(["?"] * len(unique_ids))
+        sql = f"""
+            SELECT canonical_id, entity_type, primary_source_id, display_name,
+                   normalized_name, is_drug, gene_symbol, defined_by, is_ambiguous
+            FROM '{self.entities_path.as_posix()}'
+            WHERE canonical_id IN ({placeholders})
         """
-        Extract candidate tokens and n-grams from a free-text question and resolve them.
+        rows = self._con.execute(sql, unique_ids).fetchall()
+        by_cid = {}
+        for r in rows:
+            ent = ResolvedEntity(
+                canonical_id=r[0],
+                entity_type=r[1],
+                primary_source_id=r[2],
+                display_name=r[3],
+                normalized_name=r[4],
+                is_drug=bool(r[5]),
+                gene_symbol=r[6] if r[6] else None,
+                defined_by=r[7],
+                is_ambiguous=bool(r[8]),
+            )
+            by_cid[ent.canonical_id] = ent
+
+        out: List[EntityLookupResult] = []
+        for cid in unique_ids:
+            ent = by_cid.get(cid)
+            if ent is not None:
+                out.append(
+                    EntityLookupResult(
+                        query=ent.display_name,
+                        status="resolved",
+                        canonical_id=ent.canonical_id,
+                        candidate_types=[ent.entity_type],
+                        candidates=[ent],
+                    )
+                )
+        return out
+
+    @staticmethod
+    def _is_short_alpha_gene_filtered(cand_token: str, candidate: ResolvedEntity) -> bool:
         """
-        # Split on whitespace/punctuation to find potential entity terms
+        Return True if `candidate` is a purely alphabetic <=6-letter gene symbol
+        matched by a free-text token that was NOT typed in exact uppercase.
+        Chemical names and symbols with digits/punctuation are unaffected.
+        """
+        if candidate.entity_type.lower() != "gene":
+            return False
+        sym = (candidate.gene_symbol or candidate.display_name or "").strip()
+        if not sym or not _SHORT_ALPHA_GENE_RE.fullmatch(sym):
+            return False
+        if " " in cand_token:
+            return False
+        if cand_token.lower() != sym.lower():
+            return False
+        return cand_token != sym.upper()
+
+    def extract_and_resolve_entities_with_notes(
+        self,
+        text: str,
+        entity_hints: Optional[List[str]] = None,
+    ) -> Tuple[List[EntityLookupResult], List[str]]:
+        """
+        Extract candidate tokens and 2-grams from a free-text question and resolve them.
+        Enforces:
+        - Explicit QUESTION_WORD_STOPLIST for non-uppercase prose tokens
+        - Purely alphabetic gene symbols <= 6 letters resolve from free text only when typed
+          in exact uppercase (or supplied via entity_hints)
+        Returns (resolved_results, possible_gene_names_lowercase).
+        """
         words = [w.strip("?,.:;\"'()[]{}") for w in text.split()]
         words = [w for w in words if len(w) >= 2]
 
-        STOPWORDS = {
-            "the", "is", "between", "and", "or", "in", "of", "to", "for",
-            "with", "a", "an", "what", "how", "why", "who", "which", "are",
-            "does", "relationship"
-        }
-
         # Check 1-grams and 2-grams
-        candidates_to_check = []
-        for i in range(len(words)):
-            w1 = words[i]
-            if w1.lower() not in STOPWORDS:
+        candidates_to_check: List[str] = []
+        for i, w1 in enumerate(words):
+            if not (w1.lower() in QUESTION_WORD_STOPLIST and not w1.isupper()):
                 candidates_to_check.append(w1)
             if i + 1 < len(words):
-                w2 = words[i+1]
-                if w1.lower() not in STOPWORDS or w2.lower() not in STOPWORDS:
+                w2 = words[i + 1]
+                w1_skip = w1.lower() in QUESTION_WORD_STOPLIST and not w1.isupper()
+                w2_skip = w2.lower() in QUESTION_WORD_STOPLIST and not w2.isupper()
+                if not w1_skip or not w2_skip:
                     candidates_to_check.append(f"{w1} {w2}")
 
         results: List[EntityLookupResult] = []
-        seen_canonical_ids = set()
+        seen_canonical_ids: Set[str] = set()
+        hinted_words_lower: Set[str] = set()
+        possible_gene_names_lowercase: List[str] = []
+        seen_lower_gene_words: Set[str] = set()
+
+        if entity_hints:
+            for h_res in self.lookup_by_canonical_ids(entity_hints):
+                if h_res.canonical_id and h_res.canonical_id not in seen_canonical_ids:
+                    seen_canonical_ids.add(h_res.canonical_id)
+                    results.append(h_res)
+                    for c in h_res.candidates:
+                        hinted_words_lower.add(c.display_name.lower())
+                        if c.gene_symbol:
+                            hinted_words_lower.add(c.gene_symbol.lower())
+
         for cand in candidates_to_check:
             res = self.lookup(cand)
-            if res.status == "resolved" and res.canonical_id:
-                if res.canonical_id not in seen_canonical_ids:
-                    seen_canonical_ids.add(res.canonical_id)
-                    results.append(res)
-            elif res.status == "ambiguous":
-                results.append(res)
+            if res.status == "unresolved":
+                continue
 
+            # Filter candidates according to the uppercase <=6-alpha gene rule
+            kept_candidates: List[ResolvedEntity] = []
+            filtered_gene = False
+            for c in res.candidates:
+                if self._is_short_alpha_gene_filtered(cand, c):
+                    filtered_gene = True
+                else:
+                    kept_candidates.append(c)
+
+            if not kept_candidates:
+                if (
+                    filtered_gene
+                    and cand.lower() not in hinted_words_lower
+                    and cand.lower() not in seen_lower_gene_words
+                ):
+                    seen_lower_gene_words.add(cand.lower())
+                    possible_gene_names_lowercase.append(cand.lower())
+                continue
+
+            if len(kept_candidates) == 1:
+                only = kept_candidates[0]
+                if only.canonical_id not in seen_canonical_ids:
+                    seen_canonical_ids.add(only.canonical_id)
+                    results.append(
+                        EntityLookupResult(
+                            query=cand,
+                            status="resolved",
+                            canonical_id=only.canonical_id,
+                            candidate_types=[only.entity_type],
+                            candidates=[only],
+                        )
+                    )
+            else:
+                kept_types = sorted({c.entity_type for c in kept_candidates})
+                results.append(
+                    EntityLookupResult(
+                        query=cand,
+                        status="ambiguous",
+                        canonical_id=None,
+                        candidate_types=kept_types,
+                        candidates=kept_candidates,
+                    )
+                )
+
+        return results, possible_gene_names_lowercase
+
+    def extract_and_resolve_entities(
+        self,
+        text: str,
+        entity_hints: Optional[List[str]] = None,
+    ) -> List[EntityLookupResult]:
+        """Backward-compatible wrapper returning resolved/ambiguous entities from free text."""
+        results, _ = self.extract_and_resolve_entities_with_notes(
+            text, entity_hints=entity_hints
+        )
         return results
