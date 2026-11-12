@@ -191,6 +191,27 @@ class EntityLookupService:
         for s in syn_rows:
             matched_canonical_ids.add(s[0])
 
+        # 3. Star-allele whitespace normalization fallback (lookup key only; stored names unchanged)
+        if not matched_canonical_ids and "*" in norm_key:
+            star_key = re.sub(r"\s*\*\s*", "*", norm_key)
+            star_ent_sql = f"""
+                SELECT canonical_id
+                FROM '{self.entities_path.as_posix()}'
+                WHERE CONTAINS(normalized_name, '*')
+                  AND REGEXP_REPLACE(normalized_name, '\\s*\\*\\s*', '*', 'g') = ?
+            """
+            for row in self._con.execute(star_ent_sql, [star_key]).fetchall():
+                matched_canonical_ids.add(row[0])
+
+            star_syn_sql = f"""
+                SELECT canonical_id
+                FROM '{self.synonyms_path.as_posix()}'
+                WHERE CONTAINS(normalized_synonym, '*')
+                  AND REGEXP_REPLACE(normalized_synonym, '\\s*\\*\\s*', '*', 'g') = ?
+            """
+            for row in self._con.execute(star_syn_sql, [star_key]).fetchall():
+                matched_canonical_ids.add(row[0])
+
         if not matched_canonical_ids:
             return EntityLookupResult(query=term, status="unresolved")
 

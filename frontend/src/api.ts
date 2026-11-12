@@ -1,6 +1,20 @@
-import { AskResponse } from './types';
+import { AskResponse, MeaningCoverageStats } from './types';
 
 const API_BASE = 'http://localhost:8000/api';
+
+export async function fetchStats(): Promise<MeaningCoverageStats | null> {
+  try {
+    const response = await fetch(`${API_BASE}/stats`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data && typeof data.per_source_type === 'object') {
+      return data as MeaningCoverageStats;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export async function askQuestion(question: string): Promise<AskResponse> {
   const response = await fetch(`${API_BASE}/ask`, {

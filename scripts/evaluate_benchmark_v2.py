@@ -6,6 +6,7 @@ and are NOT human-verified (verified_by_human: false).
 
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -48,13 +49,14 @@ def evaluate_v2(benchmark_path: Path) -> Dict[str, Any]:
         retrieval_pipeline=pipeline,
     )
 
-    print("=" * 92)
-    print(f"BENCHMARK V2 EVALUATION ({benchmark_path.as_posix()})")
+    print("=" * 96)
+    print(f"BENCHMARK V2 DIAGNOSTIC ({benchmark_path.as_posix()})")
     print(
-        "NOTICE: Proxy derived from structured tags, not human-verified "
-        "(verified_by_human: false)"
+        "NOTICE: The relevance rule overlaps with ranking features (entity_ids matching); "
+        "these numbers are a pipeline diagnostic and NOT a quality score "
+        "(verified_by_human: false)."
     )
-    print("=" * 92)
+    print("=" * 96)
 
     retrieval_rows: List[Dict[str, Any]] = []
     guard_passed = 0
@@ -108,8 +110,9 @@ def evaluate_v2(benchmark_path: Path) -> Dict[str, Any]:
                     first_rel_rank = rank
 
         precision_at_10 = hits_at_10 / 10.0
-        recall_at_10 = (hits_at_10 / len(relevant_corpus_ids)) if relevant_corpus_ids else 0.0
+        hit_at_10 = 1 if hits_at_10 >= 1 else 0
         mrr = (1.0 / first_rel_rank) if first_rel_rank is not None else 0.0
+        source_mix = dict(sorted(Counter(h.source_type for h in top10).items()))
 
         row = {
             "id": qid,
@@ -117,39 +120,43 @@ def evaluate_v2(benchmark_path: Path) -> Dict[str, Any]:
             "expected_entity_ids": expected_cids,
             "corpus_relevant_count": len(relevant_corpus_ids),
             "hits_at_10": hits_at_10,
-            "recall_at_10": recall_at_10,
+            "hit_at_10": hit_at_10,
             "precision_at_10": precision_at_10,
             "mrr": mrr,
             "first_relevant_rank": first_rel_rank,
+            "top10_source_type_mix": source_mix,
             "verified_by_human": False,
         }
         retrieval_rows.append(row)
         print(
             f"[{category:<12}] {qid:<42} | |R|={len(relevant_corpus_ids):>4} "
-            f"| Hits@10={hits_at_10:>2}/10 | R@10={recall_at_10:.4f} "
-            f"| P@10={precision_at_10:.4f} | MRR={mrr:.4f}"
+            f"| Hit@10={hit_at_10} | P@10={precision_at_10:.4f} | MRR={mrr:.4f} "
+            f"| mix={source_mix}"
         )
 
-    print("-" * 92)
-    print("PER-CATEGORY AVERAGES (proxy derived from structured tags, not human-verified):")
+    print("-" * 96)
+    print(
+        "PER-CATEGORY AVERAGES (pipeline diagnostic ONLY — relevance rule overlaps with "
+        "ranking features, not a quality score; verified_by_human: false):"
+    )
     for cat in ("gene_drug", "variant_drug"):
         cat_rows = [r for r in retrieval_rows if r["category"] == cat]
         if not cat_rows:
             continue
-        mean_r = sum(r["recall_at_10"] for r in cat_rows) / len(cat_rows)
+        mean_hit = sum(r["hit_at_10"] for r in cat_rows) / len(cat_rows)
         mean_p = sum(r["precision_at_10"] for r in cat_rows) / len(cat_rows)
         mean_mrr = sum(r["mrr"] for r in cat_rows) / len(cat_rows)
         print(
-            f"  {cat:<14} (n={len(cat_rows)}): Recall@10={mean_r:.4f} | "
+            f"  {cat:<14} (n={len(cat_rows)}): Hit@10={mean_hit:.4f} | "
             f"Precision@10={mean_p:.4f} | MRR={mean_mrr:.4f}"
         )
 
     if retrieval_rows:
-        ov_r = sum(r["recall_at_10"] for r in retrieval_rows) / len(retrieval_rows)
+        ov_hit = sum(r["hit_at_10"] for r in retrieval_rows) / len(retrieval_rows)
         ov_p = sum(r["precision_at_10"] for r in retrieval_rows) / len(retrieval_rows)
         ov_mrr = sum(r["mrr"] for r in retrieval_rows) / len(retrieval_rows)
         print(
-            f"  {'ALL_RETRIEVAL':<14} (n={len(retrieval_rows)}): Recall@10={ov_r:.4f} | "
+            f"  {'ALL_RETRIEVAL':<14} (n={len(retrieval_rows)}): Hit@10={ov_hit:.4f} | "
             f"Precision@10={ov_p:.4f} | MRR={ov_mrr:.4f}"
         )
 
@@ -157,11 +164,14 @@ def evaluate_v2(benchmark_path: Path) -> Dict[str, Any]:
         f"  Guard interception: {guard_passed}/{guard_total} | "
         f"Ambiguity detection: {ambig_passed}/{ambig_total}"
     )
-    print("=" * 92)
+    print("=" * 96)
 
     pipeline.meaning_index.close()
     return {
-        "proxy_label": "proxy derived from structured tags, not human-verified",
+        "diagnostic_notice": (
+            "Relevance rule overlaps with ranking features; "
+            "pipeline diagnostic and not a quality score."
+        ),
         "verified_by_human": False,
         "retrieval_rows": retrieval_rows,
         "guard_passed": guard_passed,

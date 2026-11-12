@@ -955,3 +955,73 @@ a:focus-visible {
     max-height: none;
   }
 }
+
+/* Landing Page Meaning Coverage Stats */
+.coverage-stats-panel {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.coverage-stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.coverage-stats-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.coverage-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+}
+
+.coverage-badge.partial {
+  background-color: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.coverage-badge.complete {
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.coverage-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+
+.coverage-stat-item {
+  display: flex;
+  flex-direction: column;
+  padding: 0.45rem 0.65rem;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.coverage-type {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.coverage-counts {
+  color: var(--text-muted);
+}
+
+.coverage-state {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}

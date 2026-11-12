@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { askQuestion } from './api';
-import { AskResponse } from './types';
+import React, { useEffect, useState } from 'react';
+import { askQuestion, fetchStats } from './api';
+import { AskResponse, MeaningCoverageStats } from './types';
 import { EntityChips } from './components/EntityChips';
 import { AnswerPanel } from './components/AnswerPanel';
 import { EvidencePanel } from './components/EvidencePanel';
@@ -18,12 +18,32 @@ function replaceAmbiguousTerm(question: string, originalTerm: string | undefined
   return trimmed ? `${trimmed} ${replacement}` : replacement;
 }
 
-export const App: React.FC = () => {
+interface AppProps {
+  initialStats?: MeaningCoverageStats;
+}
+
+export const App: React.FC<AppProps> = ({ initialStats }) => {
   const [question, setQuestion] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AskResponse | null>(null);
   const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
+  const [stats, setStats] = useState<MeaningCoverageStats | null>(initialStats ?? null);
+
+  useEffect(() => {
+    if (initialStats) return;
+    const metaEnv = (import.meta as unknown as { env?: { MODE?: string } }).env;
+    if (metaEnv?.MODE === 'test') return;
+    let active = true;
+    fetchStats().then((data) => {
+      if (active && data) {
+        setStats(data);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialStats]);
 
   const handleSubmit = async (qToAsk?: string) => {
     const q = (qToAsk ?? question).trim();
@@ -150,6 +170,30 @@ export const App: React.FC = () => {
               Chest Pain Advice (Safety Guard)
             </button>
           </div>
+
+          {stats && Object.keys(stats.per_source_type).length > 0 && (
+            <section className="coverage-stats-panel" aria-label="Meaning Search Coverage Stats">
+              <div className="coverage-stats-header">
+                <span className="coverage-stats-title">Meaning Search Coverage by Source Type</span>
+                <span className={`coverage-badge ${stats.is_partial ? 'partial' : 'complete'}`}>
+                  {stats.is_partial ? 'Partial Index' : 'Full Index'}
+                </span>
+              </div>
+              <div className="coverage-stats-grid">
+                {Object.entries(stats.per_source_type).map(([sourceType, info]) => (
+                  <div key={sourceType} className="coverage-stat-item">
+                    <span className="coverage-type">{sourceType}</span>
+                    <span className="coverage-counts">
+                      {info.indexed.toLocaleString()} / {info.expected.toLocaleString()}
+                    </span>
+                    <span className="coverage-state">
+                      {info.complete ? 'complete' : info.indexed > 0 ? 'partial' : 'unindexed'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
 
         {/* Loading Spinner */}

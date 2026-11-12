@@ -4,6 +4,7 @@ Meaning search module: dense embedding and vector search using local Qdrant on d
 
 import ctypes
 import gc
+import hashlib
 import json
 import os
 import time
@@ -19,7 +20,49 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
 from sentence_transformers import SentenceTransformer
 
-from app.ingestion.hash_utils import compute_sha256, write_raw_file_atomically
+from app.ingestion.hash_utils import write_raw_file_atomically
+
+
+def compute_embedded_text_sha256(
+    chunks_path: Path,
+    source_types: Optional[List[str]] = None,
+) -> str:
+    """
+    Compute a deterministic SHA-256 hash covering ONLY the embedded text and its keys
+    (chunk_id, source_type, title, content), ignoring metadata such as entity_ids or dates.
+    """
+    if not chunks_path.exists():
+        raise FileNotFoundError(f"Chunks table not found at {chunks_path}")
+    con = duckdb.connect(":memory:")
+    params: List[Any] = []
+    where_clause = ""
+    if source_types is not None:
+        cleaned = sorted({s.strip() for s in source_types if s and s.strip()})
+        if cleaned:
+            placeholders = ", ".join(["?"] * len(cleaned))
+            where_clause = f"WHERE source_type IN ({placeholders})"
+            params.extend(cleaned)
+
+    rows = con.execute(
+        f"""
+        SELECT chunk_id, source_type, title, content
+        FROM '{chunks_path.as_posix()}'
+        {where_clause}
+        ORDER BY chunk_id ASC
+        """,
+        params,
+    ).fetchall()
+
+    hasher = hashlib.sha256()
+    for cid, st, title, content in rows:
+        record = json.dumps(
+            [str(cid or ""), str(st or ""), str(title or ""), str(content or "")],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        hasher.update(record.encode("utf-8"))
+        hasher.update(b"\n")
+    return hasher.hexdigest()
 
 
 def get_process_ram_mb() -> Tuple[float, float]:
@@ -322,7 +365,7 @@ class MeaningSearchIndex:
         target_types = self._normalize_source_types(source_types, expected_counts_all)
         rows = self._load_ordered_chunks(target_types)
         total_chunks = len(rows)
-        chunks_sha256 = compute_sha256(self.chunks_path)
+        embedded_sha256 = compute_embedded_text_sha256(self.chunks_path)
 
         exists = self.client.collection_exists(self.collection_name)
 
@@ -348,7 +391,7 @@ class MeaningSearchIndex:
                             bool(complete_map.get(st, False)) for st in target_types
                         )
                     manifest_ok = (
-                        manifest.get("chunks_parquet_sha256") == chunks_sha256
+                        manifest.get("embedded_text_sha256") == embedded_sha256
                         and manifest.get("model_name") == self.model_name
                         and stages_done
                     )
@@ -374,7 +417,7 @@ class MeaningSearchIndex:
                     )
                 ckpt_next = int(ckpt.get("next_idx", -1))
                 if (
-                    ckpt.get("chunks_parquet_sha256") == chunks_sha256
+                    ckpt.get("embedded_text_sha256") == embedded_sha256
                     and ckpt.get("model_name") == self.model_name
                     and ckpt.get("collection_name") == self.collection_name
                     and ckpt.get("chunk_order", self.CHUNK_ORDER) == self.CHUNK_ORDER
@@ -409,7 +452,7 @@ class MeaningSearchIndex:
                 f"[{now_utc}] START index build: source_types=[{types_label}], "
                 f"total={total_chunks}, batch_size={batch_size}, "
                 f"checkpoint_every={checkpoint_every}, model={self.model_name}, "
-                f"chunks_sha256={chunks_sha256[:12]}...",
+                f"embedded_text_sha256={embedded_sha256[:12]}...",
                 log_path=log_target,
             )
         elif resumed:
@@ -429,7 +472,7 @@ class MeaningSearchIndex:
                 f"[{now_utc}] APPEND index build: source_types=[{types_label}], "
                 f"stage_total={total_chunks}, existing_points={existing_cnt}, "
                 f"batch_size={batch_size}, model={self.model_name}, "
-                f"chunks_sha256={chunks_sha256[:12]}...",
+                f"embedded_text_sha256={embedded_sha256[:12]}...",
                 log_path=log_target,
             )
 
@@ -494,7 +537,7 @@ class MeaningSearchIndex:
 
                 ckpt_data = {
                     "source_types": target_types,
-                    "chunks_parquet_sha256": chunks_sha256,
+                    "embedded_text_sha256": embedded_sha256,
                     "model_name": self.model_name,
                     "collection_name": self.collection_name,
                     "chunk_order": self.CHUNK_ORDER,
@@ -559,7 +602,7 @@ class MeaningSearchIndex:
                 "expected_per_source_type": dict(sorted(expected_counts_all.items())),
                 "complete_per_source_type": complete_per_type,
                 "last_completed_stage_source_types": target_types,
-                "chunks_parquet_sha256": chunks_sha256,
+                "embedded_text_sha256": embedded_sha256,
                 "batch_size": batch_size,
                 "peak_ram_mb": round(max_ram_seen, 2),
                 "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -675,7 +718,7 @@ class MeaningSearchIndex:
             "expected_by_source_type": dict(sorted(expected_by_type_target.items())),
             "actual_by_source_type": dict(sorted(actual_by_type_target.items())),
             "coverage_per_source_type": coverage_per_type,
-            "chunks_parquet_sha256": compute_sha256(self.chunks_path),
+            "embedded_text_sha256": compute_embedded_text_sha256(self.chunks_path),
         }
 
     def close(self):

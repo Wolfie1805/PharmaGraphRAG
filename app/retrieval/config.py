@@ -2,6 +2,7 @@
 Configuration module for Demo D1 retrieval core.
 """
 
+import os
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -15,7 +16,9 @@ class RetrievalConfig(BaseModel):
         description="Default sentence-transformers embedding model name or path.",
     )
     qdrant_path: Path = Field(
-        default=Path("data/processed/qdrant_db"),
+        default_factory=lambda: Path(
+            os.getenv("PHARMAGRAPH_QDRANT_PATH", "data/processed/qdrant_db")
+        ),
         description="Local disk directory for embedded Qdrant vector database.",
     )
     collection_name: str = Field(

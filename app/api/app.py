@@ -94,6 +94,12 @@ def health_check() -> dict:
     }
 
 
+@app.get("/api/stats")
+def get_stats() -> dict:
+    """Return index and meaning-search coverage statistics per source_type."""
+    return answer_service.get_stats_summary()
+
+
 @app.post("/api/ask", response_model=AskResponse)
 async def ask_question(req: AskRequest, request: Request) -> AskResponse:
     """

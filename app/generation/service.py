@@ -35,12 +35,26 @@ class AnswerService:
         else:
             self.llm_client = get_llm_client(self.config, mock=mock_llm)
 
-    def _coverage_metadata(self) -> tuple[Dict[str, Any], List[str]]:
-        """Return (meaning_coverage_dict, partial_flags) safely for real or mock pipelines."""
+    def get_stats_summary(self) -> Dict[str, Any]:
+        """Return full meaning-search coverage summary per source_type."""
         coverage_fn = getattr(self.retrieval_pipeline, "get_meaning_coverage", None)
         if not callable(coverage_fn):
-            return {}, []
-        summary = coverage_fn() or {}
+            return {
+                "per_source_type": {},
+                "is_partial": True,
+                "covered_source_types": [],
+                "complete_source_types": [],
+            }
+        return coverage_fn() or {
+            "per_source_type": {},
+            "is_partial": True,
+            "covered_source_types": [],
+            "complete_source_types": [],
+        }
+
+    def _coverage_metadata(self) -> tuple[Dict[str, Any], List[str]]:
+        """Return (meaning_coverage_dict, partial_flags) safely for real or mock pipelines."""
+        summary = self.get_stats_summary()
         per_type = summary.get("per_source_type", {})
         partial_flags: List[str] = []
         if summary.get("is_partial"):
@@ -251,6 +265,10 @@ class AnswerService:
 
         if not is_sufficient:
             flags.append("insufficient_evidence")
+            # Exclude ungrounded hits when insufficient_evidence is set
+            grounded_items = [it for it in bundle.items if bool(it.matched_entities)]
+            bundle.items = grounded_items
+            bundle.total_items = len(grounded_items)
 
         has_conflicts, _conflict_info = detect_evidence_conflicts(bundle)
         if has_conflicts:
@@ -262,7 +280,7 @@ class AnswerService:
         if not is_sufficient:
             fallback_answer = (
                 f"Insufficient evidence was retrieved to reliably answer '{question}'. "
-                f"Retrieved {bundle.total_items} items "
+                f"Retrieved {bundle.total_items} grounded items "
                 f"(minimum required: {self.config.min_evidence_items})."
             )
             return AskResponse(

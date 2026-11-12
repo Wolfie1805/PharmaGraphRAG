@@ -1176,4 +1176,62 @@ def test_api_section_c_question_words_and_lowercase_gene_flag(test_client):
     assert r_dolo["evidence_bundle"]["has_sufficient_evidence"] is False
 
 
+def test_fastapi_stats_endpoint(test_client):
+    """Verify GET /api/stats returns per_source_type meaning coverage statistics."""
+    resp = test_client.get("/api/stats")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "per_source_type" in data
+    assert "is_partial" in data
+    assert "covered_source_types" in data
+    assert "complete_source_types" in data
+
+
+def test_insufficient_evidence_drops_ungrounded_items():
+    """Verify ungrounded hits are removed from evidence_bundle on insufficient_evidence."""
+    from app.retrieval.entity_lookup import EntityLookupResult
+    from app.retrieval.fusion import FusedHit
+    from app.retrieval.pipeline import PipelineQueryResult
+
+    class _MixedInsufficientPipeline:
+        def query(self, question: str):
+            return PipelineQueryResult(
+                question=question,
+                resolved_entities=[
+                    EntityLookupResult(
+                        query="IMPACT", status="resolved", canonical_id="pg:gene:143485502"
+                    )
+                ],
+                top_evidence=[
+                    FusedHit(
+                        chunk_id="c:ungrounded:1",
+                        source_id="UNG_1",
+                        source_type="annotation",
+                        title="Unrelated off-topic dense hit",
+                        content="Unrelated CYP2C19 content.",
+                        date="unknown",
+                        date_precision="unknown",
+                        entity_ids=["pg:gene:124"],
+                        matched_entities=[],
+                        found_by_paths=["meaning"],
+                        rrf_score=0.0164,
+                        rank=1,
+                    )
+                ],
+                graph_edges=[],
+            )
+
+    svc = AnswerService(
+        config=GenerationConfig(llm_mode="extractive"),
+        retrieval_pipeline=_MixedInsufficientPipeline(),  # type: ignore
+    )
+    resp = svc.answer_question("IMPACT")
+    assert "insufficient_evidence" in resp.flags
+    assert resp.claims == []
+    assert resp.evidence_bundle.has_sufficient_evidence is False
+    assert resp.evidence_bundle.items == []
+    assert resp.evidence_bundle.total_items == 0
+
+
+
 

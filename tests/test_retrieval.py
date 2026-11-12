@@ -415,8 +415,7 @@ def test_meaning_index_checkpoint_resume_and_verify(tmp_path: Path, monkeypatch)
 
     import numpy as np
 
-    from app.ingestion.hash_utils import compute_sha256
-    from app.retrieval.meaning_search import MeaningSearchIndex
+    from app.retrieval.meaning_search import MeaningSearchIndex, compute_embedded_text_sha256
 
     encoded_batches: List[List[str]] = []
 
@@ -465,7 +464,7 @@ def test_meaning_index_checkpoint_resume_and_verify(tmp_path: Path, monkeypatch)
         for i in range(10)
     ]
     pq.write_table(pa.Table.from_pylist(rows, schema=schema), chunks_path)
-    expected_sha = compute_sha256(chunks_path)
+    expected_sha = compute_embedded_text_sha256(chunks_path)
 
     qdrant_dir = tmp_path / "qdrant_db"
 
@@ -483,7 +482,7 @@ def test_meaning_index_checkpoint_resume_and_verify(tmp_path: Path, monkeypatch)
     assert not idx1.manifest_path.exists()
     ckpt = json.loads(idx1.checkpoint_path.read_text(encoding="utf-8"))
     assert ckpt["next_idx"] == 4
-    assert ckpt["chunks_parquet_sha256"] == expected_sha
+    assert ckpt["embedded_text_sha256"] == expected_sha
     idx1.close()
 
     # Clear call tracker and simulate a fresh process resuming from disk
@@ -502,7 +501,7 @@ def test_meaning_index_checkpoint_resume_and_verify(tmp_path: Path, monkeypatch)
 
     manifest = json.loads(idx2.manifest_path.read_text(encoding="utf-8"))
     assert manifest["total_points"] == 10
-    assert manifest["chunks_parquet_sha256"] == expected_sha
+    assert manifest["embedded_text_sha256"] == expected_sha
     assert manifest["model_version"] == "1.5"
     assert manifest["points_per_source_type"] == {"annotation": 5, "pubmed": 5}
 
@@ -947,6 +946,284 @@ def test_pubmed_relationship_pmid_linking_strictness(tmp_path: Path, monkeypatch
             assert "linked_via_relationship_pmid" not in by_sid[unlinked_id].found_by_paths
 
     pipeline.meaning_index.close()
+
+
+def test_embedded_text_hash_ignores_entity_ids_and_detects_content_change(tmp_path: Path):
+    """
+    Verify compute_embedded_text_sha256 hashes only (chunk_id, source_type, title, content):
+    - Changing entity_ids leaves the hash unchanged.
+    - Changing content changes the hash.
+    """
+    from app.retrieval.meaning_search import compute_embedded_text_sha256
+
+    schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    base_rows = [
+        {
+            "chunk_id": "chunk:annotation:1",
+            "source_type": "annotation",
+            "source_id": "1",
+            "title": "Title 1",
+            "content": "Original sentence content.",
+            "date": "unknown",
+            "date_precision": "unknown",
+            "entity_ids": ["pg:gene:124"],
+        }
+    ]
+    p_orig = tmp_path / "orig.parquet"
+    pq.write_table(pa.Table.from_pylist(base_rows, schema=schema), p_orig)
+    h_orig = compute_embedded_text_sha256(p_orig)
+
+    meta_rows = [
+        {**base_rows[0], "entity_ids": ["pg:gene:124", "pg:var:166154053"], "date": "2024-01-01"}
+    ]
+    p_meta = tmp_path / "meta.parquet"
+    pq.write_table(pa.Table.from_pylist(meta_rows, schema=schema), p_meta)
+    h_meta = compute_embedded_text_sha256(p_meta)
+    assert h_meta == h_orig
+
+    content_rows = [{**base_rows[0], "content": "Modified sentence content."}]
+    p_content = tmp_path / "content.parquet"
+    pq.write_table(pa.Table.from_pylist(content_rows, schema=schema), p_content)
+    h_content = compute_embedded_text_sha256(p_content)
+    assert h_content != h_orig
+
+
+def test_variant_tagging_strict_joins_and_untagged_reasons(tmp_path: Path):
+    """
+    Verify deterministic variant/haplotype tagging strictly from structured columns:
+    - Exact rsID -> pg:var:*
+    - Exact allele within row's gene (including HLA space normalization) -> pg:haplo:*
+    - Phenotype labels and unknown alleles remain untagged and counted
+    - Text appearing only in Sentence/Notes is NEVER mined
+    - All non-entity_ids columns remain byte-identical
+    """
+    import zipfile
+
+    from app.retrieval.variant_tagging import build_chunks_v2
+
+    proc_dir = tmp_path / "processed"
+    proc_dir.mkdir(parents=True, exist_ok=True)
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+
+    ent_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("entity_type", pa.string()),
+            ("primary_source_id", pa.string()),
+            ("display_name", pa.string()),
+            ("normalized_name", pa.string()),
+            ("gene_symbol", pa.string()),
+            ("is_artifact", pa.bool_()),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "canonical_id": "pg:var:166154053",
+                    "entity_type": "variant",
+                    "primary_source_id": "PA166154053",
+                    "display_name": "rs4244285",
+                    "normalized_name": "rs4244285",
+                    "gene_symbol": "CYP2C19",
+                    "is_artifact": False,
+                },
+                {
+                    "canonical_id": "pg:var:999999",
+                    "entity_type": "variant",
+                    "primary_source_id": "PA999999",
+                    "display_name": "rs777777",
+                    "normalized_name": "rs777777",
+                    "gene_symbol": "CYP2C19",
+                    "is_artifact": False,
+                },
+                {
+                    "canonical_id": "pg:haplo:165816542",
+                    "entity_type": "haplotype",
+                    "primary_source_id": "PA165816542",
+                    "display_name": "CYP2C19*2",
+                    "normalized_name": "cyp2c19*2",
+                    "gene_symbol": "CYP2C19",
+                    "is_artifact": False,
+                },
+                {
+                    "canonical_id": "pg:haplo:165987830",
+                    "entity_type": "haplotype",
+                    "primary_source_id": "PA165987830",
+                    "display_name": "HLA-B *57:01",
+                    "normalized_name": "hla-b *57:01",
+                    "gene_symbol": "HLA-B",
+                    "is_artifact": False,
+                },
+            ],
+            schema=ent_schema,
+        ),
+        proc_dir / "entities.parquet",
+    )
+    syn_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("synonym_text", pa.string()),
+            ("normalized_synonym", pa.string()),
+            ("is_artifact", pa.bool_()),
+        ]
+    )
+    pq.write_table(pa.Table.from_pylist([], schema=syn_schema), proc_dir / "synonyms.parquet")
+
+    # variantAnnotations.zip with 2 rows (1 matched + 1 untagged; rs777777 only in prose)
+    tsv_lines = [
+        "Variant Annotation ID\tVariant/Haplotypes\tGene\tDrug(s)\tSentence\tNotes",
+        "101\trs4244285, CYP2C19*2\tCYP2C19\tclopidogrel\tMention of rs777777 in prose only.\t",
+        "102\tPoor Metabolizer, *999\tCYP2C19\tclopidogrel\tNo rsID tagged from prose rs4244285.\t",
+    ]
+    with zipfile.ZipFile(raw_dir / "variantAnnotations.zip", "w") as zf:
+        zf.writestr("var_drug_ann.tsv", "\n".join(tsv_lines))
+
+    # drugLabels.zip
+    dl_lines = [
+        "PharmGKB ID\tName\tGenes\tVariants/Haplotypes",
+        "PA111\tAbacavir label\tHLA-B\tHLA-B*57:01",
+    ]
+    with zipfile.ZipFile(raw_dir / "drugLabels.zip", "w") as zf:
+        zf.writestr("drugLabels.tsv", "\n".join(dl_lines))
+
+    # guidelineAnnotations.json.zip
+    import json
+
+    with zipfile.ZipFile(raw_dir / "guidelineAnnotations.json.zip", "w") as zf:
+        zf.writestr(
+            "PA222.json",
+            json.dumps(
+                {
+                    "guideline": {
+                        "id": "PA222",
+                        "name": "CPIC Test",
+                        "relatedAlleles": [{"id": "PA165816542", "symbol": "CYP2C19*2"}],
+                    }
+                }
+            ),
+        )
+
+    chunks_schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    chunks_rows = [
+        {
+            "chunk_id": "chunk:annotation:101",
+            "source_type": "annotation",
+            "source_id": "101",
+            "title": "Ann 101",
+            "content": "Mention of rs777777 in prose only.",
+            "date": "unknown",
+            "date_precision": "unknown",
+            "entity_ids": ["pg:gene:124"],
+        },
+        {
+            "chunk_id": "chunk:annotation:102",
+            "source_type": "annotation",
+            "source_id": "102",
+            "title": "Ann 102",
+            "content": "No rsID tagged from prose rs4244285.",
+            "date": "unknown",
+            "date_precision": "unknown",
+            "entity_ids": ["pg:gene:124"],
+        },
+        {
+            "chunk_id": "chunk:drug_label:PA111",
+            "source_type": "drug_label",
+            "source_id": "PA111",
+            "title": "Abacavir label",
+            "content": "Testing required.",
+            "date": "2020-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:chem:448004"],
+        },
+        {
+            "chunk_id": "chunk:guideline:PA222",
+            "source_type": "guideline",
+            "source_id": "PA222",
+            "title": "CPIC Test",
+            "content": "Guideline body.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124"],
+        },
+    ]
+    pq.write_table(
+        pa.Table.from_pylist(chunks_rows, schema=chunks_schema), proc_dir / "chunks.parquet"
+    )
+
+    report = build_chunks_v2(
+        chunks_path=proc_dir / "chunks.parquet",
+        output_path=proc_dir / "chunks_v2.parquet",
+        processed_dir=proc_dir,
+        clinpgx_dir=raw_dir,
+    )
+    assert report["non_entity_columns_byte_identical"] is True
+    assert report["chunks_updated_entity_ids"] == 3
+    assert report["stream_stats"]["annotation"]["untagged_token_reasons"] == {
+        "phenotype_or_functional_label": 1,
+        "unknown_allele": 1,
+    }
+
+    import duckdb
+
+    con = duckdb.connect(":memory:")
+    by_id = dict(
+        con.execute(
+            f"SELECT chunk_id, entity_ids FROM '{(proc_dir / 'chunks_v2.parquet').as_posix()}'"
+        ).fetchall()
+    )
+    assert by_id["chunk:annotation:101"] == [
+        "pg:gene:124",
+        "pg:haplo:165816542",
+        "pg:var:166154053",
+    ]
+    assert "pg:var:999999" not in by_id["chunk:annotation:101"]
+    assert by_id["chunk:annotation:102"] == ["pg:gene:124"]
+    assert by_id["chunk:drug_label:PA111"] == ["pg:chem:448004", "pg:haplo:165987830"]
+    assert by_id["chunk:guideline:PA222"] == ["pg:gene:124", "pg:haplo:165816542"]
+
+
+def test_hla_spacing_lookup_normalization_preserves_stored_names():
+    """
+    Verify lookup-only star-allele whitespace normalization resolves 'HLA-B*57:01'
+    to stored 'HLA-B *57:01' without altering entities.parquet display_name, and q07
+    resolves both HLA-B*57:01 and abacavir.
+    """
+    service = EntityLookupService()
+    res_hla = service.lookup("HLA-B*57:01")
+    assert res_hla.status == "resolved"
+    assert res_hla.canonical_id == "pg:haplo:165987830"
+    assert res_hla.candidates[0].display_name == "HLA-B *57:01"
+
+    q07_res = service.extract_and_resolve_entities(
+        "What adverse reaction is associated with HLA-B*57:01 and abacavir?"
+    )
+    q07_cids = {r.canonical_id for r in q07_res if r.canonical_id}
+    assert {"pg:haplo:165987830", "pg:chem:448004"}.issubset(q07_cids)
+
 
 
 

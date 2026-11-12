@@ -20,6 +20,11 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
     );
   }
 
+  // When insufficient_evidence is set, never render ungrounded items as evidence cards
+  const visibleItems = bundle.has_sufficient_evidence
+    ? bundle.items
+    : bundle.items.filter((it) => Array.isArray(it.matched_entities) && it.matched_entities.length > 0);
+
   // Check for old evidence: any dated item older than 10 years (e.g. before 2016)
   const hasOldEvidence = bundle.items.some((it) => {
     if (!it.date || it.date === 'unknown' || it.date === 'unspecified') return false;
@@ -34,7 +39,7 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
       <div className="evidence-header">
         <div className="evidence-title-group">
           <h3>Retrieved Evidence Bundle</h3>
-          <span className="total-items-badge">{bundle.total_items} items</span>
+          <span className="total-items-badge">{visibleItems.length} items</span>
         </div>
 
         <div className="evidence-badges">
@@ -56,15 +61,21 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
         </div>
       </div>
 
-      <div className="cards-grid">
-        {bundle.items.map((item, idx) => (
-          <EvidenceCard
-            key={`${item.source_id}-${idx}`}
-            item={item}
-            isHighlighted={highlightedSourceId === item.source_id}
-          />
-        ))}
-      </div>
+      {visibleItems.length === 0 ? (
+        <p className="no-evidence-text">
+          No grounded evidence items matched the queried entities; ungrounded hits are omitted.
+        </p>
+      ) : (
+        <div className="cards-grid">
+          {visibleItems.map((item, idx) => (
+            <EvidenceCard
+              key={`${item.source_id}-${idx}`}
+              item={item}
+              isHighlighted={highlightedSourceId === item.source_id}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 };

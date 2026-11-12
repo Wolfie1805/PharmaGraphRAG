@@ -167,6 +167,34 @@ describe('Evidence cards, badges, and refusal rendering', () => {
     expect(screen.getByText('Conflicts Detected')).toBeInTheDocument();
     expect(screen.getByText('Insufficient Evidence Threshold')).toBeInTheDocument();
     expect(screen.getByText(/Contains Historical Evidence/i)).toBeInTheDocument();
+    // Ungrounded card content must NOT be shown when insufficient_evidence is set
+    expect(screen.queryByText('Older study')).toBeNull();
+    expect(screen.queryByText('Historical data.')).toBeNull();
+    expect(screen.getByText(/ungrounded hits are omitted/i)).toBeInTheDocument();
+  });
+
+  it('renders landing page meaning coverage stats per source_type', () => {
+    render(
+      <App
+        initialStats={{
+          is_partial: true,
+          covered_source_types: ['drug_label', 'guideline'],
+          complete_source_types: ['drug_label', 'guideline'],
+          per_source_type: {
+            annotation: { indexed: 0, expected: 13030, complete: false },
+            drug_label: { indexed: 1435, expected: 1435, complete: true },
+            guideline: { indexed: 219, expected: 219, complete: true },
+            pubmed: { indexed: 0, expected: 7819, complete: false },
+          },
+        }}
+      />
+    );
+    expect(screen.getByText('Meaning Search Coverage by Source Type')).toBeInTheDocument();
+    expect(screen.getByText('Partial Index')).toBeInTheDocument();
+    expect(screen.getByText('drug_label')).toBeInTheDocument();
+    expect(screen.getByText(/1,435 \/ 1,435/)).toBeInTheDocument();
+    expect(screen.getByText('guideline')).toBeInTheDocument();
+    expect(screen.getByText(/219 \/ 219/)).toBeInTheDocument();
   });
 
   it('renders emergency care alert prominently in RefusalPanel and hides evidence area in App', async () => {

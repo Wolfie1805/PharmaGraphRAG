@@ -55,6 +55,13 @@ export interface MeaningSourceCoverage {
   complete: boolean;
 }
 
+export interface MeaningCoverageStats {
+  per_source_type: Record<string, MeaningSourceCoverage>;
+  is_partial: boolean;
+  covered_source_types: string[];
+  complete_source_types: string[];
+}
+
 export interface AskResponse {
   question: string;
   answer: string;
