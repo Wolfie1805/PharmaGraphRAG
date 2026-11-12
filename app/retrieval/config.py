@@ -40,6 +40,10 @@ class RetrievalConfig(BaseModel):
         default=10,
         description="Top K results to return from fusion.",
     )
+    entity_path_top_k: int = Field(
+        default=50,
+        description="Top K candidates from the structured entity-grounded path.",
+    )
     curated_slot_reserve: int = Field(
         default=5,
         description="Max top_k slots reserved for curated sources carrying all resolved entities.",

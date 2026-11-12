@@ -1785,6 +1785,366 @@ def test_coverage_reports_annotation_zero_for_short_stage_manifest(tmp_path: Pat
     }
 
 
+def _setup_d3c_fixture(
+    sub_dir: Path,
+    monkeypatch,
+    chunks_rows: list,
+    extra_entities: list | None = None,
+):
+    """Helper building an isolated offline RetrievalPipeline fixture for D3c entity-path tests."""
+    import numpy as np
+
+    from app.retrieval.config import RetrievalConfig
+    from app.retrieval.pipeline import RetrievalPipeline
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            vecs = []
+            for idx, text in enumerate(texts):
+                # Give PubMed/noisy texts closer cosine vectors so meaning favors them
+                if "noisy" in str(text).lower() or "pubmed" in str(text).lower():
+                    v = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+                else:
+                    v = np.array([0.2, 0.9, float((idx % 5) + 1) * 0.05, 0.1], dtype=np.float32)
+                v = v / np.linalg.norm(v)
+                vecs.append(v)
+            return np.vstack(vecs)
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+    sub_dir.mkdir(parents=True, exist_ok=True)
+
+    ent_rows = [
+        {
+            "canonical_id": "pg:gene:124",
+            "entity_type": "gene",
+            "primary_source_id": "PA124",
+            "display_name": "CYP2C19",
+            "normalized_name": "cyp2c19",
+            "is_drug": False,
+            "gene_symbol": "CYP2C19",
+            "defined_by": "clinpgx_genes",
+            "is_ambiguous": False,
+        },
+        {
+            "canonical_id": "pg:chem:449053",
+            "entity_type": "chemical",
+            "primary_source_id": "PA449053",
+            "display_name": "clopidogrel",
+            "normalized_name": "clopidogrel",
+            "is_drug": True,
+            "gene_symbol": None,
+            "defined_by": "clinpgx_chemicals",
+            "is_ambiguous": False,
+        },
+    ]
+    if extra_entities:
+        ent_rows.extend(extra_entities)
+
+    ent_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("entity_type", pa.string()),
+            ("primary_source_id", pa.string()),
+            ("display_name", pa.string()),
+            ("normalized_name", pa.string()),
+            ("is_drug", pa.bool_()),
+            ("gene_symbol", pa.string()),
+            ("defined_by", pa.string()),
+            ("is_ambiguous", pa.bool_()),
+        ]
+    )
+    pq.write_table(pa.Table.from_pylist(ent_rows, schema=ent_schema), sub_dir / "entities.parquet")
+
+    syn_schema = pa.schema(
+        [
+            ("canonical_id", pa.string()),
+            ("synonym_text", pa.string()),
+            ("normalized_synonym", pa.string()),
+            ("synonym_type", pa.string()),
+        ]
+    )
+    pq.write_table(pa.Table.from_pylist([], schema=syn_schema), sub_dir / "synonyms.parquet")
+
+    rel_schema = pa.schema(
+        [
+            ("relationship_id", pa.string()),
+            ("entity1_id", pa.string()),
+            ("entity1_name", pa.string()),
+            ("entity1_type", pa.string()),
+            ("entity1_canonical_id", pa.string()),
+            ("entity2_id", pa.string()),
+            ("entity2_name", pa.string()),
+            ("entity2_type", pa.string()),
+            ("entity2_canonical_id", pa.string()),
+            ("association", pa.string()),
+            ("pmids", pa.list_(pa.string())),
+            ("is_dangling", pa.bool_()),
+            ("raw_file_sha256", pa.string()),
+        ]
+    )
+    pq.write_table(pa.Table.from_pylist([], schema=rel_schema), sub_dir / "relationships.parquet")
+
+    chunks_schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(chunks_rows, schema=chunks_schema),
+        sub_dir / "chunks.parquet",
+    )
+
+    cfg = RetrievalConfig(
+        processed_dir=sub_dir,
+        qdrant_path=sub_dir / "qdrant_db",
+        raw_haplo_dir=sub_dir,
+    )
+    pipeline = RetrievalPipeline(config=cfg)
+    pipeline.meaning_index.build_index(force_rebuild=True, batch_size=16)
+    return pipeline
+
+
+def test_d3c_entity_path_surfaces_curated_over_noisy_prose_and_skips_when_unresolved(
+    tmp_path: Path, monkeypatch
+):
+    """
+    Verify D3c Item 2:
+    - Prose words that saturate BM25 top 50 with PubMed no longer push out curated chunks
+      carrying all resolved entity IDs (surfaced via the 'entity' path).
+    - entity_hints alone (when question text carries no resolved entity) activates 'entity'.
+    - When no entity resolves at all, the 'entity' path is NOT used.
+    """
+    chunks_rows = []
+    # 60 PubMed chunks saturating noisy prose + entity tokens, pushing curated past BM25 top 50
+    for i in range(60):
+        chunks_rows.append(
+            {
+                "chunk_id": f"chunk:pubmed:PM{i:03d}:0",
+                "source_type": "pubmed",
+                "source_id": f"PM{i:03d}",
+                "title": f"PubMed noisy platelet outcome trial {i}",
+                "content": (
+                    "noisy outcome cohort prospective CYP2C19 clopidogrel "
+                    "noisy outcome cohort prospective CYP2C19 clopidogrel."
+                ),
+                "date": "2022-01-01",
+                "date_precision": "day",
+                "entity_ids": [],
+            }
+        )
+    # 2 curated chunks carrying BOTH canonical IDs without repeating prose words
+    chunks_rows.extend(
+        [
+            {
+                "chunk_id": "chunk:guideline:CPIC1",
+                "source_type": "guideline",
+                "source_id": "CPIC1",
+                "title": "Curated dosing advice",
+                "content": "Alternative antiplatelet therapy recommended for reduced function.",
+                "date": "2022-05-01",
+                "date_precision": "day",
+                "entity_ids": ["pg:gene:124", "pg:chem:449053"],
+            },
+            {
+                "chunk_id": "chunk:annotation:ANN1",
+                "source_type": "annotation",
+                "source_id": "ANN1",
+                "title": "Curated variant note",
+                "content": "Decreased response observed in variant carriers.",
+                "date": "2021-01-01",
+                "date_precision": "year",
+                "entity_ids": ["pg:gene:124", "pg:chem:449053"],
+            },
+        ]
+    )
+
+    pipeline = _setup_d3c_fixture(tmp_path / "noisy_case", monkeypatch, chunks_rows)
+    try:
+        # 1. Resolved entities + noisy prose -> entity path surfaces curated chunks
+        res = pipeline.query(
+            "What is the noisy outcome cohort prospective effect of CYP2C19 on clopidogrel?"
+        )
+        by_cid = {h.chunk_id: h for h in res.top_evidence}
+        assert "chunk:guideline:CPIC1" in by_cid
+        assert "chunk:annotation:ANN1" in by_cid
+        for cur_id in ("chunk:guideline:CPIC1", "chunk:annotation:ANN1"):
+            hit = by_cid[cur_id]
+            assert "entity" in hit.found_by_paths
+            assert hit.path_ranks.get("entity", 0) >= 1
+            assert hit.provenance.get("path_ranks", {}).get("entity") == hit.path_ranks["entity"]
+            assert "tier2" not in hit.provenance
+
+        # 2. Entity resolved via entity_hints -> 'entity' path is active
+        res_hints = pipeline.query(
+            "Dosing guidance summary?",
+            entity_hints=["pg:gene:124", "pg:chem:449053"],
+        )
+        assert any("entity" in h.found_by_paths for h in res_hints.top_evidence)
+
+        # 3. No resolved entities -> 'entity' path is NOT used anywhere
+        res_none = pipeline.query("noisy outcome cohort prospective platelet trial")
+        assert res_none.resolved_entities == []
+        for h in res_none.top_evidence:
+            assert "entity" not in h.found_by_paths
+            assert "entity" not in h.path_ranks
+            assert "entity" not in h.provenance.get("path_ranks", {})
+    finally:
+        pipeline.meaning_index.close()
+
+
+def test_d3c_entity_path_tier2_fallback_determinism_and_source_dedup(tmp_path: Path, monkeypatch):
+    """
+    Verify D3c Item 2:
+    - When all-ID chunks exist alongside single-ID chunks, tier1 uses ONLY all-ID chunks
+      (no 'tier2' flag in provenance).
+    - When ZERO all-ID chunks exist, 'entity' falls back to tier2 chunks carrying ANY resolved
+      ID, marked provenance['tier2'] = True.
+    - Ties in BM25 within 'entity' break deterministically by chunk_id ASC, and repeat calls
+      produce identical outputs.
+    - Multiple chunks sharing the same source_id deduplicate to one chunk before top_k cut.
+    """
+    # Part A: Mixed all-ID (with duplicate source_id) + single-ID chunks
+    rows_tier1 = [
+        {
+            "chunk_id": "chunk:guideline:PA_DUP:0",
+            "source_type": "guideline",
+            "source_id": "PA_DUP",
+            "title": "Curated entry",
+            "content": "Identical scoring text for determinism check.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124", "pg:chem:449053"],
+        },
+        {
+            "chunk_id": "chunk:guideline:PA_DUP:1",
+            "source_type": "guideline",
+            "source_id": "PA_DUP",
+            "title": "Curated entry",
+            "content": "Identical scoring text for determinism check.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124", "pg:chem:449053"],
+        },
+        {
+            "chunk_id": "chunk:annotation:B_TIE",
+            "source_type": "annotation",
+            "source_id": "B_TIE",
+            "title": "Curated entry",
+            "content": "Identical scoring text for determinism check.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124", "pg:chem:449053"],
+        },
+        {
+            "chunk_id": "chunk:annotation:A_TIE",
+            "source_type": "annotation",
+            "source_id": "A_TIE",
+            "title": "Curated entry",
+            "content": "Identical scoring text for determinism check.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124", "pg:chem:449053"],
+        },
+        # Single-ID only chunk: must NOT be picked by 'entity' when tier1 exists
+        {
+            "chunk_id": "chunk:drug_label:SINGLE_ONLY",
+            "source_type": "drug_label",
+            "source_id": "SINGLE_ONLY",
+            "title": "Single ID label",
+            "content": "Unrelated filler text.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124"],
+        },
+    ]
+
+    p_t1 = _setup_d3c_fixture(tmp_path / "tier1_case", monkeypatch, rows_tier1)
+    try:
+        # Tie-breaking check directly on search_by_entities
+        ent_hits = p_t1.bm25_index.search_by_entities(
+            "CYP2C19 clopidogrel", ["pg:gene:124", "pg:chem:449053"], top_k=50
+        )
+        assert [h.chunk_id for h in ent_hits] == [
+            "chunk:annotation:A_TIE",
+            "chunk:annotation:B_TIE",
+            "chunk:guideline:PA_DUP:0",
+            "chunk:guideline:PA_DUP:1",
+        ]
+        assert all(h.tier == "tier1" for h in ent_hits)
+
+        res1 = p_t1.query("CYP2C19 clopidogrel")
+        res2 = p_t1.query("CYP2C19 clopidogrel")
+
+        # Exact determinism across repeated invocations
+        assert [h.chunk_id for h in res1.top_evidence] == [h.chunk_id for h in res2.top_evidence]
+        assert [h.rrf_score for h in res1.top_evidence] == [h.rrf_score for h in res2.top_evidence]
+        assert [h.path_ranks for h in res1.top_evidence] == [
+            h.path_ranks for h in res2.top_evidence
+        ]
+
+        # source_id PA_DUP deduplicated strictly to 1 chunk (best fused rank -> :0)
+        dup_hits = [h for h in res1.top_evidence if h.source_id == "PA_DUP"]
+        assert len(dup_hits) == 1
+        assert dup_hits[0].chunk_id == "chunk:guideline:PA_DUP:0"
+
+        # Single-ID chunk was NOT selected by 'entity' since tier1 existed
+        single = [h for h in res1.top_evidence if h.chunk_id == "chunk:drug_label:SINGLE_ONLY"]
+        if single:
+            assert "entity" not in single[0].found_by_paths
+        assert all("tier2" not in h.provenance for h in res1.top_evidence)
+    finally:
+        p_t1.meaning_index.close()
+
+    # Part B: Zero all-ID chunks -> 'entity' falls back to tier2 marked in provenance
+    rows_tier2 = [
+        {
+            "chunk_id": "chunk:annotation:GENE_ONLY",
+            "source_type": "annotation",
+            "source_id": "GENE_ONLY",
+            "title": "Gene only annotation",
+            "content": "Metadata tagged only with CYP2C19.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:gene:124"],
+        },
+        {
+            "chunk_id": "chunk:drug_label:CHEM_ONLY",
+            "source_type": "drug_label",
+            "source_id": "CHEM_ONLY",
+            "title": "Drug only label",
+            "content": "Metadata tagged only with clopidogrel.",
+            "date": "2022-01-01",
+            "date_precision": "day",
+            "entity_ids": ["pg:chem:449053"],
+        },
+    ]
+    p_t2 = _setup_d3c_fixture(tmp_path / "tier2_case", monkeypatch, rows_tier2)
+    try:
+        res_t2 = p_t2.query("CYP2C19 clopidogrel")
+        entity_selected = [h for h in res_t2.top_evidence if "entity" in h.found_by_paths]
+        assert len(entity_selected) == 2
+        for h in entity_selected:
+            assert h.provenance.get("tier2") is True
+            assert h.provenance.get("entity_tier") == "tier2"
+            assert h.path_ranks.get("entity", 0) >= 1
+    finally:
+        p_t2.meaning_index.close()
+
+
+
 
 
 

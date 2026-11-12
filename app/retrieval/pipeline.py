@@ -115,6 +115,15 @@ class RetrievalPipeline:
         # 4. Meaning Search
         meaning_hits = self.meaning_index.search(question, top_k=50)
 
+        # 4b. Structured Entity-Grounded Search (skipped if no resolved entities)
+        entity_hits = (
+            self.bm25_index.search_by_entities(
+                question, resolved_cids, top_k=self.config.entity_path_top_k
+            )
+            if resolved_cids
+            else []
+        )
+
         # 5. Graph edges mapped to source chunks (strictly existing chunks, never stubs)
         graph_chunks: List[Dict[str, Any]] = []
         if graph_res.source_pmids:
@@ -146,11 +155,15 @@ class RetrievalPipeline:
                 )
 
         # 6. Reciprocal Rank Fusion (k=60), preserving full fused pool for dedup & slot balance
-        pool_limit = max(50, len(keyword_hits) + len(meaning_hits) + len(graph_chunks))
+        pool_limit = max(
+            50,
+            len(keyword_hits) + len(meaning_hits) + len(graph_chunks) + len(entity_hits),
+        )
         fused_candidates = compute_rrf_fusion(
             keyword_hits=keyword_hits,
             meaning_hits=meaning_hits,
             graph_chunks=graph_chunks,
+            entity_hits=entity_hits,
             k=self.config.rrf_k,
             top_n=pool_limit,
         )

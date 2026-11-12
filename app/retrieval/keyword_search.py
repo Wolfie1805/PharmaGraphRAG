@@ -47,6 +47,22 @@ class KeywordHit(BaseModel):
     rank: int
 
 
+class EntityHit(BaseModel):
+    """Structured entity-grounded search result hit."""
+
+    chunk_id: str
+    source_type: str
+    source_id: str
+    title: str
+    content: str
+    date: str
+    date_precision: str
+    entity_ids: List[str] = Field(default_factory=list)
+    bm25_score: float
+    tier: str = Field(description="'tier1' (all resolved IDs) or 'tier2' (any resolved ID)")
+    rank: int
+
+
 class BM25KeywordIndex:
     """In-memory BM25 index over data/processed/chunks.parquet."""
 
@@ -122,6 +138,73 @@ class BM25KeywordIndex:
                     date_precision=chunk["date_precision"],
                     entity_ids=chunk["entity_ids"],
                     bm25_score=float(score),
+                    rank=rank,
+                )
+            )
+        return hits
+
+    def search_by_entities(
+        self,
+        query: str,
+        resolved_canonical_ids: List[str],
+        top_k: int = 50,
+    ) -> List[EntityHit]:
+        """
+        Retrieve chunks matching resolved entity IDs via structured chunk.entity_ids only:
+        - Tier 1 ('tier1'): chunks carrying ALL resolved canonical IDs.
+        - Tier 2 ('tier2'): used ONLY if zero Tier 1 chunks exist; chunks carrying ANY resolved ID.
+        Ranked deterministically within the subset by existing BM25 keyword score, ties by chunk_id.
+        """
+        ordered_cids = list(dict.fromkeys(cid for cid in resolved_canonical_ids if cid))
+        if not ordered_cids or top_k <= 0 or not self.chunk_records:
+            return []
+
+        resolved_set = set(ordered_cids)
+        tier1_indices = [
+            idx
+            for idx, rec in enumerate(self.chunk_records)
+            if resolved_set.issubset(set(rec["entity_ids"]))
+        ]
+        if tier1_indices:
+            selected_indices = tier1_indices
+            tier = "tier1"
+        else:
+            tier2_indices = [
+                idx
+                for idx, rec in enumerate(self.chunk_records)
+                if any(cid in resolved_set for cid in rec["entity_ids"])
+            ]
+            if not tier2_indices:
+                return []
+            selected_indices = tier2_indices
+            tier = "tier2"
+
+        query_tokens = [
+            t for t in tokenize_biomedical(query) if t not in BM25_STOPWORDS
+        ]
+        if query_tokens and self.bm25 is not None:
+            scores = self.bm25.get_batch_scores(query_tokens, selected_indices)
+            scored = [(idx, float(sc)) for idx, sc in zip(selected_indices, scores)]
+        else:
+            scored = [(idx, 0.0) for idx in selected_indices]
+
+        scored.sort(key=lambda pair: (-pair[1], self.chunk_records[pair[0]]["chunk_id"]))
+
+        hits: List[EntityHit] = []
+        for rank, (idx, score) in enumerate(scored[:top_k], start=1):
+            chunk = self.chunk_records[idx]
+            hits.append(
+                EntityHit(
+                    chunk_id=chunk["chunk_id"],
+                    source_type=chunk["source_type"],
+                    source_id=chunk["source_id"],
+                    title=chunk["title"],
+                    content=chunk["content"],
+                    date=chunk["date"],
+                    date_precision=chunk["date_precision"],
+                    entity_ids=chunk["entity_ids"],
+                    bm25_score=score,
+                    tier=tier,
                     rank=rank,
                 )
             )
