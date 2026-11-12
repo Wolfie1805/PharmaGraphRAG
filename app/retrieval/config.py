@@ -24,7 +24,7 @@ class RetrievalConfig(BaseModel):
     )
     chunks_path: Path = Field(
         default_factory=lambda: Path(
-            os.getenv("PHARMAGRAPH_CHUNKS_PATH", "data/processed/chunks.parquet")
+            os.getenv("PHARMAGRAPH_CHUNKS_PATH", "data/processed/chunks_v2.parquet")
         ),
         description="Path to chunks Parquet table.",
     )
