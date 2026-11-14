@@ -20,15 +20,22 @@ function replaceAmbiguousTerm(question: string, originalTerm: string | undefined
 
 interface AppProps {
   initialStats?: MeaningCoverageStats;
+  initialQuestion?: string;
 }
 
-export const App: React.FC<AppProps> = ({ initialStats }) => {
-  const [question, setQuestion] = useState<string>('');
+export const App: React.FC<AppProps> = ({ initialStats, initialQuestion = '' }) => {
+  const [question, setQuestion] = useState<string>(initialQuestion);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AskResponse | null>(null);
   const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
   const [stats, setStats] = useState<MeaningCoverageStats | null>(initialStats ?? null);
+
+  useEffect(() => {
+    if (initialQuestion !== undefined) {
+      setQuestion(initialQuestion);
+    }
+  }, [initialQuestion]);
 
   useEffect(() => {
     if (initialStats) return;
@@ -92,9 +99,26 @@ export const App: React.FC<AppProps> = ({ initialStats }) => {
       </aside>
 
       <header className="app-header">
-        <div className="header-brand">
-          <h1>PharmaGraph</h1>
-          <span className="tagline">Evidence-Grounded Pharmacogenomics Intelligence Core</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div className="header-brand">
+            <h1>PharmaGraph</h1>
+            <span className="tagline">Evidence-Grounded Pharmacogenomics Search</span>
+          </div>
+          <a
+            href="#/"
+            className="btn-back-landing"
+            style={{
+              color: '#9a9aa0',
+              textDecoration: 'none',
+              fontSize: '0.88rem',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '0.4rem 0.85rem',
+              borderRadius: '6px',
+              background: 'rgba(255, 255, 255, 0.04)',
+            }}
+          >
+            ← Back to Overview
+          </a>
         </div>
       </header>
 
@@ -255,10 +279,10 @@ export const App: React.FC<AppProps> = ({ initialStats }) => {
         <p className="footer-disclaimer">
           <strong>Disclaimer:</strong>{' '}
           {response?.disclaimer_text ??
-            'PharmaGraph is an experimental research system for pharmacogenomics intelligence and does NOT provide medical advice, clinical diagnosis, or dosing recommendations. Always consult a licensed physician, clinical geneticist, or pharmacist for medical decisions.'}
+            'PharmaGraph is an experimental research system for pharmacogenomics search and does NOT provide medical advice, clinical diagnosis, or dosing recommendations. Always consult a licensed physician, clinical geneticist, or pharmacist for medical decisions.'}
         </p>
         <p className="footer-meta">
-          PharmaGraph Phase D3 &bull; Grounded Knowledge Graph + Multi-Path RRF Retrieval &bull; Built with React &amp; TypeScript
+          PharmaGraph Phase D3 &bull; Grounded Evidence Retrieval + Multi-Path RRF &bull; Built with React &amp; TypeScript
         </p>
       </footer>
     </div>

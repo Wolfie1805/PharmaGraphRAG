@@ -1,6 +1,16 @@
-import { AskResponse, MeaningCoverageStats } from './types';
+import { AskResponse, MeaningCoverageStats, SiteStats } from './types';
 
 const API_BASE = 'http://localhost:8000/api';
+
+export async function fetchSiteStats(): Promise<SiteStats | null> {
+  try {
+    const response = await fetch('/site_stats.json');
+    if (!response.ok) return null;
+    return (await response.json()) as SiteStats;
+  } catch {
+    return null;
+  }
+}
 
 export async function fetchStats(): Promise<MeaningCoverageStats | null> {
   try {

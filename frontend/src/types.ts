@@ -78,3 +78,115 @@ export interface AskResponse {
   network_calls: number;
   builder_calls: number;
 }
+
+
+export interface LicenseNote {
+  quote: string;
+  location: string;
+}
+
+export interface PubMedQueryInfo {
+  pair_id: string;
+  query: string;
+  esearch_count: number;
+  retrieval_date: string;
+}
+
+export interface SourceMetadata {
+  name: string;
+  description: string;
+  license?: string;
+  site_footer_license?: string;
+  archive_bundled_license?: string;
+  discrepancy_unresolved?: boolean;
+  working_assumption?: string;
+  date_checked: string;
+  license_notes?: LicenseNote[];
+  pubmed_queries?: PubMedQueryInfo[];
+}
+
+export interface RawFileRun {
+  run_id: string;
+  count: number;
+  bytes: number;
+}
+
+export interface RawFilesSummary {
+  clinpgx?: {
+    source_name: string;
+    count: number;
+    bytes: number;
+    release_label: string;
+  };
+  pubmed?: {
+    source_name: string;
+    count: number;
+    bytes: number;
+    release_label: string;
+    runs?: {
+      full?: RawFileRun;
+      pilot?: RawFileRun;
+    };
+  };
+}
+
+export interface ChunkTypeSummary {
+  total: number;
+  with_any_entity: number;
+  with_variant_or_allele: number;
+}
+
+export interface PapersSummary {
+  count: number;
+  year_min?: number;
+  year_max?: number;
+  year_range?: string;
+  with_abstracts: number;
+}
+
+export interface BenchmarkSummary {
+  question_count: number;
+  run_date: string;
+  qdrant_path?: string;
+  rule_checks?: {
+    guard: string;
+    ambiguity: string;
+  };
+  retrieval_proxy?: {
+    hit_at_10: number;
+    precision_at_10: number;
+    mrr: number;
+    not_a_quality_score: boolean;
+    verified_by_human: boolean;
+  };
+}
+
+export interface SiteStats {
+  generated_at?: string | null;
+  git?: {
+    commit?: string | null;
+    latest_tag?: string | null;
+    dirty?: boolean | null;
+  } | null;
+  raw_files?: RawFilesSummary | null;
+  processed_tables?: Record<string, number | null> | null;
+  entities_by_type?: Record<string, number> | null;
+  relationships?: {
+    total: number;
+    dangling: number;
+  } | null;
+  chunks_by_source_type?: Record<string, ChunkTypeSummary> | null;
+  papers?: PapersSummary | null;
+  retrieval?: {
+    path_names: string[];
+    embedding_model: string;
+    meaning_coverage?: Record<string, MeaningSourceCoverage> | null;
+    default_answer_mode: string;
+  } | null;
+  sources?: SourceMetadata[] | null;
+  tests?: {
+    pytest_collected?: number | null;
+    vitest_collected?: number | null;
+  } | null;
+  benchmark?: BenchmarkSummary | null;
+}
