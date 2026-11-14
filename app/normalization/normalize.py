@@ -58,7 +58,7 @@ def normalize_search_term(text: Optional[str]) -> str:
     # Collapse multiple whitespaces
     norm = re.sub(r"\s+", " ", norm)
     # Strip enclosing quotes if any
-    norm = norm.strip("\"'")
+    norm = norm.strip().strip("\"'")
     return norm.strip()
 
 

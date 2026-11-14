@@ -47,3 +47,19 @@
 ## 4. Privacy & Answer Mode Architecture
 - Default answer mode runs locally with no external service; no ClinPGx-derived text is sent anywhere unless the optional local model mode is used, which also stays on this machine.
 
+---
+
+## 5. Frontend Self-Hosted Typography Licenses
+- **Sora (`@fontsource/sora` pinned to v5.3.0):**
+  - **License:** SIL Open Font License, Version 1.1 (OFL-1.1).
+  - **Copyright:** Copyright 2019 The Sora Project Authors (https://github.com/huertatipografica/sora).
+  - **Redistribution:** Self-hosted package bundled locally with zero external network calls. Subsets restricted to Latin.
+- **Inter (`@fontsource/inter` pinned to v5.3.0):**
+  - **License:** SIL Open Font License, Version 1.1 (OFL-1.1).
+  - **Copyright:** Copyright (c) 2016-2020 The Inter Project Authors (https://github.com/rsms/inter).
+  - **Redistribution:** Self-hosted package bundled locally with zero external network calls. Subsets restricted to Latin.
+- **JetBrains Mono (`@fontsource/jetbrains-mono` pinned to v5.3.0):**
+  - **License:** SIL Open Font License, Version 1.1 (OFL-1.1).
+  - **Copyright:** Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono).
+  - **Redistribution:** Self-hosted package bundled locally with zero external network calls. Subsets restricted to Latin.
+

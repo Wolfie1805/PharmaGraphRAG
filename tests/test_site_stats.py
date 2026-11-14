@@ -153,7 +153,10 @@ def test_git_info_fields():
     ).strip()
     assert git_info["commit"] == expected_commit
     assert isinstance(git_info["dirty"], bool)
-    assert git_info["latest_tag"] == "d3c-reviewed"
+    expected_tag = subprocess.check_output(
+        ["git", "describe", "--tags", "--abbrev=0"], text=True
+    ).strip()
+    assert git_info["latest_tag"] == expected_tag
 
 
 def test_licenses_and_pubmed_queries_fidelity():
