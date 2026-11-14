@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-11-14T12:40:34.644375+00:00",
+  "generated_at": "2026-11-14T12:50:11.147213+00:00",
   "git": {
-    "commit": "ca99abd058decba19cfb3480a097451772b3860f",
+    "commit": "83b8ba869cf2b590b5c3941f8ad9e34a3c3320c6",
     "latest_tag": "d3c-reviewed",
-    "dirty": true
+    "dirty": false
   },
   "raw_files": {
     "clinpgx": {
