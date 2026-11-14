@@ -1,0 +1,149 @@
+{
+  "generated_at": "2026-11-14T11:32:48.245361+00:00",
+  "git": {
+    "commit": "c992a08a4fc86e5fc633ff87ddfb420dc77b28e0",
+    "latest_tag": "d3c-reviewed"
+  },
+  "raw_files": {
+    "clinpgx": {
+      "source_name": "ClinPGx",
+      "count": 14,
+      "bytes": 16666117,
+      "release_label": "2026-10-05"
+    },
+    "pubmed": {
+      "source_name": "PubMed",
+      "count": 17,
+      "bytes": 51579989,
+      "release_label": "not provided"
+    }
+  },
+  "processed_tables": {
+    "entities": 57480,
+    "synonyms": 160807,
+    "cross_references": 318355,
+    "relationships": 246714,
+    "publications": 3096,
+    "chunks": 22503
+  },
+  "entities_by_type": {
+    "chemical": 5329,
+    "cnv": 12,
+    "gene": 25041,
+    "haplotype": 5274,
+    "phenotype": 774,
+    "snv": 13358,
+    "variant": 7692
+  },
+  "relationships": {
+    "total": 246714,
+    "dangling": 183062
+  },
+  "chunks_by_source_type": {
+    "annotation": {
+      "total": 13030,
+      "with_any_entity": 13030,
+      "with_variant_or_allele": 12316
+    },
+    "drug_label": {
+      "total": 1435,
+      "with_any_entity": 1433,
+      "with_variant_or_allele": 209
+    },
+    "guideline": {
+      "total": 219,
+      "with_any_entity": 219,
+      "with_variant_or_allele": 62
+    },
+    "pubmed": {
+      "total": 7819,
+      "with_any_entity": 0,
+      "with_variant_or_allele": 0
+    }
+  },
+  "papers": {
+    "count": 3096,
+    "year_min": 1993,
+    "year_max": 2026,
+    "year_range": "1993-2026",
+    "with_abstracts": 3096
+  },
+  "retrieval": {
+    "path_names": [
+      "keyword",
+      "meaning",
+      "graph",
+      "entity"
+    ],
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "meaning_coverage": {
+      "annotation": {
+        "indexed": 0,
+        "expected": 13030,
+        "complete": false
+      },
+      "drug_label": {
+        "indexed": 1435,
+        "expected": 1435,
+        "complete": true
+      },
+      "guideline": {
+        "indexed": 219,
+        "expected": 219,
+        "complete": true
+      },
+      "pubmed": {
+        "indexed": 0,
+        "expected": 7819,
+        "complete": false
+      }
+    },
+    "default_answer_mode": "extractive"
+  },
+  "sources": [
+    {
+      "name": "ClinPGx Core TSVs",
+      "description": "Curated pharmacogenomics annotations, drug labels, clinical variants, and relationships.",
+      "license": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)",
+      "date_checked": "2026-10-30"
+    },
+    {
+      "name": "ClinPGx Haplotypes",
+      "description": "Haplotype and star-allele definitions for pharmacogenes.",
+      "license": "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)",
+      "date_checked": "2026-10-31"
+    },
+    {
+      "name": "CPIC Alleles",
+      "description": "Clinical Pharmacogenetics Implementation Consortium allele definitions and guideline status.",
+      "license": "Creative Commons Zero 1.0 Universal (CC0 1.0) Public Domain Dedication",
+      "date_checked": "2026-10-31"
+    },
+    {
+      "name": "PubMed / NLM (NCBI E-utilities)",
+      "description": "Biomedical literature citations, metadata, and abstracts linked to ClinPGx associations.",
+      "license": "U.S. Government Public Domain (metadata/citations); individual third-party copyright on abstracts & full text",
+      "date_checked": "2026-10-30"
+    }
+  ],
+  "tests": {
+    "pytest_collected": 99,
+    "vitest_collected": 19
+  },
+  "benchmark": {
+    "question_count": 15,
+    "run_date": "2026-11-14T10:42:38.782831+00:00",
+    "qdrant_path": "data/processed/qdrant_db_full",
+    "rule_checks": {
+      "guard": "6/6",
+      "ambiguity": "2/2"
+    },
+    "retrieval_proxy": {
+      "hit_at_10": 0.8571,
+      "precision_at_10": 0.7429,
+      "mrr": 0.8571,
+      "not_a_quality_score": true,
+      "verified_by_human": false
+    }
+  }
+}

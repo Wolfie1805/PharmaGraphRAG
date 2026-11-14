@@ -12,6 +12,7 @@ repos:
           (?x)^(
             \.secrets\.baseline|
             requirements-lock\.txt|
-            poetry\.lock
+            poetry\.lock|
+            frontend/public/site_stats\.json
           )$
 

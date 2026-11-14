@@ -8,6 +8,7 @@ import argparse
 import json
 import sys
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
@@ -40,6 +41,7 @@ def _compute_corpus_relevant_ids(
 def evaluate_v2(
     benchmark_path: Path,
     chunks_path: Optional[Path] = None,
+    output_path: Optional[Path] = Path("data/benchmark/results_latest.json"),
 ) -> Dict[str, Any]:
     questions: List[Dict[str, Any]] = json.loads(benchmark_path.read_text(encoding="utf-8"))
 
@@ -180,7 +182,8 @@ def evaluate_v2(
     print("=" * 96)
 
     pipeline.meaning_index.close()
-    return {
+
+    result_payload: Dict[str, Any] = {
         "diagnostic_notice": (
             "Relevance rule overlaps with ranking features; "
             "pipeline diagnostic and not a quality score."
@@ -192,6 +195,44 @@ def evaluate_v2(
         "ambig_passed": ambig_passed,
         "ambig_total": ambig_total,
     }
+
+    if output_path is not None:
+        ov_hit = (
+            sum(r["hit_at_10"] for r in retrieval_rows) / len(retrieval_rows)
+            if retrieval_rows
+            else None
+        )
+        ov_p = (
+            sum(r["precision_at_10"] for r in retrieval_rows) / len(retrieval_rows)
+            if retrieval_rows
+            else None
+        )
+        ov_mrr = (
+            sum(r["mrr"] for r in retrieval_rows) / len(retrieval_rows)
+            if retrieval_rows
+            else None
+        )
+        benchmark_results = {
+            "question_count": len(questions),
+            "run_date": datetime.now(timezone.utc).isoformat(),
+            "qdrant_path": cfg.qdrant_path.as_posix(),
+            "rule_checks": {
+                "guard": f"{guard_passed}/{guard_total}",
+                "ambiguity": f"{ambig_passed}/{ambig_total}",
+            },
+            "retrieval_proxy": {
+                "hit_at_10": round(ov_hit, 4) if ov_hit is not None else None,
+                "precision_at_10": round(ov_p, 4) if ov_p is not None else None,
+                "mrr": round(ov_mrr, 4) if ov_mrr is not None else None,
+                "not_a_quality_score": True,
+                "verified_by_human": False,
+            },
+        }
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(benchmark_results, indent=2), encoding="utf-8")
+        result_payload["latest_results_path"] = output_path.as_posix()
+
+    return result_payload
 
 
 if __name__ == "__main__":
@@ -210,5 +251,11 @@ if __name__ == "__main__":
             "(defaults to PHARMAGRAPH_CHUNKS_PATH or data/processed/chunks.parquet)."
         ),
     )
+    parser.add_argument(
+        "--output-path",
+        type=Path,
+        default=Path("data/benchmark/results_latest.json"),
+        help="Target path for latest benchmark summary results JSON.",
+    )
     args = parser.parse_args()
-    evaluate_v2(args.benchmark_path, chunks_path=args.chunks_path)
+    evaluate_v2(args.benchmark_path, chunks_path=args.chunks_path, output_path=args.output_path)

@@ -2144,6 +2144,98 @@ def test_d3c_entity_path_tier2_fallback_determinism_and_source_dedup(tmp_path: P
         p_t2.meaning_index.close()
 
 
+def test_verify_index_checks_indexed_subset_text_sha256(tmp_path: Path, monkeypatch):
+    """
+    Verify D3c Decision 5:
+    - MeaningSearchIndex.verify_index checks indexed_subset_text_sha256 against manifest.
+    - When manifest has correct indexed_subset_text_sha256, is_exact_match is True.
+    - When manifest has mismatched indexed_subset_text_sha256, is_exact_match is False.
+    """
+    import json
+
+    import numpy as np
+
+    from app.retrieval.meaning_search import MeaningSearchIndex, compute_embedded_text_sha256
+
+    class _FakeEncoder:
+        def __init__(self, model_name: str):
+            self.model_name = model_name
+
+        def get_embedding_dimension(self) -> int:
+            return 4
+
+        def encode(self, texts, batch_size=16, show_progress_bar=False, normalize_embeddings=True):
+            return np.ones((len(texts), 4), dtype=np.float32) * 0.5
+
+    monkeypatch.setattr("app.retrieval.meaning_search.SentenceTransformer", _FakeEncoder)
+
+    chunks_path = tmp_path / "chunks.parquet"
+    schema = pa.schema(
+        [
+            ("chunk_id", pa.string()),
+            ("source_type", pa.string()),
+            ("source_id", pa.string()),
+            ("title", pa.string()),
+            ("content", pa.string()),
+            ("date", pa.string()),
+            ("date_precision", pa.string()),
+            ("entity_ids", pa.list_(pa.string())),
+        ]
+    )
+    pq.write_table(
+        pa.Table.from_pylist(
+            [
+                {
+                    "chunk_id": "chunk:drug_label:1",
+                    "source_type": "drug_label",
+                    "source_id": "DL1",
+                    "title": "Label 1",
+                    "content": "Label content",
+                    "date": "2021-01-01",
+                    "date_precision": "day",
+                    "entity_ids": [],
+                },
+                {
+                    "chunk_id": "chunk:guideline:1",
+                    "source_type": "guideline",
+                    "source_id": "G1",
+                    "title": "Guideline 1",
+                    "content": "Guideline content",
+                    "date": "2022-01-01",
+                    "date_precision": "day",
+                    "entity_ids": [],
+                },
+            ],
+            schema=schema,
+        ),
+        chunks_path,
+    )
+
+    qdrant_path = tmp_path / "qdrant_db"
+    idx = MeaningSearchIndex(qdrant_path=qdrant_path, chunks_path=chunks_path)
+    try:
+        idx.build_index(force_rebuild=True, batch_size=4, source_types=["drug_label", "guideline"])
+        rep_valid = idx.verify_index(source_types=["drug_label", "guideline"])
+        assert rep_valid["is_exact_match"] is True
+        assert rep_valid["indexed_subset_text_sha256_matches"] is True
+        expected_subset_sha = compute_embedded_text_sha256(
+            chunks_path, source_types=["drug_label", "guideline"]
+        )
+        assert rep_valid["indexed_subset_text_sha256"] == expected_subset_sha
+
+        # Tamper manifest indexed_subset_text_sha256 -> verify_index reports failure
+        manifest = json.loads(idx.manifest_path.read_text(encoding="utf-8"))
+        manifest["indexed_subset_text_sha256"] = "0" * 64
+        idx.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        rep_tampered = idx.verify_index(source_types=["drug_label", "guideline"])
+        assert rep_tampered["is_exact_match"] is False
+        assert rep_tampered["indexed_subset_text_sha256_matches"] is False
+    finally:
+        idx.close()
+
+
+
 
 
 

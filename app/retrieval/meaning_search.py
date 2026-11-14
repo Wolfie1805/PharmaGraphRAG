@@ -591,6 +591,12 @@ class MeaningSearchIndex:
 
             cur_ram, peak_ram = get_process_ram_mb()
             max_ram_seen = max(max_ram_seen, peak_ram, cur_ram)
+            indexed_types = [st for st, comp in complete_per_type.items() if comp]
+            if not indexed_types:
+                indexed_types = target_types
+            indexed_subset_sha = compute_embedded_text_sha256(
+                self.chunks_path, source_types=indexed_types
+            )
             manifest_data = {
                 "model_name": self.model_name,
                 "model_version": self._detect_model_version(),
@@ -603,6 +609,7 @@ class MeaningSearchIndex:
                 "complete_per_source_type": complete_per_type,
                 "last_completed_stage_source_types": target_types,
                 "embedded_text_sha256": embedded_sha256,
+                "indexed_subset_text_sha256": indexed_subset_sha,
                 "batch_size": batch_size,
                 "peak_ram_mb": round(max_ram_seen, 2),
                 "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -696,6 +703,28 @@ class MeaningSearchIndex:
                 "complete": act_n == exp_n and exp_n > 0,
             }
 
+        subset_sha = compute_embedded_text_sha256(self.chunks_path, source_types=target_types)
+        manifest_subset_sha = None
+        manifest_subset_matches = True
+        reported_subset_sha = subset_sha
+        if self.manifest_path.exists():
+            try:
+                manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
+                manifest_subset_sha = manifest.get("indexed_subset_text_sha256")
+                if manifest_subset_sha is not None:
+                    comp_map = manifest.get("complete_per_source_type", {})
+                    indexed_types = [st for st, comp in comp_map.items() if comp]
+                    if not indexed_types:
+                        last_types = manifest.get("last_completed_stage_source_types")
+                        indexed_types = last_types or target_types
+                    expected_indexed_sha = compute_embedded_text_sha256(
+                        self.chunks_path, source_types=indexed_types
+                    )
+                    manifest_subset_matches = (expected_indexed_sha == manifest_subset_sha)
+                    reported_subset_sha = expected_indexed_sha
+            except Exception:
+                manifest_subset_matches = False
+
         is_exact_match = (
             qdrant_count == scrolled_total
             and sum(actual_by_type_target.values()) == len(expected_ids_target)
@@ -703,6 +732,7 @@ class MeaningSearchIndex:
             and len(missing_ids) == 0
             and len(extra_ids) == 0
             and actual_by_type_target == expected_by_type_target
+            and manifest_subset_matches
         )
 
         return {
@@ -719,6 +749,8 @@ class MeaningSearchIndex:
             "actual_by_source_type": dict(sorted(actual_by_type_target.items())),
             "coverage_per_source_type": coverage_per_type,
             "embedded_text_sha256": compute_embedded_text_sha256(self.chunks_path),
+            "indexed_subset_text_sha256": reported_subset_sha,
+            "indexed_subset_text_sha256_matches": manifest_subset_matches,
         }
 
     def close(self):

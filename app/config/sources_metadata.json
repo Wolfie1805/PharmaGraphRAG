@@ -1,0 +1,26 @@
+[
+  {
+    "name": "ClinPGx Core TSVs",
+    "description": "Curated pharmacogenomics annotations, drug labels, clinical variants, and relationships.",
+    "license": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)",
+    "date_checked": "2026-10-30"
+  },
+  {
+    "name": "ClinPGx Haplotypes",
+    "description": "Haplotype and star-allele definitions for pharmacogenes.",
+    "license": "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)",
+    "date_checked": "2026-10-31"
+  },
+  {
+    "name": "CPIC Alleles",
+    "description": "Clinical Pharmacogenetics Implementation Consortium allele definitions and guideline status.",
+    "license": "Creative Commons Zero 1.0 Universal (CC0 1.0) Public Domain Dedication",
+    "date_checked": "2026-10-31"
+  },
+  {
+    "name": "PubMed / NLM (NCBI E-utilities)",
+    "description": "Biomedical literature citations, metadata, and abstracts linked to ClinPGx associations.",
+    "license": "U.S. Government Public Domain (metadata/citations); individual third-party copyright on abstracts & full text",
+    "date_checked": "2026-10-30"
+  }
+]
