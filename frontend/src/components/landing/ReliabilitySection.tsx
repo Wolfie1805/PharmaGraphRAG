@@ -98,7 +98,7 @@ export const ReliabilitySection: React.FC<ReliabilitySectionProps> = ({ stats })
               color: '#e5e5e8',
             }}
           >
-            CONTINUOUS INTEGRATION
+            REPOSITORY TEST SUITE
           </span>
           <h3 style={{ margin: '0.25rem 0 0 0', color: '#ffffff', fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>
             AUTOMATED REGRESSION TEST SUITE
@@ -110,8 +110,10 @@ export const ReliabilitySection: React.FC<ReliabilitySectionProps> = ({ stats })
             <div style={{ fontSize: '0.78rem', color: '#9a9aa0', textTransform: 'uppercase' }}>
               Backend Unit Tests
             </div>
-            <div style={{ fontSize: '1.4rem', fontFamily: 'var(--font-mono)', color: '#ffffff' }}>
-              {stats?.tests?.pytest_collected != null ? `${stats.tests.pytest_collected} passing` : '—'}
+            <div style={{ fontSize: '1.1rem', fontFamily: 'var(--font-mono)', color: '#ffffff', marginTop: '0.25rem' }}>
+              {stats?.tests?.pytest_collected != null
+                ? `${stats.tests.pytest_collected} automated tests are defined in the repository`
+                : '—'}
             </div>
           </div>
 
@@ -119,8 +121,10 @@ export const ReliabilitySection: React.FC<ReliabilitySectionProps> = ({ stats })
             <div style={{ fontSize: '0.78rem', color: '#9a9aa0', textTransform: 'uppercase' }}>
               Frontend Specs
             </div>
-            <div style={{ fontSize: '1.4rem', fontFamily: 'var(--font-mono)', color: '#ffffff' }}>
-              {stats?.tests?.vitest_collected != null ? `${stats.tests.vitest_collected} passing` : '—'}
+            <div style={{ fontSize: '1.1rem', fontFamily: 'var(--font-mono)', color: '#ffffff', marginTop: '0.25rem' }}>
+              {stats?.tests?.vitest_collected != null
+                ? `${stats.tests.vitest_collected} automated tests are defined in the repository`
+                : '—'}
             </div>
           </div>
         </div>

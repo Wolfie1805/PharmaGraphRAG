@@ -174,7 +174,7 @@ export const LicenseAndFaqSection: React.FC<LicenseAndFaqSectionProps> = ({ stat
       <div className="cta-banner">
         <h3 className="cta-title">EXPLORE THE PHARMACOGENOMICS EVIDENCE BASE</h3>
         <p style={{ color: '#9a9aa0', fontSize: '1rem', maxWidth: '600px', margin: '0 auto 2rem', lineHeight: 1.6 }}>
-          Run offline inquiries across normalized guidelines, FDA package inserts, and scientific literature.
+          Run offline inquiries across normalized guidelines, drug label annotations from ClinPGx, and scientific literature.
         </p>
         <a href="#/app" className="btn-primary" style={{ padding: '0.85rem 2.25rem', fontSize: '1rem' }}>
           Open the app →

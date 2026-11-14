@@ -49,6 +49,8 @@ const BANNED_PHRASES = [
   'knowledge graph',
   'intelligence engine',
   'official clinical',
+  'passing',
+  'continuous integration',
 ];
 
 const ALLOWED_MEDICAL_TERM_COMPONENTS = new Set([

@@ -56,8 +56,8 @@ export const LimitsRoadmapSection: React.FC = () => {
               Ingestion of international consortia data such as DPWG (Dutch Pharmacogenetics Working Group).
             </li>
             <li>
-              <strong style={{ color: '#ffffff' }}>Continuous Regulatory Updates: </strong>
-              Automated pipelines for ingesting updated drug package insert tables.
+              <strong style={{ color: '#ffffff' }}>Continuous Label Updates: </strong>
+              Automated pipelines for ingesting updated drug label tables.
             </li>
             <li>
               <strong style={{ color: '#ffffff' }}>Advanced Relation Extraction: </strong>

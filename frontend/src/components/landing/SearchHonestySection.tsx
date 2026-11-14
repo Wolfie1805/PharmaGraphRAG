@@ -16,7 +16,7 @@ export const SearchHonestySection: React.FC<SearchHonestySectionProps> = ({ stat
       </h2>
       <p className="section-lead">
         Four parallel retrieval paths feed a reciprocal rank fusion engine. Vector semantic search
-        is deliberately restricted to verified regulatory and guideline corpora.
+        is deliberately restricted to verified drug label and guideline corpora.
       </p>
 
       {/* Four Retrieval Paths */}
@@ -91,7 +91,7 @@ export const SearchHonestySection: React.FC<SearchHonestySectionProps> = ({ stat
           </thead>
           <tbody>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <td style={{ padding: '0.75rem', color: '#ffffff', fontWeight: 500 }}>Drug Labels (FDA)</td>
+              <td style={{ padding: '0.75rem', color: '#ffffff', fontWeight: 500 }}>Drug Labels (ClinPGx)</td>
               <td style={{ padding: '0.75rem', fontFamily: 'var(--font-mono)' }}>
                 {coverage?.drug_label
                   ? `${coverage.drug_label.indexed.toLocaleString()} / ${coverage.drug_label.expected.toLocaleString()} chunks`

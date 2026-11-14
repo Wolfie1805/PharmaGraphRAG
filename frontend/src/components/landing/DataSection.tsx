@@ -29,7 +29,7 @@ export const DataSection: React.FC<DataSectionProps> = ({ stats }) => {
         THE DATA
       </h2>
       <p className="section-lead">
-        Aggregated from published guideline consortia, regulatory drug label annotations, and biomedical literature.
+        Aggregated from published guideline consortia, drug label annotations from ClinPGx, and biomedical literature.
       </p>
 
       {/* Dynamic Animated Counters */}

@@ -55,7 +55,8 @@ describe('LandingPage Component Suite', () => {
 
     // Section 9: Reliability
     expect(screen.getByRole('heading', { level: 2, name: /RELIABILITY & PROVENANCE/i })).toBeInTheDocument();
-    expect(screen.getByText(/101 passing/i)).toBeInTheDocument();
+    expect(screen.getByText(/101 automated tests are defined in the repository/i)).toBeInTheDocument();
+    expect(screen.getByText(/19 automated tests are defined in the repository/i)).toBeInTheDocument();
 
     // Section 10: Search Honesty
     expect(screen.getByRole('heading', { level: 2, name: /HOW SEARCH WORKS, HONESTLY/i })).toBeInTheDocument();
