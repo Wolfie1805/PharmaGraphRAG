@@ -13,7 +13,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import duckdb
 
@@ -22,10 +22,11 @@ from app.retrieval.config import RetrievalConfig
 from app.retrieval.meaning_search import MeaningSearchIndex
 
 
-def get_git_info(workspace_dir: Path) -> Tuple[Optional[str], Optional[str]]:
-    """Return (git_commit, latest_tag) or (None, None) if unavailable."""
+def get_git_info(workspace_dir: Path) -> Optional[Dict[str, Any]]:
+    """Return git commit, latest tag, and dirty status, or None if unavailable."""
     commit: Optional[str] = None
     tag: Optional[str] = None
+    dirty: Optional[bool] = None
     try:
         commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"],
@@ -46,7 +47,25 @@ def get_git_info(workspace_dir: Path) -> Tuple[Optional[str], Optional[str]]:
     except Exception:
         tag = None
 
-    return commit or None, tag or None
+    try:
+        status_out = subprocess.check_output(
+            ["git", "status", "--porcelain"],
+            cwd=workspace_dir,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        dirty = bool(status_out)
+    except Exception:
+        dirty = None
+
+    if commit is None and tag is None and dirty is None:
+        return None
+
+    return {
+        "commit": commit,
+        "latest_tag": tag,
+        "dirty": dirty,
+    }
 
 
 def collect_pytest_count(workspace_dir: Path) -> Optional[int]:
@@ -93,8 +112,36 @@ def collect_vitest_count(workspace_dir: Path) -> Optional[int]:
     return None
 
 
+def get_pubmed_queries(workspace_dir: Path) -> List[Dict[str, Any]]:
+    """Extract PubMed queries and counts from the full run manifest."""
+    manifest_path = workspace_dir / "data" / "manifests" / "manifest_pubmed_20261031_7d1398e0.json"
+    if not manifest_path.exists():
+        return []
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        queries = data.get("queries", {})
+        counts = data.get("esearch_counts", {})
+        raw_date = str(data.get("retrieval_timestamp_utc") or "")
+        retrieval_date = raw_date.split("T")[0] if "T" in raw_date else raw_date
+        return [
+            {
+                "pair_id": pid,
+                "query": q_str,
+                "esearch_count": int(counts.get(pid, 0)),
+                "retrieval_date": retrieval_date,
+            }
+            for pid, q_str in sorted(queries.items())
+        ]
+    except Exception:
+        return []
+
+
 def get_raw_files_summary(workspace_dir: Path) -> Optional[Dict[str, Any]]:
-    """Summarize raw acquisition files and release labels from manifest files."""
+    """
+    Summarize raw acquisition files.
+    Reports full PubMed run and pilot separately with run IDs and counts;
+    excludes pilot from PubMed totals.
+    """
     manifests_dir = workspace_dir / "data" / "manifests"
     if not manifests_dir.exists():
         return None
@@ -103,37 +150,78 @@ def get_raw_files_summary(workspace_dir: Path) -> Optional[Dict[str, Any]]:
     if not manifest_files:
         return None
 
-    sources_summary: Dict[str, Dict[str, Any]] = {}
+    clinpgx_count = 0
+    clinpgx_bytes = 0
+    clinpgx_version = "not provided"
+
+    pubmed_full_count = 0
+    pubmed_full_bytes = 0
+    pubmed_full_run_id = "unknown"
+
+    pubmed_pilot_count = 0
+    pubmed_pilot_bytes = 0
+    pubmed_pilot_run_id = "unknown"
+
+    has_clinpgx = False
+    has_pubmed = False
+
     for p in manifest_files:
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
-            sname = str(data.get("source_name") or "unknown").strip()
-            key = sname.lower()
+            sname = str(data.get("source_name") or "").strip().lower()
+            run_id = str(data.get("run_id") or p.stem.replace("manifest_", "")).strip()
             files_list = data.get("files") or []
             file_count = len(files_list)
             byte_sum = sum(int(f.get("byte_size", 0)) for f in files_list)
-            version = str(data.get("source_version") or "not provided").strip()
-            if not version:
-                version = "not provided"
+            is_pilot = bool(data.get("is_pilot", False))
 
-            if key not in sources_summary:
-                sources_summary[key] = {
-                    "source_name": sname,
-                    "count": file_count,
-                    "bytes": byte_sum,
-                    "release_label": version,
-                }
-            else:
-                sources_summary[key]["count"] += file_count
-                sources_summary[key]["bytes"] += byte_sum
-                # If multiple versions seen, preserve known release or keep current
-                if (
-                    sources_summary[key]["release_label"] == "not provided"
-                    and version != "not provided"
-                ):
-                    sources_summary[key]["release_label"] = version
+            if "clinpgx" in sname or "clinpgx" in p.name.lower():
+                has_clinpgx = True
+                clinpgx_count += file_count
+                clinpgx_bytes += byte_sum
+                v = str(data.get("source_version") or "").strip()
+                if v and v != "not provided":
+                    clinpgx_version = v
+            elif "pubmed" in sname or "pubmed" in p.name.lower():
+                has_pubmed = True
+                if is_pilot:
+                    pubmed_pilot_count += file_count
+                    pubmed_pilot_bytes += byte_sum
+                    pubmed_pilot_run_id = run_id
+                else:
+                    pubmed_full_count += file_count
+                    pubmed_full_bytes += byte_sum
+                    pubmed_full_run_id = run_id
         except Exception:
             continue
+
+    sources_summary: Dict[str, Any] = {}
+    if has_clinpgx:
+        sources_summary["clinpgx"] = {
+            "source_name": "ClinPGx",
+            "count": clinpgx_count,
+            "bytes": clinpgx_bytes,
+            "release_label": clinpgx_version,
+        }
+    if has_pubmed:
+        sources_summary["pubmed"] = {
+            "source_name": "PubMed",
+            "count": pubmed_full_count,
+            "bytes": pubmed_full_bytes,
+            "release_label": "not provided",
+            "runs": {
+                "full": {
+                    "run_id": pubmed_full_run_id,
+                    "count": pubmed_full_count,
+                    "bytes": pubmed_full_bytes,
+                },
+                "pilot": {
+                    "run_id": pubmed_pilot_run_id,
+                    "count": pubmed_pilot_count,
+                    "bytes": pubmed_pilot_bytes,
+                },
+            },
+        }
 
     return sources_summary or None
 
@@ -334,18 +422,64 @@ def get_retrieval_summary(workspace_dir: Path) -> Dict[str, Any]:
     }
 
 
-def get_sources_registry(workspace_dir: Path) -> List[Dict[str, str]]:
-    """Read static source descriptions and licenses from config file."""
+def get_sources_registry(workspace_dir: Path) -> List[Dict[str, Any]]:
+    """
+    Read static source descriptions and licenses from config file.
+    Validates license_notes quotes against docs/licenses.md (replacing missing with 'unverified').
+    Attaches pubmed_queries from manifest to the PubMed entry.
+    """
     cfg_path = workspace_dir / "app" / "config" / "sources_metadata.json"
     if not cfg_path.exists():
         return []
+
+    doc_text = ""
+    lic_doc = workspace_dir / "docs" / "licenses.md"
+    if lic_doc.exists():
+        try:
+            doc_text = lic_doc.read_text(encoding="utf-8")
+        except Exception:
+            doc_text = ""
+
     try:
         data = json.loads(cfg_path.read_text(encoding="utf-8"))
-        if isinstance(data, list):
-            return data
+        if not isinstance(data, list):
+            return []
+
+        pubmed_queries = get_pubmed_queries(workspace_dir)
+
+        cleaned_sources = []
+        for entry in data:
+            if not isinstance(entry, dict):
+                continue
+            src = dict(entry)
+
+            # Validate license_notes quotes against docs/licenses.md
+            notes = src.get("license_notes")
+            if isinstance(notes, list):
+                verified_notes = []
+                for n in notes:
+                    if isinstance(n, dict):
+                        q = n.get("quote", "")
+                        loc = n.get("location", "")
+                        if doc_text and q in doc_text:
+                            verified_notes.append({"quote": q, "location": loc})
+                        else:
+                            verified_notes.append({"quote": "unverified", "location": loc})
+                    elif isinstance(n, str):
+                        if doc_text and n in doc_text:
+                            verified_notes.append(n)
+                        else:
+                            verified_notes.append("unverified")
+                src["license_notes"] = verified_notes
+
+            if "pubmed" in src.get("name", "").lower():
+                src["pubmed_queries"] = pubmed_queries
+
+            cleaned_sources.append(src)
+
+        return cleaned_sources
     except Exception:
-        pass
-    return []
+        return []
 
 
 def get_benchmark_latest(workspace_dir: Path) -> Optional[Dict[str, Any]]:
@@ -373,7 +507,7 @@ def build_site_stats(
     workspace_dir = workspace_dir.resolve()
     con = duckdb.connect(":memory:")
 
-    git_commit, latest_tag = get_git_info(workspace_dir)
+    git_info = get_git_info(workspace_dir)
     generated_at = generated_at_override or datetime.now(timezone.utc).isoformat()
 
     pytest_count = collect_pytest_count(workspace_dir) if collect_test_counts else None
@@ -391,10 +525,7 @@ def build_site_stats(
 
     site_stats: Dict[str, Any] = {
         "generated_at": generated_at,
-        "git": {
-            "commit": git_commit,
-            "latest_tag": latest_tag,
-        },
+        "git": git_info,
         "raw_files": raw_files,
         "processed_tables": processed_tables,
         "entities_by_type": entities_by_type,
@@ -446,11 +577,13 @@ def main() -> int:
         output_path=args.output,
         collect_test_counts=not args.no_collect_tests,
     )
+    git_summary = stats.get("git") or {}
     print(f"Generated site stats at {args.output}")
-    print(f"  git commit : {stats['git']['commit']}")
-    print(f"  latest tag : {stats['git']['latest_tag']}")
+    print(f"  git commit : {git_summary.get('commit')}")
+    print(f"  latest tag : {git_summary.get('latest_tag')}")
+    print(f"  git dirty  : {git_summary.get('dirty')}")
     print(f"  entities   : {sum((stats['entities_by_type'] or {}).values())}")
-    print(f"  papers     : {getattr(stats['papers'], 'get', lambda k: None)('count')}")
+    print(f"  papers     : {(stats['papers'] or {}).get('count')}")
     p_cnt = stats["tests"]["pytest_collected"]
     v_cnt = stats["tests"]["vitest_collected"]
     print(f"  tests      : pytest={p_cnt}, vitest={v_cnt}")

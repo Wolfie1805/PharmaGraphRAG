@@ -73,6 +73,7 @@ def test_null_for_missing_inputs(tmp_path: Path):
         collect_test_counts=False,
     )
     assert stats["benchmark"] is None
+    assert stats["git"] is None
     assert stats["raw_files"] is None
     assert stats["processed_tables"] is None
     assert stats["entities_by_type"] is None
@@ -137,3 +138,62 @@ def test_numbers_match_source_tables():
     assert stats["papers"]["year_min"] == int(pub_row[1])
     assert stats["papers"]["year_max"] == int(pub_row[2])
     assert stats["papers"]["with_abstracts"] == pub_row[3]
+
+
+def test_git_info_fields():
+    """Verify git commit equals git rev-parse HEAD and dirty is a boolean."""
+    import subprocess
+
+    stats = build_site_stats(output_path=None, collect_test_counts=False)
+    git_info = stats["git"]
+    assert git_info is not None
+
+    expected_commit = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True
+    ).strip()
+    assert git_info["commit"] == expected_commit
+    assert isinstance(git_info["dirty"], bool)
+    assert git_info["latest_tag"] == "d3c-reviewed"
+
+
+def test_licenses_and_pubmed_queries_fidelity():
+    """Verify license notes, exact quotes, discrepancy flags, and pubmed queries."""
+    stats = build_site_stats(output_path=None, collect_test_counts=False)
+
+    # 1. Raw files PubMed separation
+    raw_pubmed = stats["raw_files"]["pubmed"]
+    assert raw_pubmed["count"] == 16
+    assert raw_pubmed["runs"]["full"]["count"] == 16
+    assert raw_pubmed["runs"]["full"]["run_id"] == "20261031_7d1398e0"
+    assert raw_pubmed["runs"]["pilot"]["count"] == 1
+    assert raw_pubmed["runs"]["pilot"]["run_id"] == "20261030_9a48695d"
+
+    # 2. ClinPGx Core TSVs discrepancy and working assumption
+    sources_map = {s["name"]: s for s in stats["sources"]}
+    core = sources_map["ClinPGx Core TSVs"]
+    assert "CC BY-SA 4.0" in core["site_footer_license"]
+    assert "CC BY-NC-SA 4.0" in core["archive_bundled_license"]
+    assert core["discrepancy_unresolved"] is True
+    assert core["working_assumption"] == "NonCommercial reading until the owner decides"
+
+    # 3. PubMed description, unverified license, no U.S. Gov Public Domain wording
+    pubmed = sources_map["PubMed / NLM (NCBI E-utilities)"]
+    assert pubmed["description"] == (
+        "Abstracts and metadata retrieved by searches for four gene-medicine pairs"
+    )
+    assert pubmed["license"] == "unverified"
+    assert "U.S. Government Public Domain" not in json.dumps(pubmed)
+
+    # 4. PubMed queries: 4 pairs with non-empty query and positive count
+    queries = pubmed["pubmed_queries"]
+    assert len(queries) == 4
+    for q in queries:
+        assert q["pair_id"] in [
+            "CYP2C19_clopidogrel",
+            "CYP2C9_warfarin",
+            "SLCO1B1_simvastatin",
+            "VKORC1_warfarin",
+        ]
+        assert len(q["query"]) > 10
+        assert q["esearch_count"] > 0
+        assert q["retrieval_date"] == "2026-10-31"

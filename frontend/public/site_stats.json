@@ -1,8 +1,9 @@
 {
-  "generated_at": "2026-11-14T11:54:34.504858+00:00",
+  "generated_at": "2026-11-14T12:40:34.644375+00:00",
   "git": {
-    "commit": "1051b4c6f3434513d9f97ec0593a0cd510b47e2b",
-    "latest_tag": "d3c-reviewed"
+    "commit": "ca99abd058decba19cfb3480a097451772b3860f",
+    "latest_tag": "d3c-reviewed",
+    "dirty": true
   },
   "raw_files": {
     "clinpgx": {
@@ -13,9 +14,21 @@
     },
     "pubmed": {
       "source_name": "PubMed",
-      "count": 17,
-      "bytes": 51579989,
-      "release_label": "not provided"
+      "count": 16,
+      "bytes": 50664249,
+      "release_label": "not provided",
+      "runs": {
+        "full": {
+          "run_id": "20261031_7d1398e0",
+          "count": 16,
+          "bytes": 50664249
+        },
+        "pilot": {
+          "run_id": "20261030_9a48695d",
+          "count": 1,
+          "bytes": 915740
+        }
+      }
     }
   },
   "processed_tables": {
@@ -104,30 +117,95 @@
     {
       "name": "ClinPGx Core TSVs",
       "description": "Curated pharmacogenomics annotations, drug labels, clinical variants, and relationships.",
-      "license": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)",
-      "date_checked": "2026-10-30"
+      "site_footer_license": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)",
+      "archive_bundled_license": "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)",
+      "discrepancy_unresolved": true,
+      "working_assumption": "NonCommercial reading until the owner decides",
+      "date_checked": "2026-10-30",
+      "license_notes": [
+        {
+          "quote": "Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)",
+          "location": "docs/licenses.md#L5"
+        },
+        {
+          "quote": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license... 1. Attribution: You must give appropriate credit to ClinPGx... 2. NonCommercial: You may not use the material for commercial purposes... 3. ShareAlike: If you alter, amend, reuse or otherwise change ClinPGx data you agree that if you distribute such product, all recipients shall first agree to be subject to this license. Under no circumstances can ClinPGx data be sold for other's private or commercial use.",
+          "location": "docs/licenses.md#L6"
+        },
+        {
+          "quote": "to use the data for research purposes and not with any intent to offer all or any part of the data for sale as a commercial item",
+          "location": "docs/licenses.md#L5"
+        }
+      ]
     },
     {
       "name": "ClinPGx Haplotypes",
       "description": "Haplotype and star-allele definitions for pharmacogenes.",
       "license": "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)",
-      "date_checked": "2026-10-31"
+      "date_checked": "2026-10-31",
+      "license_notes": [
+        {
+          "quote": "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license... 1. Attribution: You must give appropriate credit to ClinPGx... 2. NonCommercial: You may not use the material for commercial purposes... 3. ShareAlike: If you alter, amend, reuse or otherwise change ClinPGx data you agree that if you distribute such product, all recipients shall first agree to be subject to this license. Under no circumstances can ClinPGx data be sold for other's private or commercial use.",
+          "location": "docs/licenses.md#L6"
+        }
+      ]
     },
     {
       "name": "CPIC Alleles",
       "description": "Clinical Pharmacogenetics Implementation Consortium allele definitions and guideline status.",
       "license": "Creative Commons Zero 1.0 Universal (CC0 1.0) Public Domain Dedication",
-      "date_checked": "2026-10-31"
+      "date_checked": "2026-10-31",
+      "license_notes": [
+        {
+          "quote": "Creative Commons CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. To the extent possible under law, the Clinical Pharmacogenetics Implementation Consortium (CPIC) has waived all copyright and related or neighboring rights to CPIC guidelines and associated data tables.",
+          "location": "docs/licenses.md#L32"
+        }
+      ]
     },
     {
       "name": "PubMed / NLM (NCBI E-utilities)",
-      "description": "Biomedical literature citations, metadata, and abstracts linked to ClinPGx associations.",
-      "license": "U.S. Government Public Domain (metadata/citations); individual third-party copyright on abstracts & full text",
-      "date_checked": "2026-10-30"
+      "description": "Abstracts and metadata retrieved by searches for four gene-medicine pairs",
+      "license": "unverified",
+      "date_checked": "2026-10-30",
+      "license_notes": [
+        {
+          "quote": "NLM does not claim copyright on PubMed bibliographic records; individual journal publishers and authors typically hold copyright on abstracts.",
+          "location": "docs/licenses.md#L41"
+        },
+        {
+          "quote": "PubMed abstract excerpts are shown only as short quoted excerpts with source IDs; abstract copyright and NLM terms are \"unverified\" until I review them.",
+          "location": "docs/licenses.md#L43"
+        }
+      ],
+      "pubmed_queries": [
+        {
+          "pair_id": "CYP2C19_clopidogrel",
+          "query": "(CYP2C19[Title/Abstract] AND clopidogrel[Title/Abstract]) AND hasabstract[text]",
+          "esearch_count": 1432,
+          "retrieval_date": "2026-10-31"
+        },
+        {
+          "pair_id": "CYP2C9_warfarin",
+          "query": "(CYP2C9[Title/Abstract] AND warfarin[Title/Abstract]) AND hasabstract[text]",
+          "esearch_count": 1409,
+          "retrieval_date": "2026-10-31"
+        },
+        {
+          "pair_id": "SLCO1B1_simvastatin",
+          "query": "(SLCO1B1[Title/Abstract] AND simvastatin[Title/Abstract]) AND hasabstract[text]",
+          "esearch_count": 141,
+          "retrieval_date": "2026-10-31"
+        },
+        {
+          "pair_id": "VKORC1_warfarin",
+          "query": "(VKORC1[Title/Abstract] AND warfarin[Title/Abstract]) AND hasabstract[text]",
+          "esearch_count": 978,
+          "retrieval_date": "2026-10-31"
+        }
+      ]
     }
   ],
   "tests": {
-    "pytest_collected": 99,
+    "pytest_collected": 101,
     "vitest_collected": 19
   },
   "benchmark": {
