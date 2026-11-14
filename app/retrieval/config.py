@@ -18,7 +18,7 @@ class RetrievalConfig(BaseModel):
     )
     qdrant_path: Path = Field(
         default_factory=lambda: Path(
-            os.getenv("PHARMAGRAPH_QDRANT_PATH", "data/processed/qdrant_db")
+            os.getenv("PHARMAGRAPH_QDRANT_PATH", "data/processed/qdrant_db_full")
         ),
         description="Local disk directory for embedded Qdrant vector database.",
     )

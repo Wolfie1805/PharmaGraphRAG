@@ -140,7 +140,7 @@ class MeaningSearchIndex:
     def __init__(
         self,
         model_name: str = "BAAI/bge-small-en-v1.5",
-        qdrant_path: Path = Path("data/processed/qdrant_db"),
+        qdrant_path: Path = Path("data/processed/qdrant_db_full"),
         collection_name: str = "pharmagraph_chunks",
         chunks_path: Path = Path("data/processed/chunks.parquet"),
     ):
