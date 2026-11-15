@@ -31,6 +31,10 @@ const ALLOW_LIST_DIGITS = new Set([
   '2500', // Particle distance squared (50*50)
   '008', // Angle delta float (0.008)
   '8000', // Local port
+  '110', // SVG bar width / dimension px
+  '140', // SVG chart height px
+  '150', // Debounce delay ms
+  '2026', // Current snapshot year / copyright
   // Hex color codes if matched as digits
   '131314',
   '151314',
@@ -57,9 +61,10 @@ const ALLOWED_MEDICAL_TERM_COMPONENTS = new Set([
   'DoesNotDoSection.tsx',
   'LicenseAndFaqSection.tsx',
   'LandingFooter.tsx',
+  'EdgeStates.tsx',
 ]);
 
-function getLandingComponentFiles(): { filePath: string; fileName: string; content: string }[] {
+function getComponentFiles(): { filePath: string; fileName: string; content: string }[] {
   const result: { filePath: string; fileName: string; content: string }[] = [];
 
   function traverse(dir: string) {
@@ -67,14 +72,16 @@ function getLandingComponentFiles(): { filePath: string; fileName: string; conte
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name === 'landing') {
+        if (entry.name === 'landing' || entry.name === 'app') {
           traverse(fullPath);
         }
       } else if (entry.isFile() && (entry.name.endsWith('.tsx') || entry.name.endsWith('.ts'))) {
         if (
           dir.endsWith('landing') ||
+          dir.endsWith('app') ||
           entry.name === 'LandingPage.tsx' ||
-          entry.name === 'HeroCanvas.tsx'
+          entry.name === 'HeroCanvas.tsx' ||
+          entry.name === 'App.tsx'
         ) {
           result.push({
             filePath: fullPath,
@@ -87,11 +94,21 @@ function getLandingComponentFiles(): { filePath: string; fileName: string; conte
   }
 
   traverse(LANDING_COMPONENTS_DIR);
+  // Also check App.tsx
+  const appTsxPath = path.resolve(__dirname, '../App.tsx');
+  if (fs.existsSync(appTsxPath)) {
+    result.push({
+      filePath: appTsxPath,
+      fileName: 'App.tsx',
+      content: fs.readFileSync(appTsxPath, 'utf-8'),
+    });
+  }
+
   return result;
 }
 
-describe('Landing Page Claims Policy Verification', () => {
-  const files = getLandingComponentFiles();
+describe('Landing Page and App Claims Policy Verification', () => {
+  const files = getComponentFiles();
 
   it('scans all landing components and finds component files', () => {
     expect(files.length).toBeGreaterThanOrEqual(10);

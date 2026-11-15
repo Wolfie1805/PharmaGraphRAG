@@ -126,6 +126,10 @@ class AnswerService:
                 ent_dict["candidate_types"] = ent.candidate_types
             if ent.candidates:
                 ent_dict["candidates"] = [c.model_dump() for c in ent.candidates]
+            if getattr(ent, "resolved_via", None):
+                ent_dict["resolved_via"] = ent.resolved_via
+            if getattr(ent, "hint_overrode_text", None):
+                ent_dict["hint_overrode_text"] = ent.hint_overrode_text
             resolved_entities_dicts.append(ent_dict)
 
         resolved_cids = list(

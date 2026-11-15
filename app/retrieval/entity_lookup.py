@@ -5,8 +5,9 @@ Enforces strict ambiguous/unresolved status and disallows fuzzy matching.
 
 import json
 import re
+from collections import defaultdict
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import duckdb
 from pydantic import BaseModel, Field
@@ -127,6 +128,10 @@ class ResolvedEntity(BaseModel):
     gene_symbol: Optional[str] = None
     defined_by: str
     is_ambiguous: bool
+    provenance: List[str] = Field(default_factory=list)
+    sources: List[str] = Field(default_factory=list)
+    resolved_via: Optional[str] = None
+    hint_overrode_text: Optional[Dict[str, Any]] = None
 
 
 class EntityLookupResult(BaseModel):
@@ -137,6 +142,8 @@ class EntityLookupResult(BaseModel):
     canonical_id: Optional[str] = None
     candidate_types: List[str] = Field(default_factory=list)
     candidates: List[ResolvedEntity] = Field(default_factory=list)
+    resolved_via: Optional[str] = None
+    hint_overrode_text: Optional[Dict[str, Any]] = None
 
 
 class EntityLookupService:
@@ -157,6 +164,21 @@ class EntityLookupService:
         self._con = duckdb.connect(":memory:")
         self._cpic_genes: Set[str] = self._load_cpic_genes()
         self._gene_chemical_edges: Set[Tuple[str, str]] = self._load_gene_chemical_edges()
+        self._entities_has_source_name: bool = self._check_has_source_name()
+
+    def _check_has_source_name(self) -> bool:
+        if not self.entities_path.exists():
+            return False
+        try:
+            cols = [
+                r[0]
+                for r in self._con.execute(
+                    f"DESCRIBE SELECT * FROM '{self.entities_path.as_posix()}'"
+                ).fetchall()
+            ]
+            return "source_name" in cols
+        except Exception:
+            return False
 
     def _load_cpic_genes(self) -> Set[str]:
         """Load distinct CPIC gene symbols dynamically from cpic.alleles.json."""
@@ -215,8 +237,7 @@ class EntityLookupService:
         # 1. Exact match on entities table
         # Avoid string escaping issues by parameterized queries
         entities_sql = f"""
-            SELECT canonical_id, entity_type, primary_source_id, display_name,
-                   normalized_name, is_drug, gene_symbol, defined_by, is_ambiguous
+            SELECT canonical_id
             FROM '{self.entities_path.as_posix()}'
             WHERE LOWER(canonical_id) = ?
                OR LOWER(primary_source_id) = ?
@@ -241,58 +262,78 @@ class EntityLookupService:
         for s in syn_rows:
             matched_canonical_ids.add(s[0])
 
-        # 3. Star-allele whitespace normalization fallback (lookup key only; stored names unchanged)
-        if not matched_canonical_ids and "*" in norm_key:
-            star_key = re.sub(r"\s*\*\s*", "*", norm_key)
+        # 3. Star-allele spacing key route: evaluate whenever '*' is in norm_key and union
+        if "*" in norm_key:
+            star_spacing_key = re.sub(r"\s*\*\s*", " *", norm_key)
             star_ent_sql = f"""
                 SELECT canonical_id
                 FROM '{self.entities_path.as_posix()}'
-                WHERE CONTAINS(normalized_name, '*')
-                  AND REGEXP_REPLACE(normalized_name, '\\s*\\*\\s*', '*', 'g') = ?
+                WHERE normalized_name = ?
+                   OR LOWER(display_name) = ?
             """
-            for row in self._con.execute(star_ent_sql, [star_key]).fetchall():
-                matched_canonical_ids.add(row[0])
-
-            star_syn_sql = f"""
-                SELECT canonical_id
-                FROM '{self.synonyms_path.as_posix()}'
-                WHERE CONTAINS(normalized_synonym, '*')
-                  AND REGEXP_REPLACE(normalized_synonym, '\\s*\\*\\s*', '*', 'g') = ?
-            """
-            for row in self._con.execute(star_syn_sql, [star_key]).fetchall():
+            for row in self._con.execute(
+                star_ent_sql, [star_spacing_key, star_spacing_key]
+            ).fetchall():
                 matched_canonical_ids.add(row[0])
 
         if not matched_canonical_ids:
             return EntityLookupResult(query=term, status="unresolved")
 
-        # Fetch full details for all matched canonical IDs
+        # Fetch details for matched canonical IDs and deduplicate by canonical_id
+        # The same ID from clinpgx and cpic counts once, with all sources in provenance
         ids_list = list(matched_canonical_ids)
         placeholders = ", ".join(["?"] * len(ids_list))
+        src_col = "source_name" if self._entities_has_source_name else "NULL AS source_name"
         fetch_sql = f"""
             SELECT canonical_id, entity_type, primary_source_id, display_name,
-                   normalized_name, is_drug, gene_symbol, defined_by, is_ambiguous
+                   normalized_name, is_drug, gene_symbol, defined_by, is_ambiguous, {src_col}
             FROM '{self.entities_path.as_posix()}'
             WHERE canonical_id IN ({placeholders})
         """
         all_matches = self._con.execute(fetch_sql, ids_list).fetchall()
 
+        by_cid: Dict[str, Dict[str, Any]] = {}
+        for r in all_matches:
+            cid = r[0]
+            src = r[9] if len(r) > 9 and r[9] else None
+            if cid not in by_cid:
+                by_cid[cid] = {
+                    "canonical_id": r[0],
+                    "entity_type": r[1],
+                    "primary_source_id": r[2],
+                    "display_name": r[3],
+                    "normalized_name": r[4],
+                    "is_drug": bool(r[5]),
+                    "gene_symbol": r[6] if r[6] else None,
+                    "defined_by": r[7],
+                    "is_ambiguous": bool(r[8]),
+                    "sources": set(),
+                }
+            if src:
+                by_cid[cid]["sources"].add(src)
+
         candidates: List[ResolvedEntity] = []
         types_set = set()
-        for r in all_matches:
+        for cid in sorted(by_cid.keys()):
+            data = by_cid[cid]
+            srcs = sorted(list(data["sources"]))
             candidates.append(
                 ResolvedEntity(
-                    canonical_id=r[0],
-                    entity_type=r[1],
-                    primary_source_id=r[2],
-                    display_name=r[3],
-                    normalized_name=r[4],
-                    is_drug=bool(r[5]),
-                    gene_symbol=r[6] if r[6] else None,
-                    defined_by=r[7],
-                    is_ambiguous=bool(r[8]),
+                    canonical_id=data["canonical_id"],
+                    entity_type=data["entity_type"],
+                    primary_source_id=data["primary_source_id"],
+                    display_name=data["display_name"],
+                    normalized_name=data["normalized_name"],
+                    is_drug=data["is_drug"],
+                    gene_symbol=data["gene_symbol"],
+                    defined_by=data["defined_by"],
+                    is_ambiguous=data["is_ambiguous"],
+                    provenance=srcs,
+                    sources=srcs,
+                    resolved_via="text",
                 )
             )
-            types_set.add(r[1])
+            types_set.add(data["entity_type"])
 
         # If exactly 1 distinct canonical ID matched: resolved
         if len(candidates) == 1:
@@ -302,6 +343,7 @@ class EntityLookupService:
                 canonical_id=candidates[0].canonical_id,
                 candidate_types=[candidates[0].entity_type],
                 candidates=candidates,
+                resolved_via="text",
             )
 
         # Multiple candidates: ambiguous with all candidate entities and types
@@ -311,6 +353,7 @@ class EntityLookupService:
             canonical_id=None,
             candidate_types=sorted(list(types_set)),
             candidates=candidates,
+            resolved_via="text",
         )
 
     def lookup_by_canonical_ids(self, canonical_ids: List[str]) -> List[EntityLookupResult]:
@@ -320,32 +363,53 @@ class EntityLookupService:
             return []
         unique_ids = list(dict.fromkeys(clean_ids))
         placeholders = ", ".join(["?"] * len(unique_ids))
+        src_col = "source_name" if self._entities_has_source_name else "NULL AS source_name"
         sql = f"""
             SELECT canonical_id, entity_type, primary_source_id, display_name,
-                   normalized_name, is_drug, gene_symbol, defined_by, is_ambiguous
+                   normalized_name, is_drug, gene_symbol, defined_by, is_ambiguous, {src_col}
             FROM '{self.entities_path.as_posix()}'
             WHERE canonical_id IN ({placeholders})
         """
         rows = self._con.execute(sql, unique_ids).fetchall()
-        by_cid = {}
+        by_cid: Dict[str, Dict[str, Any]] = {}
         for r in rows:
-            ent = ResolvedEntity(
-                canonical_id=r[0],
-                entity_type=r[1],
-                primary_source_id=r[2],
-                display_name=r[3],
-                normalized_name=r[4],
-                is_drug=bool(r[5]),
-                gene_symbol=r[6] if r[6] else None,
-                defined_by=r[7],
-                is_ambiguous=bool(r[8]),
-            )
-            by_cid[ent.canonical_id] = ent
+            cid = r[0]
+            src = r[9] if len(r) > 9 and r[9] else None
+            if cid not in by_cid:
+                by_cid[cid] = {
+                    "canonical_id": r[0],
+                    "entity_type": r[1],
+                    "primary_source_id": r[2],
+                    "display_name": r[3],
+                    "normalized_name": r[4],
+                    "is_drug": bool(r[5]),
+                    "gene_symbol": r[6] if r[6] else None,
+                    "defined_by": r[7],
+                    "is_ambiguous": bool(r[8]),
+                    "sources": set(),
+                }
+            if src:
+                by_cid[cid]["sources"].add(src)
 
         out: List[EntityLookupResult] = []
         for cid in unique_ids:
-            ent = by_cid.get(cid)
-            if ent is not None:
+            if cid in by_cid:
+                data = by_cid[cid]
+                srcs = sorted(list(data["sources"]))
+                ent = ResolvedEntity(
+                    canonical_id=data["canonical_id"],
+                    entity_type=data["entity_type"],
+                    primary_source_id=data["primary_source_id"],
+                    display_name=data["display_name"],
+                    normalized_name=data["normalized_name"],
+                    is_drug=data["is_drug"],
+                    gene_symbol=data["gene_symbol"],
+                    defined_by=data["defined_by"],
+                    is_ambiguous=data["is_ambiguous"],
+                    provenance=srcs,
+                    sources=srcs,
+                    resolved_via="hint",
+                )
                 out.append(
                     EntityLookupResult(
                         query=ent.display_name,
@@ -353,9 +417,20 @@ class EntityLookupService:
                         canonical_id=ent.canonical_id,
                         candidate_types=[ent.entity_type],
                         candidates=[ent],
+                        resolved_via="hint",
                     )
                 )
         return out
+
+    def is_valid_canonical_id(self, canonical_id: str) -> bool:
+        """Check if a canonical ID exists in the entities table."""
+        if not canonical_id or not self.entities_path.exists():
+            return False
+        sql = f"SELECT 1 FROM '{self.entities_path.as_posix()}' WHERE canonical_id = ? LIMIT 1"
+        try:
+            return bool(self._con.execute(sql, [canonical_id.strip()]).fetchone())
+        except Exception:
+            return False
 
     @staticmethod
     def _is_short_alpha_gene_filtered(cand_token: str, candidate: ResolvedEntity) -> bool:
@@ -410,23 +485,128 @@ class EntityLookupService:
         possible_gene_names_lowercase: List[str] = []
         seen_lower_gene_words: Set[str] = set()
 
+        hints_by_cid: Dict[str, EntityLookupResult] = {}
+        hint_surface_forms: Dict[str, Set[str]] = defaultdict(set)
+        matched_hint_cids: Set[str] = set()
         if entity_hints:
-            for h_res in self.lookup_by_canonical_ids(entity_hints):
-                if h_res.canonical_id and h_res.canonical_id not in seen_canonical_ids:
-                    seen_canonical_ids.add(h_res.canonical_id)
-                    results.append(h_res)
+            clean_hints = list(dict.fromkeys(h.strip() for h in entity_hints if h and h.strip()))
+            for h_res in self.lookup_by_canonical_ids(clean_hints):
+                if h_res.canonical_id:
+                    cid = h_res.canonical_id
+                    hints_by_cid[cid] = h_res
                     for c in h_res.candidates:
                         hinted_words_lower.add(c.display_name.lower())
                         if c.gene_symbol:
                             hinted_words_lower.add(c.gene_symbol.lower())
                         if c.entity_type.lower() == "chemical":
                             resolved_chemical_ids.add(c.canonical_id)
+                        # Add entity's own names to hint_surface_forms
+                        own_names = [c.display_name, c.normalized_name, c.primary_source_id]
+                        if c.entity_type.lower() == "gene" and c.gene_symbol:
+                            own_names.append(c.gene_symbol)
+                        for name in own_names:
+                            if name:
+                                s = str(name).lower().strip()
+                                hint_surface_forms[cid].add(s)
+                                hint_surface_forms[cid].add(normalize_search_term(s))
+                                hint_surface_forms[cid].add(re.sub(r"\s*\*\s*", "*", s))
+                                hint_surface_forms[cid].add(re.sub(r"\s*\*\s*", " *", s))
+
+            # Query synonyms for hinted entities to capture surface form variants
+            if self.synonyms_path.exists() and hints_by_cid:
+                placeholders = ", ".join(["?"] * len(hints_by_cid))
+                syn_sql = f"""
+                    SELECT canonical_id, synonym_text, normalized_synonym
+                    FROM '{self.synonyms_path.as_posix()}'
+                    WHERE canonical_id IN ({placeholders})
+                """
+                syn_rows = self._con.execute(syn_sql, list(hints_by_cid.keys())).fetchall()
+                for s_cid, syn_text, norm_syn in syn_rows:
+                    if syn_text:
+                        s = str(syn_text).lower().strip()
+                        hint_surface_forms[s_cid].add(s)
+                        hint_surface_forms[s_cid].add(normalize_search_term(s))
+                        hint_surface_forms[s_cid].add(re.sub(r"\s*\*\s*", "*", s))
+                        hint_surface_forms[s_cid].add(re.sub(r"\s*\*\s*", " *", s))
+                    if norm_syn:
+                        s = str(norm_syn).lower().strip()
+                        hint_surface_forms[s_cid].add(s)
 
         # Pass 1: Lookup candidates, resolve non-filtered entities, and collect resolved chemicals
-        raw_lookups: List[Tuple[str, List[ResolvedEntity], List[ResolvedEntity]]] = []
+        raw_lookups: List[
+            Tuple[str, List[ResolvedEntity], List[ResolvedEntity], EntityLookupResult]
+        ] = []
         for cand in candidates_to_check:
             res = self.lookup(cand)
             if res.status == "unresolved":
+                continue
+
+            # Check if this candidate matches an explicit entity_hint
+            matching_hint_cid = None
+            if hints_by_cid:
+                cand_low = cand.lower().strip()
+                cand_norm = normalize_search_term(cand)
+                cand_star = re.sub(r"\s*\*\s*", "*", cand_low)
+                cand_star_space = re.sub(r"\s*\*\s*", " *", cand_low)
+                cand_keys = {cand_low, cand_norm, cand_star, cand_star_space}
+
+                for h_cid, s_forms in hint_surface_forms.items():
+                    if cand_keys.intersection(s_forms):
+                        matching_hint_cid = h_cid
+                        break
+
+                if not matching_hint_cid:
+                    cand_cids = {c.canonical_id for c in res.candidates}
+                    if res.canonical_id:
+                        cand_cids.add(res.canonical_id)
+                    for h_cid in hints_by_cid:
+                        if h_cid in cand_cids:
+                            matching_hint_cid = h_cid
+                            break
+
+            if matching_hint_cid:
+                # Valid hint injected as resolved for ITS surface form only
+                h_res = hints_by_cid[matching_hint_cid]
+                matched_hint_cids.add(matching_hint_cid)
+                if matching_hint_cid not in seen_canonical_ids:
+                    seen_canonical_ids.add(matching_hint_cid)
+                    override = None
+                    if res.status == "resolved" and res.canonical_id != matching_hint_cid:
+                        override = {"hint_id": matching_hint_cid, "text_id": res.canonical_id}
+                    base_cand = h_res.candidates[0] if h_res.candidates else None
+                    cand_type = (
+                        h_res.candidate_types[0] if h_res.candidate_types else "unknown"
+                    )
+                    hint_cand = (
+                        base_cand.model_copy(deep=True)
+                        if base_cand
+                        else ResolvedEntity(
+                            canonical_id=matching_hint_cid,
+                            entity_type=cand_type,
+                            primary_source_id=matching_hint_cid,
+                            display_name=cand,
+                            normalized_name=cand.lower(),
+                            is_drug=False,
+                            defined_by="hint",
+                            is_ambiguous=False,
+                            resolved_via="hint",
+                        )
+                    )
+                    hint_cand.resolved_via = "hint"
+                    hint_cand.hint_overrode_text = override
+                    results.append(
+                        EntityLookupResult(
+                            query=cand,
+                            status="resolved",
+                            canonical_id=matching_hint_cid,
+                            candidate_types=[hint_cand.entity_type],
+                            candidates=[hint_cand],
+                            resolved_via="hint",
+                            hint_overrode_text=override,
+                        )
+                    )
+                    if hint_cand.entity_type.lower() == "chemical":
+                        resolved_chemical_ids.add(matching_hint_cid)
                 continue
 
             immediate_kept: List[ResolvedEntity] = []
@@ -440,10 +620,10 @@ class EntityLookupService:
             if len(immediate_kept) == 1 and immediate_kept[0].entity_type.lower() == "chemical":
                 resolved_chemical_ids.add(immediate_kept[0].canonical_id)
 
-            raw_lookups.append((cand, immediate_kept, pending_lower_genes))
+            raw_lookups.append((cand, immediate_kept, pending_lower_genes, res))
 
         # Pass 2: Evaluate lowercase <=6-alpha gene rule against resolved chemicals or CPIC list
-        for cand, immediate_kept, pending_lower_genes in raw_lookups:
+        for cand, immediate_kept, pending_lower_genes, res in raw_lookups:
             kept_candidates: List[ResolvedEntity] = list(immediate_kept)
             filtered_gene = False
             for c in pending_lower_genes:
@@ -479,6 +659,7 @@ class EntityLookupService:
                             canonical_id=only.canonical_id,
                             candidate_types=[only.entity_type],
                             candidates=[only],
+                            resolved_via="text",
                         )
                     )
             else:
@@ -490,8 +671,17 @@ class EntityLookupService:
                         canonical_id=None,
                         candidate_types=kept_types,
                         candidates=kept_candidates,
+                        resolved_via="text",
                     )
                 )
+
+        # Any hints that did not match a surface form token in the question are injected directly
+        if hints_by_cid:
+            for h_cid, h_res in hints_by_cid.items():
+                if h_cid not in matched_hint_cids and h_cid not in seen_canonical_ids:
+                    seen_canonical_ids.add(h_cid)
+                    h_res.resolved_via = "hint"
+                    results.append(h_res)
 
         return results, possible_gene_names_lowercase
 

@@ -254,6 +254,56 @@ class RetrievalPipeline:
 
         # Re-assign rank
         top_evidence = selected[:top_k]
+
+        # 7c. paper_reserve (config, default 2):
+        # In the top 10, linked papers (where source_type == "pubmed",
+        # linked_via_relationship_pmid is true, and both endpoints resolve to query pair)
+        # take up to that many slots, replacing ONLY the lowest-ranked annotations.
+        # Guidelines and drug_labels are NEVER displaced.
+        # If no linked papers qualify, top 10 is unchanged.
+        # Main claim evidence order: curated first, linked papers after.
+        paper_reserve = getattr(self.config, "paper_reserve", 0)
+        if paper_reserve > 0 and len(resolved_cids) >= 2:
+
+            def is_qualifying_linked_paper(h: FusedHit) -> bool:
+                if h.source_type != "pubmed":
+                    return False
+                is_linked = (
+                    h.provenance.get("linked_via_relationship_pmid") is True
+                    or "linked_via_relationship_pmid" in h.found_by_paths
+                )
+                if not is_linked:
+                    return False
+                return len(set(h.matched_entities).intersection(resolved_cid_set)) >= 2
+
+            linked_in_top = [h for h in top_evidence if is_qualifying_linked_paper(h)]
+            needed = paper_reserve - len(linked_in_top)
+            if needed > 0:
+                top_chunk_ids = {h.chunk_id for h in top_evidence}
+                available_linked = [
+                    h
+                    for h in fused_candidates
+                    if is_qualifying_linked_paper(h) and h.chunk_id not in top_chunk_ids
+                ]
+                if available_linked:
+                    annotation_indices = [
+                        idx
+                        for idx, h in enumerate(top_evidence)
+                        if h.source_type == "annotation"
+                    ]
+                    displaceable = list(reversed(annotation_indices))
+                    num_to_replace = min(needed, len(available_linked), len(displaceable))
+
+                    if num_to_replace > 0:
+                        replaced_indices = set(displaceable[:num_to_replace])
+                        new_papers = available_linked[:num_to_replace]
+                        curated_kept = [
+                            h
+                            for idx, h in enumerate(top_evidence)
+                            if idx not in replaced_indices
+                        ]
+                        top_evidence = curated_kept + new_papers
+
         for idx, hit in enumerate(top_evidence, start=1):
             hit.rank = idx
 

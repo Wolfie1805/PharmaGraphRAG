@@ -54,4 +54,5 @@ class GenerationConfig(BaseModel):
     min_evidence_items: int = 3
     min_top_score: float = 0.015
     request_timeout_seconds: float = 30.0
+    max_entity_hints: int = 4
     disclaimer_text: str = DEFAULT_DISCLAIMER

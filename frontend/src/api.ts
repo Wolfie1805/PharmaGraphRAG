@@ -1,4 +1,4 @@
-import { AskResponse, MeaningCoverageStats, SiteStats } from './types';
+import { AskResponse, DemoQuestion, MeaningCoverageStats, SiteStats, SuggestResponse } from './types';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -9,6 +9,16 @@ export async function fetchSiteStats(): Promise<SiteStats | null> {
     return (await response.json()) as SiteStats;
   } catch {
     return null;
+  }
+}
+
+export async function fetchDemoQuestions(): Promise<DemoQuestion[]> {
+  try {
+    const response = await fetch('/demo_questions.json');
+    if (!response.ok) return [];
+    return (await response.json()) as DemoQuestion[];
+  } catch {
+    return [];
   }
 }
 
@@ -26,13 +36,47 @@ export async function fetchStats(): Promise<MeaningCoverageStats | null> {
   }
 }
 
-export async function askQuestion(question: string): Promise<AskResponse> {
+export async function fetchSuggestions(
+  q: string,
+  limit = 8,
+  signal?: AbortSignal
+): Promise<SuggestResponse> {
+  const trimmed = q.trim();
+  if (trimmed.length < 2) {
+    return { suggestions: [], searches: [] };
+  }
+  try {
+    const params = new URLSearchParams({ q: trimmed, limit: String(limit) });
+    const response = await fetch(`${API_BASE}/suggest?${params.toString()}`, { signal });
+    if (!response.ok) return { suggestions: [], searches: [] };
+    return (await response.json()) as SuggestResponse;
+  } catch {
+    return { suggestions: [], searches: [] };
+  }
+}
+
+export interface AskOptions {
+  question: string;
+  answer_mode?: string;
+  entity_hints?: string[];
+}
+
+export async function askQuestion(
+  questionOrOptions: string | AskOptions,
+  signal?: AbortSignal
+): Promise<AskResponse> {
+  const payload =
+    typeof questionOrOptions === 'string'
+      ? { question: questionOrOptions }
+      : questionOrOptions;
+
   const response = await fetch(`${API_BASE}/ask`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify(payload),
+    signal,
   });
 
   if (!response.ok) {

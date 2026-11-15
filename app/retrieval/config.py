@@ -48,6 +48,20 @@ class RetrievalConfig(BaseModel):
         default=5,
         description="Max top_k slots reserved for curated sources carrying all resolved entities.",
     )
+    paper_reserve: int = Field(
+        default=2,
+        description=(
+            "Max top_k slots reserved for linked papers replacing lowest-ranked annotations."
+        ),
+    )
+    max_entity_hints: int = Field(
+        default=4,
+        description="Maximum allowed entity hints in query.",
+    )
+    suggest_types: List[str] = Field(
+        default_factory=lambda: ["chemical", "gene", "variant", "haplotype"],
+        description="Default entity types enabled for suggestion queries.",
+    )
     curated_source_types: List[str] = Field(
         default_factory=lambda: ["guideline", "annotation", "drug_label"],
         description="Curated source types eligible for slot reservation before top_k cut.",

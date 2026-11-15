@@ -15,8 +15,44 @@ export interface ResolvedEntity {
   query: string;
   status: 'resolved' | 'ambiguous' | 'unresolved';
   canonical_id?: string;
+  entity_type?: string;
   candidate_types?: string[];
   candidates?: EntityCandidate[];
+  resolved_via?: 'hint' | 'text';
+  hint_overrode_text?: {
+    hint_id: string;
+    text_id: string;
+  };
+}
+
+export interface SuggestItem {
+  canonical_id: string;
+  display_label: string;
+  matched_alias: string;
+  match_kind: 'exact' | 'prefix' | 'word_prefix' | 'substring' | 'typo';
+  entity_type: string;
+  sort_group: 'chemical' | 'gene' | 'variant' | 'allele' | 'other';
+  is_ambiguous?: boolean;
+  candidate_count?: number;
+}
+
+export interface ReadyMadeSearch {
+  query: string;
+  gene: string;
+  chemical: string;
+}
+
+export interface SuggestResponse {
+  suggestions: SuggestItem[];
+  searches: ReadyMadeSearch[];
+}
+
+export interface DemoQuestion {
+  id: string;
+  category: string;
+  question: string;
+  expected_entities: string[];
+  verified_by_human?: boolean;
 }
 
 export interface EvidenceItem {
