@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { scrollToSection } from '../../utils/scroll';
 
 interface LandingNavProps {
@@ -19,6 +19,8 @@ export const LandingNav: React.FC<LandingNavProps> = ({
 }) => {
   const [activeSection, setActiveSection] = useState<string>('');
   const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // Track active section via IntersectionObserver
@@ -43,16 +45,41 @@ export const LandingNav: React.FC<LandingNavProps> = ({
     }
   }, []);
 
+  // Back to top appears only after user scrolls past hero section
   useEffect(() => {
     const handleScroll = () => {
+      const hero = document.getElementById('hero');
       const scrollY = window.scrollY || window.pageYOffset || 0;
-      setShowBackToTop(scrollY > 400);
+      if (hero) {
+        const rect = hero.getBoundingClientRect();
+        // Scrolled past hero: top is negative (or scrollY past hero) and bottom is above nav height
+        const hasScrolledPast = rect.bottom <= 64 && (rect.top < 0 || scrollY > 200);
+        setShowBackToTop(hasScrolledPast);
+      } else {
+        setShowBackToTop(scrollY > 500);
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Keyboard accessibility: Escape key closes menu and returns focus
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMenuOpen]);
 
   return (
     <>
@@ -82,6 +109,7 @@ export const LandingNav: React.FC<LandingNavProps> = ({
           <span className="brand-name">PharmaGraph</span>
         </a>
 
+        {/* Desktop nav links */}
         <nav className="nav-links" aria-label="Primary Navigation">
           {NAV_ITEMS.map((item) => (
             <button
@@ -96,6 +124,7 @@ export const LandingNav: React.FC<LandingNavProps> = ({
           ))}
         </nav>
 
+        {/* Desktop actions */}
         <div className="nav-actions">
           <button
             type="button"
@@ -112,17 +141,92 @@ export const LandingNav: React.FC<LandingNavProps> = ({
             <span aria-hidden="true">→</span>
           </a>
         </div>
+
+        {/* Mobile menu button (compact bar at 400px) */}
+        <button
+          ref={menuButtonRef}
+          type="button"
+          className="nav-menu-btn"
+          aria-expanded={isMenuOpen}
+          aria-controls="landing-mobile-menu"
+          aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          onClick={() => setIsMenuOpen((prev) => !prev)}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            {isMenuOpen ? (
+              <path d="M18 6L6 18M6 6l12 12" />
+            ) : (
+              <path d="M3 12h18M3 6h18M3 18h18" />
+            )}
+          </svg>
+          <span>Menu</span>
+        </button>
       </header>
 
-      {/* Back to top button */}
-      <button
-        type="button"
-        className={`back-to-top-btn ${showBackToTop ? 'visible' : ''}`}
-        onClick={() => scrollToSection('hero', { reduceEffects })}
-        aria-label="Back to top"
-      >
-        ↑ Back to top
-      </button>
+      {/* Accessible mobile disclosure drawer */}
+      {isMenuOpen && (
+        <div
+          id="landing-mobile-menu"
+          className="mobile-nav-drawer"
+          role="region"
+          aria-label="Mobile Navigation Menu"
+        >
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                menuButtonRef.current?.focus();
+                scrollToSection(item.id, { reduceEffects });
+              }}
+              className={`nav-link-btn mobile ${activeSection === item.id ? 'active' : ''}`}
+              aria-current={activeSection === item.id ? 'true' : undefined}
+            >
+              {item.label}
+            </button>
+          ))}
+          <div className="mobile-nav-footer">
+            <button
+              type="button"
+              onClick={() => {
+                onToggleEffects();
+              }}
+              className={`btn-toggle-effects ${reduceEffects ? 'active' : ''}`}
+              aria-pressed={reduceEffects}
+              aria-label="Toggle visual animation effects"
+            >
+              {reduceEffects ? 'Effects: Reduced' : 'Reduce effects'}
+            </button>
+            <a href="#/app" className="btn-open-app" onClick={() => setIsMenuOpen(false)}>
+              Open the app
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Back to top button: strictly omitted from tab order and accessibility tree while hidden */}
+      {showBackToTop && (
+        <button
+          type="button"
+          className="back-to-top-btn visible"
+          onClick={() => scrollToSection('hero', { reduceEffects })}
+          aria-label="Back to top"
+        >
+          ↑ Back to top
+        </button>
+      )}
     </>
   );
 };

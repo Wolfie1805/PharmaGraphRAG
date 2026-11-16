@@ -136,11 +136,11 @@ describe('EntityChips ambiguity picker', () => {
     fireEvent.click(screen.getByRole('button', { name: /Submit Question/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Resolve ambiguous entity DBI/i })).toBeInTheDocument();
+      expect(screen.getByText(/Ambiguity Detected/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Resolve ambiguous entity DBI/i }));
-    fireEvent.click(screen.getByText('diazepam'));
+    const selectButtons = screen.getAllByRole('button', { name: 'Select' });
+    fireEvent.click(selectButtons[1]);
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);

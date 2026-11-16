@@ -172,7 +172,12 @@ async def ask_question(req: AskRequest, request: Request) -> AskResponse:
         loop = asyncio.get_event_loop()
         response = await asyncio.wait_for(
             loop.run_in_executor(
-                None, answer_service.answer_question, req.question, clean_hints
+                None,
+                answer_service.answer_question,
+                req.question,
+                clean_hints,
+                req.overview_offset,
+                req.overview_limit,
             ),
             timeout=config.request_timeout_seconds,
         )

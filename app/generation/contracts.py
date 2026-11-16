@@ -62,6 +62,92 @@ class AskRequest(BaseModel):
         default=None,
         description="Optional canonical entity IDs to resolve without ambiguity.",
     )
+    overview_offset: int = Field(
+        default=0, ge=0, description="Pagination offset for overview rows."
+    )
+    overview_limit: int = Field(
+        default=20, ge=1, le=100, description="Pagination limit for overview rows."
+    )
+
+
+class OverviewRow(BaseModel):
+    """Structured gene-chemical relationship overview row."""
+
+    target_id: str
+    target_name: str
+    target_type: str
+    other_id: str
+    other_name: str
+    other_type: str
+    chemical_id: str
+    chemical_name: str
+    gene_id: str
+    gene_name: str
+    association: str
+    annotation_count: int = 0
+    drug_label_count: int = 0
+    guideline_count: int = 0
+    curated_count: int = 0
+    linked_papers_count: int = 0
+
+
+class OverviewData(BaseModel):
+    """Complete overview table response with pagination metadata."""
+
+    total_count: int = 0
+    offset: int = 0
+    limit: int = 20
+    rows: List[OverviewRow] = Field(default_factory=list)
+
+
+class VariantFindingItem(BaseModel):
+    """Structured variant-level clinical finding with raw columns mapped."""
+
+    source_id: str
+    title: str
+    sentence: str
+    significance: Optional[str] = None
+    phenotype_category: Optional[str] = None
+    direction_of_effect: Optional[str] = None
+    population_types: Optional[str] = None
+    pmid: Optional[str] = None
+    source_columns: Dict[str, str] = Field(default_factory=dict)
+
+
+class VariantFindingGroup(BaseModel):
+    """Findings grouped by variant or allele tag."""
+
+    variant_tag: str
+    display_name: str
+    canonical_id: Optional[str] = None
+    findings: List[VariantFindingItem] = Field(default_factory=list)
+
+
+class DetailSections(BaseModel):
+    """Evidence grouped into explicit sections for detail query modes."""
+
+    guidelines: List[EvidenceItem] = Field(default_factory=list)
+    drug_labels: List[EvidenceItem] = Field(default_factory=list)
+    variant_findings: List[VariantFindingGroup] = Field(default_factory=list)
+    linked_papers: List[EvidenceItem] = Field(default_factory=list)
+    recorded_relationships: List[EvidenceItem] = Field(default_factory=list)
+
+
+class SuggestedNextItem(BaseModel):
+    """Deterministic follow-up query suggestion derived from graph edges."""
+
+    label: str
+    entity_ids: List[str] = Field(default_factory=list)
+
+
+class PromptTemplateItem(BaseModel):
+    """Supported query structure template."""
+
+    name: str
+    shape: str
+    template: str
+    example: str
+    description: str
 
 
 class AskResponse(BaseModel):
@@ -81,3 +167,8 @@ class AskResponse(BaseModel):
     llm_calls: int = 0
     network_calls: int = 0
     builder_calls: int = 0
+    query_mode: str = "unrecognized"
+    overview: Optional[OverviewData] = None
+    sections: Optional[DetailSections] = None
+    suggested_next: List[SuggestedNextItem] = Field(default_factory=list)
+    prompt_templates: List[PromptTemplateItem] = Field(default_factory=list)

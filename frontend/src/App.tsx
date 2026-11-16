@@ -1,16 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { askQuestion, fetchSiteStats } from './api';
 import { AskResponse, MeaningCoverageStats, ResolvedEntity, SiteStats } from './types';
 import { SearchBar } from './components/app/SearchBar';
-import { ExampleGroups } from './components/app/ExampleGroups';
-import { AtAGlanceCard } from './components/app/AtAGlanceCard';
-import { SummaryCard } from './components/app/SummaryCard';
-import { EvidenceChart } from './components/app/EvidenceChart';
-import { EvidenceList } from './components/app/EvidenceList';
+import { HomeStateCards } from './components/app/HomeStateCards';
+import { ResultsHeader } from './components/app/ResultsHeader';
+import { OverviewTable } from './components/app/OverviewTable';
+import { DetailSectionsView } from './components/app/DetailSectionsView';
 import {
   AmbiguityPickerCard,
   BackendOfflineCard,
-  EmptyWelcomeCard,
+  HowToReadThisCard,
   InsufficientEvidenceCard,
   RefusalCard,
   SkeletonLoading,
@@ -37,6 +36,7 @@ interface AppProps {
 export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) => {
   const [question, setQuestion] = useState<string>(initialQuestion);
   const [loading, setLoading] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [backendOffline, setBackendOffline] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [response, setResponse] = useState<AskResponse | null>(null);
@@ -51,13 +51,86 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
   });
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const questionRef = useRef(question);
+  questionRef.current = question;
+  const activeHintsRef = useRef(activeHints);
+  activeHintsRef.current = activeHints;
+
+  const handleQuery = useCallback(
+    async (
+      queryText?: string,
+      hints?: string[],
+      isPaging = false,
+      offset = 0
+    ) => {
+      const q = (queryText !== undefined ? queryText : questionRef.current).trim();
+      if (!q) return;
+
+      if (isPaging) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setBackendOffline(false);
+        setErrorMessage(null);
+        setHighlightedSourceId(null);
+      }
+
+      const hintsToUse = hints !== undefined ? hints : activeHintsRef.current;
+
+      try {
+        const res = await askQuestion({
+          question: q,
+          entity_hints: hintsToUse && hintsToUse.length > 0 ? hintsToUse : undefined,
+          overview_offset: isPaging ? offset : 0,
+          overview_limit: 20,
+        });
+
+        if (isPaging) {
+          setResponse((prev) => {
+            if (prev?.overview && res.overview) {
+              return {
+                ...prev,
+                overview: {
+                  ...res.overview,
+                  rows: [...prev.overview.rows, ...res.overview.rows],
+                },
+              };
+            }
+            return res;
+          });
+        } else {
+          setResponse(res);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'An unexpected error occurred.';
+        if (
+          msg.includes('Failed to fetch') ||
+          msg.includes('NetworkError') ||
+          msg.includes('Load failed') ||
+          msg.includes('ConnectionRefused')
+        ) {
+          setBackendOffline(true);
+        } else {
+          setErrorMessage(msg);
+        }
+        if (!isPaging) {
+          setResponse(null);
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    []
+  );
 
   // Sync initial question if changed via URL hash
   useEffect(() => {
     if (initialQuestion !== undefined && initialQuestion !== '') {
       setQuestion(initialQuestion);
+      handleQuery(initialQuestion, []);
     }
-  }, [initialQuestion]);
+  }, [initialQuestion, handleQuery]);
 
   // Fetch site snapshot metadata
   useEffect(() => {
@@ -75,37 +148,11 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
     };
   }, [initialStats]);
 
-  const handleQuery = async (queryText?: string, hints?: string[]) => {
-    const q = (queryText !== undefined ? queryText : question).trim();
-    if (!q) return;
-
-    setLoading(true);
-    setBackendOffline(false);
-    setErrorMessage(null);
-    setHighlightedSourceId(null);
-    const hintsToUse = hints !== undefined ? hints : activeHints;
-
-    try {
-      const res = await askQuestion({
-        question: q,
-        entity_hints: hintsToUse.length > 0 ? hintsToUse : undefined,
-      });
-      setResponse(res);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An unexpected error occurred.';
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
-        setBackendOffline(true);
-      } else {
-        setErrorMessage(msg);
-      }
-      setResponse(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelectAmbiguityCandidate = (candidateId: string, candidateName: string, originalTerm?: string) => {
-    // When user selects a candidate from the ambiguity picker, re-query with that candidate's canonical_id in entity_hints
+  const handleSelectAmbiguityCandidate = (
+    candidateId: string,
+    candidateName: string,
+    originalTerm?: string
+  ) => {
     const updatedHints = [candidateId];
     setActiveHints(updatedHints);
     const newQuery = replaceAmbiguousTerm(question, originalTerm, candidateName);
@@ -115,13 +162,21 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
 
   const handleSelectExample = (exampleQuery: string, hints?: string[]) => {
     setQuestion(exampleQuery);
-    if (hints && hints.length > 0) {
-      setActiveHints(hints);
-      handleQuery(exampleQuery, hints);
-    } else {
-      setActiveHints([]);
-      handleQuery(exampleQuery, []);
-    }
+    const h = hints || [];
+    setActiveHints(h);
+    handleQuery(exampleQuery, h);
+  };
+
+  const handleOpenPair = (pairQuery: string, hints: string[]) => {
+    setQuestion(pairQuery);
+    setActiveHints(hints);
+    handleQuery(pairQuery, hints);
+  };
+
+  const handleLoadMoreOverview = () => {
+    if (!response?.overview) return;
+    const currentLength = response.overview.rows.length;
+    handleQuery(question, activeHints, true, currentLength);
   };
 
   const handleCitationClick = (sourceId: string) => {
@@ -140,25 +195,30 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
     setBackendOffline(false);
   };
 
-  // Inspect response state
-  const isRefused = response?.flags?.includes('refused');
-  const ambiguousEntities = (response?.resolved_entities || []).filter(
-    (e) => e.status === 'ambiguous' && e.candidates && e.candidates.length > 1
-  );
-  const ungroundedEntities = (response?.resolved_entities || []).filter(
-    (e) => e.status === 'unresolved'
-  );
-  const hasSufficientEvidence = response?.evidence_bundle?.has_sufficient_evidence ?? true;
-  const evidenceItems = response?.evidence_bundle?.items || [];
   const snapshotDate = siteStats?.generated_at
     ? siteStats.generated_at.split('T')[0]
     : '2026-11-14';
+
+  const queryMode = response?.query_mode || 'unrecognized';
+  const isRefusal = queryMode === 'refused' || (response?.flags || []).includes('refused');
+  const isAmbiguous =
+    queryMode === 'ambiguous' ||
+    (response?.resolved_entities || []).some((e) => e.status === 'ambiguous');
+  const isUnrecognized =
+    queryMode === 'unrecognized' ||
+    (response?.flags || []).includes('unrecognized_entity');
+  const isOverview =
+    queryMode === 'medicine_overview' ||
+    queryMode === 'gene_overview' ||
+    queryMode === 'variant_overview';
+  const isDetail = queryMode === 'pair_detail' || queryMode === 'variant_detail';
+  const hasInsufficientEvidence = (response?.flags || []).includes('insufficient_evidence');
 
   return (
     <div className={`app-workspace ${reducedEffects ? 'effects-reduced' : ''}`}>
       {/* 2-Column Responsive Layout */}
       <div className="workspace-layout">
-        {/* LEFT COLUMN: Sidebar (320px - 360px on desktop; collapses to top bar on <=768px) */}
+        {/* LEFT COLUMN: Sidebar */}
         <aside className="workspace-sidebar" aria-label="Query Controls and Navigation">
           <div className="sidebar-top-nav">
             <a href="#/" className="btn-back-overview">
@@ -167,7 +227,7 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
           </div>
 
           <div className="sidebar-heading-block">
-            <h1 className="sidebar-main-heading">Ask about a gene and a medicine</h1>
+            <h1 className="sidebar-main-heading">Biomedical Evidence Search</h1>
             <p className="sidebar-subheading">
               Grounded retrieval from CPIC, PharmGKB, ClinPGx &amp; PubMed.
             </p>
@@ -188,12 +248,9 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
             />
           </div>
 
-          {/* Example Groups Tabs */}
-          <div className="sidebar-examples-block">
-            <ExampleGroups
-              disabled={loading}
-              onSelectQuestion={handleSelectExample}
-            />
+          {/* Persistent "How to read this" Drawer */}
+          <div className="sidebar-how-to-read">
+            <HowToReadThisCard />
           </div>
 
           {/* Sidebar Footer Controls */}
@@ -246,8 +303,13 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
 
         {/* RIGHT COLUMN: Main Content Area */}
         <main className="workspace-main" id="main-content" aria-live="polite">
+          {/* Persistent Disclaimer Banner */}
+          <div className="disclaimer-banner" role="note">
+            <span className="banner-prefix">Research prototype:</span> All evidence is directly extracted from ClinPGx, PharmGKB, CPIC, and PubMed archives. Not intended for direct medical decision making.
+          </div>
+
           {/* 1. Loading Skeleton */}
-          {loading && <SkeletonLoading reducedEffects={reducedEffects} />}
+          {loading && !loadingMore && <SkeletonLoading reducedEffects={reducedEffects} />}
 
           {/* 2. Backend Offline State */}
           {!loading && backendOffline && (
@@ -262,79 +324,89 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
             </div>
           )}
 
-          {/* 4. Empty State (No query yet) */}
+          {/* 4. Home State (Empty/Idle Query) */}
           {!loading && !backendOffline && !errorMessage && !response && (
-            <EmptyWelcomeCard
-              onSelectStarter={(starter) => {
-                setQuestion(starter);
-                handleQuery(starter);
-              }}
+            <HomeStateCards
+              onSelectExample={handleSelectExample}
+              disabled={loading}
             />
           )}
 
           {/* 5. Response Results */}
           {!loading && !backendOffline && !errorMessage && response && (
             <div className="response-results-wrapper">
-              {/* Clinical Refusal Edge State: NO evidence area rendered */}
-              {isRefused ? (
-                <RefusalCard answer={response.answer} flags={response.flags} />
-              ) : (
+              {/* Results Header (You asked, We understood, Showing, Try next) */}
+              <ResultsHeader
+                question={response.question}
+                queryMode={queryMode}
+                resolvedEntities={response.resolved_entities || []}
+                suggestedNext={response.suggested_next || []}
+                onSelectSuggestion={(nextQ, hints) => handleSelectExample(nextQ, hints)}
+              />
+
+              {/* Edge State A: Clinical Refusal */}
+              {isRefusal && (
+                <RefusalCard
+                  answer={response.answer}
+                  flags={response.flags}
+                  templates={response.prompt_templates}
+                  onSelectTemplate={(ex) => handleSelectExample(ex)}
+                />
+              )}
+
+              {/* Edge State B: Ambiguous Entity */}
+              {!isRefusal && isAmbiguous && (
+                <div className="ambiguity-section-wrapper">
+                  {(response.resolved_entities || [])
+                    .filter((e) => e.status === 'ambiguous' && e.candidates && e.candidates.length > 0)
+                    .map((ambEntity: ResolvedEntity) => (
+                      <AmbiguityPickerCard
+                        key={ambEntity.canonical_id || ambEntity.name}
+                        ambiguousEntity={ambEntity}
+                        onSelectCandidate={handleSelectAmbiguityCandidate}
+                      />
+                    ))}
+                </div>
+              )}
+
+              {/* Edge State C: Unrecognized Entity */}
+              {!isRefusal && !isAmbiguous && isUnrecognized && (
+                <UnrecognizedEntityCard
+                  term={response.question}
+                  templates={response.prompt_templates}
+                  onSelectTemplate={(ex) => handleSelectExample(ex)}
+                />
+              )}
+
+              {/* Mode 1: Overview Mode (Medicine or Gene Overview) */}
+              {!isRefusal && !isAmbiguous && !isUnrecognized && isOverview && response.overview && (
+                <OverviewTable
+                  overview={response.overview}
+                  queryMode={queryMode}
+                  onOpenPair={handleOpenPair}
+                  onLoadMore={handleLoadMoreOverview}
+                  loadingMore={loadingMore}
+                />
+              )}
+
+              {/* Mode 2: Detail Mode (Pair Detail or Variant Detail) */}
+              {!isRefusal && !isAmbiguous && !isUnrecognized && isDetail && (
                 <>
-                  {/* Ambiguity Picker Edge State */}
-                  {ambiguousEntities.length > 0 && (
-                    <div className="ambiguity-section-wrapper">
-                      {ambiguousEntities.map((ambEntity: ResolvedEntity) => (
-                        <AmbiguityPickerCard
-                          key={ambEntity.canonical_id || ambEntity.name}
-                          ambiguousEntity={ambEntity}
-                          onSelectCandidate={handleSelectAmbiguityCandidate}
-                        />
-                      ))}
-                    </div>
+                  {hasInsufficientEvidence && (
+                    <InsufficientEvidenceCard
+                      totalItems={response.evidence_bundle?.total_items || 0}
+                    />
                   )}
 
-                  {/* Unrecognized Entity Notice */}
-                  {ungroundedEntities.length > 0 && (
-                    <div className="unrecognized-section-wrapper">
-                      {ungroundedEntities.map((unEnt) => (
-                        <UnrecognizedEntityCard
-                          key={unEnt.query}
-                          term={unEnt.query}
-                          onSelectSuggestion={(corrected) => {
-                            setQuestion(corrected);
-                            handleQuery(corrected);
-                          }}
-                        />
-                      ))}
-                    </div>
+                  {response.sections && (
+                    <DetailSectionsView
+                      sections={response.sections}
+                      claims={response.claims || []}
+                      answer={response.answer}
+                      highlightedSourceId={highlightedSourceId}
+                      onCitationClick={handleCitationClick}
+                    />
                   )}
-
-                  {/* Insufficient Evidence Notice */}
-                  {!hasSufficientEvidence && <InsufficientEvidenceCard />}
-
-                  {/* At A Glance Card */}
-                  <AtAGlanceCard
-                    resolvedEntities={response.resolved_entities || []}
-                    evidenceBundle={response.evidence_bundle}
-                  />
-
-                  {/* Summary Card */}
-                  <SummaryCard
-                    answer={response.answer}
-                    claims={response.claims || []}
-                    flags={response.flags || []}
-                    answerMode={response.answer_mode}
-                    onCitationClick={handleCitationClick}
-                  />
-
-                  {/* SVG Evidence Chart */}
-                  <EvidenceChart items={evidenceItems} />
-
-                  {/* Evidence Cards List */}
-                  <EvidenceList
-                    items={evidenceItems}
-                    highlightedSourceId={highlightedSourceId}
-                  />
                 </>
               )}
             </div>

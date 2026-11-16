@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { LandingPage } from '../components/LandingPage';
 import { Root } from '../Root';
 import { SiteStats } from '../types';
@@ -269,6 +269,64 @@ describe('LandingPage Component Suite', () => {
     fireEvent.click(nextBtn);
     expect(nextBtn).toBeDisabled();
     expect(prevBtn).not.toBeDisabled();
+  });
+
+  it('verifies back-to-top is hidden then visible upon scrolling past hero', () => {
+    render(<LandingPage initialStats={fullFixture} />);
+    // Initially when scrolled to top, back-to-top button is not in accessibility tree
+    expect(screen.queryByRole('button', { name: /Back to top/i })).toBeNull();
+
+    // Mock scrolling past the hero (scrollY > 500 or boundingClientRect bottom <= 64)
+    const hero = document.getElementById('hero');
+    if (hero) {
+      vi.spyOn(hero, 'getBoundingClientRect').mockReturnValue({
+        bottom: 0,
+        top: -900,
+        left: 0,
+        right: 1440,
+        width: 1440,
+        height: 900,
+        x: 0,
+        y: -900,
+        toJSON: () => {},
+      });
+    }
+
+    fireEvent.scroll(window);
+
+    // Now back to top should be visible and in tab order
+    const backToTop = screen.getByRole('button', { name: /Back to top/i });
+    expect(backToTop).toBeInTheDocument();
+  });
+
+  it('keeps location.hash unchanged after clicking a navigation link', () => {
+    window.location.hash = '#/';
+    render(<LandingPage initialStats={fullFixture} />);
+
+    const nav = screen.getByRole('navigation', { name: /Primary Navigation/i });
+    const howItWorksBtn = within(nav).getByRole('button', { name: /^How It Works$/i });
+    fireEvent.click(howItWorksBtn);
+
+    // Hash must remain exactly '#/' without jumping to '#how-it-works'
+    expect(window.location.hash).toBe('#/');
+  });
+
+  it('implements accessible Menu button disclosure pattern with Escape key return focus', () => {
+    render(<LandingPage initialStats={fullFixture} />);
+    const menuBtn = screen.getByRole('button', { name: /Open navigation menu/i });
+    expect(menuBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: /Mobile Navigation Menu/i })).toBeNull();
+
+    // Open disclosure
+    fireEvent.click(menuBtn);
+    expect(menuBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('region', { name: /Mobile Navigation Menu/i })).toBeInTheDocument();
+
+    // Press Escape to close and verify focus returns to menu button
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(menuBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('region', { name: /Mobile Navigation Menu/i })).toBeNull();
+    expect(document.activeElement).toBe(menuBtn);
   });
 });
 

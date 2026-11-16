@@ -98,6 +98,72 @@ export interface MeaningCoverageStats {
   complete_source_types: string[];
 }
 
+export interface OverviewRow {
+  target_id: string;
+  target_name: string;
+  target_type: string;
+  other_id: string;
+  other_name: string;
+  other_type: string;
+  chemical_id: string;
+  chemical_name: string;
+  gene_id: string;
+  gene_name: string;
+  association: string;
+  annotation_count: number;
+  drug_label_count: number;
+  guideline_count: number;
+  curated_count: number;
+  linked_papers_count: number;
+}
+
+export interface OverviewData {
+  total_count: number;
+  offset: number;
+  limit: number;
+  rows: OverviewRow[];
+}
+
+export interface VariantFindingItem {
+  source_id: string;
+  title: string;
+  sentence: string;
+  significance?: string | null;
+  phenotype_category?: string | null;
+  direction_of_effect?: string | null;
+  population_types?: string | null;
+  pmid?: string | null;
+  source_columns?: Record<string, string>;
+}
+
+export interface VariantFindingGroup {
+  variant_tag: string;
+  display_name: string;
+  canonical_id?: string | null;
+  findings: VariantFindingItem[];
+}
+
+export interface DetailSections {
+  guidelines: EvidenceItem[];
+  drug_labels: EvidenceItem[];
+  variant_findings: VariantFindingGroup[];
+  linked_papers: EvidenceItem[];
+  recorded_relationships: EvidenceItem[];
+}
+
+export interface SuggestedNextItem {
+  label: string;
+  entity_ids: string[];
+}
+
+export interface PromptTemplateItem {
+  name: string;
+  shape: string;
+  template: string;
+  example: string;
+  description: string;
+}
+
 export interface AskResponse {
   question: string;
   answer: string;
@@ -113,6 +179,11 @@ export interface AskResponse {
   llm_calls: number;
   network_calls: number;
   builder_calls: number;
+  query_mode?: string;
+  overview?: OverviewData | null;
+  sections?: DetailSections | null;
+  suggested_next?: SuggestedNextItem[];
+  prompt_templates?: PromptTemplateItem[];
 }
 
 

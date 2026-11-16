@@ -59,6 +59,8 @@ export interface AskOptions {
   question: string;
   answer_mode?: string;
   entity_hints?: string[];
+  overview_offset?: number;
+  overview_limit?: number;
 }
 
 export async function askQuestion(

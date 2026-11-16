@@ -71,7 +71,26 @@ describe('AnswerPanel citation highlighting', () => {
           },
         ],
       },
-      resolved_entities: [],
+      query_mode: 'pair_detail',
+      resolved_entities: [
+        { name: 'CYP2C19', canonical_id: 'pg:gene:1559', type: 'gene', status: 'resolved' },
+        { name: 'clopidogrel', canonical_id: 'pg:chem:449053', type: 'chemical', status: 'resolved' },
+      ],
+      sections: {
+        guidelines: [],
+        drug_labels: [],
+        variant_findings: [],
+        linked_papers: [
+          {
+            source_id: '19955249',
+            source_type: 'paper',
+            title: 'CYP2C19 polymorphism and clopidogrel response',
+            chunk_text: 'Carriers of CYP2C19 *2/*3 loss-of-function alleles exhibit reduced active metabolite.',
+            source: 'PubMed',
+          },
+        ],
+        recorded_relationships: [],
+      },
       flags: [],
       removed_claims_count: 0,
       disclaimer_text: 'Research prototype, not medical advice',
