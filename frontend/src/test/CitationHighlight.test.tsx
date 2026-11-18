@@ -117,14 +117,17 @@ describe('AnswerPanel citation highlighting', () => {
       expect(screen.getByRole('button', { name: /^Citation 19955249$/i })).toBeInTheDocument();
     });
 
-    const card = document.getElementById('evidence-19955249');
-    expect(card).not.toBeNull();
-    expect(card?.className).not.toContain('card-highlighted');
+    // Papers section starts collapsed; clicking the citation opens it, highlights and scrolls to the card
+    expect(document.getElementById('evidence-19955249')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /^Citation 19955249$/i }));
 
-    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1);
-    expect(card?.className).toContain('card-highlighted');
+    await waitFor(() => {
+      const card = document.getElementById('evidence-19955249');
+      expect(card).not.toBeNull();
+      expect(card?.className).toContain('card-highlighted');
+      expect(scrollIntoViewMock).toHaveBeenCalled();
+    });
   });
 
   it('shows "Extractive answer (no AI model)" for extractive mode', () => {

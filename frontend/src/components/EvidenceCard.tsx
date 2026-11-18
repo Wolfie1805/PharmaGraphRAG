@@ -73,10 +73,15 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ item, isHighlighted 
 
         <div className="card-source-id">
           {isRelRecord ? (
-            <span className="source-id-text">
-              <strong>Association (as stated by source)</strong>
-              {statedAssociation ? `: ${statedAssociation}` : ''} | Record ID: {item.source_id}
-            </span>
+            <div className="source-id-text">
+              <div>
+                <strong>ClinPGx relationship record states:</strong>
+                {statedAssociation ? ` ${statedAssociation}` : ' unspecified'} | Record ID: {item.source_id}
+              </div>
+              <div className="assoc-help-note">
+                This is the value stored in the source record. It is not a judgement by this tool and is unrelated to name ambiguity.
+              </div>
+            </div>
           ) : isAnnotation ? (
             <span className="source-id-text">
               <strong>Annotation ID:</strong> {item.source_id}

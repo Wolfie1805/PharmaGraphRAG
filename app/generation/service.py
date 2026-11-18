@@ -6,6 +6,7 @@ and citation verification.
 
 import csv
 import io
+import json
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -57,6 +58,34 @@ def _get_var_drug_ann_cache() -> Dict[str, Dict[str, str]]:
     return _VAR_DRUG_ANN_CACHE
 
 
+# Module-level in-memory cache for guideline issuing body (guideline.source)
+_GUIDELINE_SOURCE_CACHE: Optional[Dict[str, str]] = None
+
+
+def _get_guideline_source_cache() -> Dict[str, str]:
+    global _GUIDELINE_SOURCE_CACHE
+    if _GUIDELINE_SOURCE_CACHE is not None:
+        return _GUIDELINE_SOURCE_CACHE
+    cache: Dict[str, str] = {}
+    zip_path = Path("data/raw/clinpgx/20261030_79ff97e7/guidelineAnnotations.json.zip")
+    if zip_path.exists():
+        try:
+            with zipfile.ZipFile(zip_path) as z:
+                for name in z.namelist():
+                    if name.endswith(".json"):
+                        data = json.loads(z.read(name).decode("utf-8"))
+                        g = data.get("guideline") if isinstance(data, dict) else None
+                        if isinstance(g, dict):
+                            gid = str(g.get("id") or "").strip()
+                            src = str(g.get("source") or "").strip()
+                            if gid and src:
+                                cache[gid] = src
+        except Exception:
+            pass
+    _GUIDELINE_SOURCE_CACHE = cache
+    return _GUIDELINE_SOURCE_CACHE
+
+
 SUPPORTED_PROMPT_TEMPLATES: List[PromptTemplateItem] = [
     PromptTemplateItem(
         name="A medicine",
@@ -105,8 +134,9 @@ class AnswerService:
             self.llm_client = llm_client
         else:
             self.llm_client = get_llm_client(self.config, mock=mock_llm)
-        # Pre-warm in-memory annotation cache so first request never times out
+        # Pre-warm in-memory caches so first request never times out
         _get_var_drug_ann_cache()
+        _get_guideline_source_cache()
 
     def get_stats_summary(self) -> Dict[str, Any]:
         """Return full meaning-search coverage summary per source_type."""
@@ -481,41 +511,46 @@ class AnswerService:
                 if g_match:
                     effective_gene_cid = g_match[0][0]
 
-        # For variant_detail: guidelines and drug labels are for the
-        # gene-medicine pair, not variant-specific
+        # For variant_detail: label guidelines and drug labels as gene-medicine pair records
         if query_mode == "variant_detail":
             pair_note = "Records for this gene-medicine pair (not variant-specific)"
             guidelines_label = pair_note
             drug_labels_label = pair_note
-            # Fetch guidelines and drug labels for the parent gene + chemical
-            if (not guidelines or not drug_labels) and effective_gene_cid and effective_chem_cid:
-                con = duckdb.connect(":memory:")
-                pair_chunks = con.execute(
-                    f"""
-                    SELECT source_type, source_id, title, content, entity_ids
-                    FROM '{chunks_path}'
-                    WHERE source_type IN ('guideline', 'drug_label')
-                      AND list_contains(entity_ids, $1)
-                      AND list_contains(entity_ids, $2)
-                """,
-                    [effective_gene_cid, effective_chem_cid],
-                ).fetchall()
-                for stype, sid, title, content, eids in pair_chunks:
-                    item = EvidenceItem(
-                        source_type=stype,
-                        source_id=str(sid),
-                        title=title or "",
-                        chunk_text=content or "",
-                        matched_entities=list(eids) if eids else [],
-                    )
-                    if stype == "guideline" and not any(
-                        it.source_id == str(sid) for it in guidelines
-                    ):
-                        guidelines.append(item)
-                    elif stype == "drug_label" and not any(
-                        it.source_id == str(sid) for it in drug_labels
-                    ):
-                        drug_labels.append(item)
+
+        # Surface gene-medicine pair guidelines (and drug labels for variant_detail)
+        # from chunks_v2.parquet when not already present in top retrieval items
+        if effective_gene_cid and effective_chem_cid and (
+            not guidelines or (query_mode == "variant_detail" and not drug_labels)
+        ):
+            con = duckdb.connect(":memory:")
+            pair_chunks = con.execute(
+                f"""
+                SELECT source_type, source_id, title, content, entity_ids
+                FROM '{chunks_path}'
+                WHERE source_type IN ('guideline', 'drug_label')
+                  AND list_contains(entity_ids, $1)
+                  AND list_contains(entity_ids, $2)
+            """,
+                [effective_gene_cid, effective_chem_cid],
+            ).fetchall()
+            for stype, sid, title, content, eids in pair_chunks:
+                item = EvidenceItem(
+                    source_type=stype,
+                    source_id=str(sid),
+                    title=title or "",
+                    chunk_text=content or "",
+                    matched_entities=list(eids) if eids else [],
+                )
+                if stype == "guideline" and not any(
+                    it.source_id == str(sid) for it in guidelines
+                ):
+                    guidelines.append(item)
+                elif (
+                    query_mode == "variant_detail"
+                    and stype == "drug_label"
+                    and not any(it.source_id == str(sid) for it in drug_labels)
+                ):
+                    drug_labels.append(item)
 
         # All linked papers present in corpus
         all_linked_papers: List[EvidenceItem] = []
@@ -556,6 +591,13 @@ class AnswerService:
                             matched_entities=[effective_gene_cid, effective_chem_cid],
                         )
                     )
+
+        # Attach guideline.source issuing body from guidelineAnnotations JSON when present
+        guideline_src_cache = _get_guideline_source_cache()
+        for g_item in guidelines:
+            issuing_body = guideline_src_cache.get(g_item.source_id)
+            if issuing_body:
+                g_item.provenance = {**g_item.provenance, "guideline.source": issuing_body}
 
         ann_cache = _get_var_drug_ann_cache()
         ann_items = [it for it in evidence_items if it.source_type == "annotation"]
@@ -717,7 +759,6 @@ class AnswerService:
         # 2b. Gate Stage B1: Ambiguous entity found
         if has_ambiguous:
             flags.append("insufficient_evidence")
-            flags.extend(partial_flags)
             ambiguous_answer = (
                 "Multiple matching entities were found in the database. "
                 "Please select a specific candidate below."
@@ -753,7 +794,6 @@ class AnswerService:
         # 2c. Gate Stage B1: No resolved or ambiguous entity found
         if not resolved_cids and not has_ambiguous:
             flags.append("unrecognized_entity")
-            flags.extend(partial_flags)
             unrecognized_message = (
                 "No recognized gene, variant or chemical was found in your question in the "
                 "ClinPGx data used by this prototype. Supported query formats are shown below."

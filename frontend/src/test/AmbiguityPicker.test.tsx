@@ -136,7 +136,7 @@ describe('EntityChips ambiguity picker', () => {
     fireEvent.click(screen.getByRole('button', { name: /Submit Question/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Ambiguity Detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/Name matches several items/i)).toBeInTheDocument();
     });
 
     const selectButtons = screen.getAllByRole('button', { name: 'Select' });

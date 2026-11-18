@@ -28,7 +28,13 @@ describe('Evidence cards, badges, and refusal rendering', () => {
         }}
       />
     );
-    expect(screen.getByText(/Association \(as stated by source\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/ClinPGx relationship record states:/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/associated/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        /This is the value stored in the source record\. It is not a judgement by this tool and is unrelated to name ambiguity\./i
+      )
+    ).toBeInTheDocument();
     expect(screen.getByText(/Record ID: REL-12345/i)).toBeInTheDocument();
     expect(screen.getByText('Date: No date in data')).toBeInTheDocument();
     expect(screen.getByText('pg:gene:1559')).toBeInTheDocument();

@@ -55,4 +55,10 @@ class GenerationConfig(BaseModel):
     min_top_score: float = 0.015
     request_timeout_seconds: float = 30.0
     max_entity_hints: int = 4
+    cors_allowed_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
     disclaimer_text: str = DEFAULT_DISCLAIMER

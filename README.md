@@ -69,7 +69,7 @@ To enable the optional local Ollama model mode:
 ## API Endpoints
 - `GET /api/health`: Service health and active answer mode.
 - `POST /api/ask`: Grounded answer synthesis with evidence bundle, claims, resolved entities, and safety flags.
-  CORS is strictly locked to `http://localhost:5173`.
+  CORS is configured via `GenerationConfig.cors_allowed_origins` to allow `http://localhost:5173` and `http://127.0.0.1:5173`.
 
 ---
 
@@ -91,7 +91,7 @@ cd d:\PharmaRAG\frontend
 npm install
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
+Open the app at **`http://localhost:5173`** in your browser (use `localhost` rather than `127.0.0.1` as the canonical local origin; both `http://localhost:5173` and `http://127.0.0.1:5173` are permitted by backend CORS).
 
 ### Frontend Checks (Typecheck, Lint, Tests, Build)
 ```powershell

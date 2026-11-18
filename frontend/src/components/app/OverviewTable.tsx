@@ -32,6 +32,9 @@ export const OverviewTable: React.FC<OverviewTableProps> = ({
           <p className="overview-curation-note">
             These relationship edges and evidence counts represent records cataloged in ClinPGx and PharmGKB archives, not algorithmic predictions.
           </p>
+          <p className="assoc-help-note">
+            Association note: This is the value stored in the source record. It is not a judgement by this tool and is unrelated to name ambiguity.
+          </p>
         </div>
       </div>
 
@@ -69,8 +72,11 @@ export const OverviewTable: React.FC<OverviewTableProps> = ({
                     <span className="entity-cell-cid font-mono">{row.other_id}</span>
                   </td>
                   <td className="td-assoc">
-                    <span className={`assoc-pill ${assocClass}`}>
-                      {row.association}
+                    <span
+                      className={`assoc-pill ${assocClass}`}
+                      title="This is the value stored in the source record. It is not a judgement by this tool and is unrelated to name ambiguity."
+                    >
+                      ClinPGx relationship record states: {row.association}
                     </span>
                   </td>
                   <td className="td-num">

@@ -1155,17 +1155,19 @@ def test_api_section_c_question_words_and_lowercase_gene_flag(test_client):
     assert r_impact["resolved_entities"] == []
     assert r_impact["claims"] == []
     assert "meaning_coverage" in r_impact
-    assert any(f.startswith("meaning_search_partial:") for f in r_impact["flags"])
+    assert not any(f.startswith("meaning_search_partial:") for f in r_impact["flags"])
 
     r_cat = test_client.post("/api/ask", json={"question": "cat"}).json()
     assert "unrecognized_entity" in r_cat["flags"]
     assert "possible_gene_name_lowercase:cat" in r_cat["flags"]
+    assert not any(f.startswith("meaning_search_partial:") for f in r_cat["flags"])
     assert r_cat["resolved_entities"] == []
 
     r_upper = test_client.post("/api/ask", json={"question": "IMPACT"}).json()
     assert any(
         e.get("canonical_id") == "pg:gene:143485502" for e in r_upper["resolved_entities"]
     )
+    assert any(f.startswith("meaning_search_partial:") for f in r_upper["flags"])
     assert "unrecognized_entity" not in r_upper["flags"]
 
     r_dolo = test_client.post("/api/ask", json={"question": "dolo 650"}).json()

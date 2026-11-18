@@ -28,9 +28,9 @@ export const AmbiguityPickerCard: React.FC<AmbiguityPickerProps> = ({
           </svg>
         </span>
         <div>
-          <h4 className="edge-card-title">Ambiguity Detected: &ldquo;{termName}&rdquo;</h4>
+          <h4 className="edge-card-title">Name matches several items: &ldquo;{termName}&rdquo;</h4>
           <p className="edge-card-lead">
-            This name maps to multiple distinct clinical entities in the database. Choose the candidate you meant:
+            This name matches several distinct clinical entities in the database. Choose the candidate you meant:
           </p>
         </div>
       </div>

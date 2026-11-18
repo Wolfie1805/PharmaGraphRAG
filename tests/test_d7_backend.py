@@ -219,3 +219,35 @@ def test_pair_detail_all_linked_papers_list(client):
     assert "all_linked_papers" in sec
     assert len(sec["all_linked_papers"]) == 230
     assert sec["all_linked_papers"][0]["source_type"] == "pubmed"
+
+
+def test_meaning_search_partial_absent_on_ambiguous_and_unrecognized(client):
+    """Verify meaning_search_partial flag is absent on ambiguous/unrecognized, kept on answered."""
+    for q in ("DBI", "CYP2C19*2", "dolo 650"):
+        data = client.post("/api/ask", json={"question": q}).json()
+        assert data["query_mode"] in ("ambiguous", "unrecognized")
+        assert not any(f.startswith("meaning_search_partial") for f in data["flags"]), (
+            f"Unexpected meaning_search_partial flag on {q}: {data['flags']}"
+        )
+
+    for q in ("clopidogrel", "CYP2C19 clopidogrel"):
+        data = client.post("/api/ask", json={"question": q}).json()
+        assert data["query_mode"] in ("medicine_overview", "pair_detail")
+        assert any(f.startswith("meaning_search_partial:") for f in data["flags"]), (
+            f"Expected meaning_search_partial flag on answered query {q}: {data['flags']}"
+        )
+
+
+def test_guideline_source_field_and_cors_config(client):
+    """Verify guideline.source issuing body is surfaced and CORS allows localhost + 127.0.0.1."""
+    resp = client.post("/api/ask", json={"question": "CYP2C19 clopidogrel"}).json()
+    guidelines = resp["sections"]["guidelines"]
+    assert len(guidelines) > 0
+    for g in guidelines:
+        assert "guideline.source" in g["provenance"]
+        assert isinstance(g["provenance"]["guideline.source"], str)
+        assert len(g["provenance"]["guideline.source"]) > 0
+
+    health = client.get("/api/health").json()
+    assert "http://localhost:5173" in health["cors_allowed_origins"]
+    assert "http://127.0.0.1:5173" in health["cors_allowed_origins"]

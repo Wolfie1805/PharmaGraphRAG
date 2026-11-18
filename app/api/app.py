@@ -31,10 +31,10 @@ app = FastAPI(
     version="0.2.0",
 )
 
-# 1. CORS allowlist strictly for frontend development origin
+# 1. CORS allowlist from GenerationConfig (supports localhost and 127.0.0.1 on port 5173)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=config.cors_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
@@ -92,7 +92,7 @@ def health_check() -> dict:
         "provider": config.llm_provider,
         "mode": config.llm_mode,
         "model": config.llm_model,
-        "cors_allowed_origins": ["http://localhost:5173"],
+        "cors_allowed_origins": config.cors_allowed_origins,
     }
 
 

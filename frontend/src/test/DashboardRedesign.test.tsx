@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { HomeStateCards } from '../components/app/HomeStateCards';
 import { ResultsHeader } from '../components/app/ResultsHeader';
@@ -166,6 +166,12 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
 
       expect(screen.getByText('CYP2C19')).toBeInTheDocument();
       expect(screen.getByText('CYP2C9')).toBeInTheDocument();
+      expect(screen.getAllByText(/ClinPGx relationship record states: associated/i).length).toBe(2);
+      expect(
+        screen.getByText(
+          /This is the value stored in the source record\. It is not a judgement by this tool and is unrelated to name ambiguity\./i
+        )
+      ).toBeInTheDocument();
       expect(screen.getByText('49')).toBeInTheDocument();
       expect(screen.getByText('12')).toBeInTheDocument();
 
@@ -192,8 +198,14 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
           source_type: 'guideline',
           title: 'CPIC Guideline for Clopidogrel and CYP2C19',
           chunk_text: 'Intermediate and poor metabolizers have reduced active metabolite levels.',
-          source: 'CPIC',
-          url: 'https://cpicpgx.org',
+          provenance: { 'guideline.source': 'CPIC' },
+        },
+        {
+          source_id: 'NO_SRC_GUIDELINE_2',
+          source_type: 'guideline',
+          title: 'Guideline Without Source Field',
+          chunk_text: 'Body text without issuing body field.',
+          provenance: {},
         },
       ],
       drug_labels: [
@@ -228,6 +240,21 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
             },
           ],
         },
+        {
+          variant_tag: 'CYP2C19*3',
+          display_name: 'CYP2C19*3',
+          findings: [{ source_id: 'ANN_2', title: 'T2', sentence: 'Finding 2 sentence.', source_columns: {} }],
+        },
+        {
+          variant_tag: 'CYP2C19*17',
+          display_name: 'CYP2C19*17',
+          findings: [{ source_id: 'ANN_3', title: 'T3', sentence: 'Finding 3 sentence.', source_columns: {} }],
+        },
+        {
+          variant_tag: 'CYP2C19*4',
+          display_name: 'CYP2C19*4',
+          findings: [{ source_id: 'ANN_4', title: 'T4', sentence: 'Fourth group hidden initially.', source_columns: {} }],
+        },
       ],
       linked_papers: [
         {
@@ -241,15 +268,15 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
       recorded_relationships: [
         {
           source_id: 'REL_1',
-          source_type: 'relationship',
+          source_type: 'relationship_record',
           title: 'CYP2C19 - clopidogrel association',
           chunk_text: 'Curated association in ClinPGx.',
-          source: 'ClinPGx',
+          provenance: { association: 'ambiguous' },
         },
       ],
     } as unknown as DetailSections;
 
-    it('renders all 5 detail sections in strict required order and displays structured column badges', () => {
+    it('renders guidelines open by default, collapses other sections and variant groups beyond 3, and displays jump links', () => {
       const onCitationClick = vi.fn();
       const { container } = render(
         <DetailSectionsView
@@ -265,37 +292,56 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
         />
       );
 
-      // Section 1: Clinical Guidelines
-      expect(screen.getByRole('heading', { level: 3, name: /1\. Clinical Guidelines/i })).toBeInTheDocument();
+      // Jump links present with counts
+      const jumpNav = screen.getByRole('navigation', { name: /Evidence section jump links/i });
+      expect(within(jumpNav).getByRole('button', { name: /Guideline annotations \(2\)/i })).toBeInTheDocument();
+      expect(within(jumpNav).getByRole('button', { name: /Drug labels \(1\)/i })).toBeInTheDocument();
+      expect(within(jumpNav).getByRole('button', { name: /Variant findings \(4\)/i })).toBeInTheDocument();
+      expect(within(jumpNav).getByRole('button', { name: /Papers cited \(1\)/i })).toBeInTheDocument();
+      expect(within(jumpNav).getByRole('button', { name: /Recorded relationships \(1\)/i })).toBeInTheDocument();
+
+      // Section 1: Guideline annotations (ClinPGx) is OPEN by default
+      expect(screen.getByRole('heading', { level: 3, name: /1\. Guideline annotations \(ClinPGx\) \(2\)/i })).toBeInTheDocument();
       expect(screen.getByText('CPIC Guideline for Clopidogrel and CYP2C19')).toBeInTheDocument();
+      expect(screen.getByText('guideline.source: CPIC')).toBeInTheDocument();
+      // Second guideline has no guideline.source -> only 1 badge rendered
+      expect(screen.getAllByText(/guideline\.source:/i).length).toBe(1);
 
-      // Section 2: Regulatory Drug Labels
-      expect(screen.getByRole('heading', { level: 3, name: /2\. Drug Label Annotations/i })).toBeInTheDocument();
+      // Sections 2, 3, 4, 5 are COLLAPSED by default
+      expect(screen.queryByText('Plavix Prescribing Information')).not.toBeInTheDocument();
+      expect(screen.queryByText('CYP2C19*2')).not.toBeInTheDocument();
+      expect(screen.queryByText('PMID: 18946070')).not.toBeInTheDocument();
+      expect(screen.queryByText(/CYP2C19 - clopidogrel association/i)).not.toBeInTheDocument();
+
+      // Expand Section 2: Drug labels
+      fireEvent.click(screen.getByRole('button', { name: /2\. Drug Label Annotations/i }));
       expect(screen.getByText('Plavix Prescribing Information')).toBeInTheDocument();
-      expect(screen.getByText('Drug Label')).toBeInTheDocument();
 
-      // Section 3: Variant-Level Findings
-      expect(screen.getByRole('heading', { level: 3, name: /3\. Variant-Level Clinical Findings/i })).toBeInTheDocument();
+      // Expand Section 3: Variant findings (first 3 groups open, 4th collapsed)
+      fireEvent.click(screen.getByRole('button', { name: /3\. Variant-Level Clinical Findings/i }));
       expect(screen.getByText('CYP2C19*2')).toBeInTheDocument();
-
-      // Structured field badges
       expect(screen.getByText('decreased')).toBeInTheDocument();
-      expect(screen.getByText('Metabolism/PK')).toBeInTheDocument();
-      expect(screen.getByText('in people with coronary artery disease')).toBeInTheDocument();
+      expect(screen.getByText('Finding 2 sentence.')).toBeInTheDocument();
+      expect(screen.getByText('Finding 3 sentence.')).toBeInTheDocument();
+      expect(screen.queryByText('Fourth group hidden initially.')).not.toBeInTheDocument();
 
-      // Section 4: Cited Literature
-      expect(screen.getByRole('heading', { level: 3, name: /4\. Papers Cited/i })).toBeInTheDocument();
-      expect(screen.getByText(/Cytochrome P450 2C19 and cardiovascular outcomes/i)).toBeInTheDocument();
+      // Expand Section 4: Papers cited
+      fireEvent.click(screen.getByRole('button', { name: /4\. Papers Cited/i }));
       expect(screen.getByText('PMID: 18946070')).toBeInTheDocument();
 
-      // Section 5: Recorded Relationships
-      expect(screen.getByRole('heading', { level: 3, name: /5\. Recorded Relationships/i })).toBeInTheDocument();
-      expect(screen.getByText(/CYP2C19 - clopidogrel association/i)).toBeInTheDocument();
+      // Expand Section 5: Recorded relationships
+      fireEvent.click(screen.getByRole('button', { name: /5\. Recorded Relationships/i }));
+      expect(screen.getByText(/ClinPGx relationship record states: ambiguous/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          /This is the value stored in the source record\. It is not a judgement by this tool and is unrelated to name ambiguity\./i
+        )
+      ).toBeInTheDocument();
 
       // Verify DOM ordering of section headers
       const headings = container.querySelectorAll('h3.section-title');
       expect(headings.length).toBe(5);
-      expect(headings[0].textContent).toContain('1. Clinical Guidelines');
+      expect(headings[0].textContent).toContain('1. Guideline annotations (ClinPGx)');
       expect(headings[1].textContent).toContain('2. Drug Label Annotations');
       expect(headings[2].textContent).toContain('3. Variant-Level Clinical Findings');
       expect(headings[3].textContent).toContain('4. Papers Cited');
@@ -328,6 +374,9 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
       const pairLabels = screen.getAllByText('Records for this gene-medicine pair (not variant-specific)');
       expect(pairLabels.length).toBe(2);
 
+      // Open Section 4 first (collapsed by default)
+      fireEvent.click(screen.getByRole('button', { name: /4\. Papers Cited/i }));
+
       const toggleBtn = screen.getByRole('button', { name: /Show all linked papers \(6 in corpus\)/i });
       expect(toggleBtn).toBeInTheDocument();
       fireEvent.click(toggleBtn);
@@ -349,6 +398,9 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
           answer="Test answer"
         />
       );
+
+      // Open Variant Findings section first
+      fireEvent.click(screen.getByRole('button', { name: /3\. Variant-Level Clinical Findings/i }));
 
       const monoElements = document.querySelectorAll('.font-mono');
       expect(monoElements.length).toBeGreaterThan(0);
@@ -386,7 +438,7 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
         />
       );
 
-      expect(screen.getByText(/Ambiguity Detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/Name matches several items/i)).toBeInTheDocument();
       expect(screen.getByText(/CYP2C19\*2 \(Single Nucleotide Variant\)/i)).toBeInTheDocument();
       expect(screen.getByText(/CYP2C19\*2 \(Haplotype \/ Star Allele\)/i)).toBeInTheDocument();
 
