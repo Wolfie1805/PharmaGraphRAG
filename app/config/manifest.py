@@ -92,6 +92,14 @@ class ClinPGxRunManifest(BaseRunManifest):
     discrepancy_notes: Optional[str] = None
 
 
+class NRCeSRunManifest(BaseRunManifest):
+    source_name: str = "NRCeS"
+    acquisition_method: str = "manual_download_by_user"
+    release_label_as_shown: str
+    release_date_as_shown: str
+    archive_members: list[dict[str, object]] = Field(default_factory=list)
+
+
 def get_current_utc_timestamp() -> str:
     """Return ISO 8601 UTC timestamp."""
     return datetime.now(timezone.utc).isoformat()

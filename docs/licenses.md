@@ -6,6 +6,7 @@
 | **ClinPGx Haplotypes** (`clinpgxHaplotypes.zip`) | Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) | http://creativecommons.org/licenses/by-nc-sa/4.0/ | "Haplotype definitions were obtained from ClinPGx (https://www.clinpgx.org/page/citingClinpgx) [accessed 2026-10-31]." | 2026-10-31 | Explicit LICENSE.txt packaged inside archive: "This work is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International license... 1. Attribution: You must give appropriate credit to ClinPGx... 2. NonCommercial: You may not use the material for commercial purposes... 3. ShareAlike: If you alter, amend, reuse or otherwise change ClinPGx data you agree that if you distribute such product, all recipients shall first agree to be subject to this license. Under no circumstances can ClinPGx data be sold for other's private or commercial use." | All derivative outputs remain internal/private. |
 | **CPIC Alleles** (`cpic.alleles.json`) | Creative Commons Zero 1.0 Universal (CC0 1.0) Public Domain Dedication | https://creativecommons.org/publicdomain/zero/1.0/ | "CPIC allele definitions and guideline status were obtained from the Clinical Pharmacogenetics Implementation Consortium (CPIC) (https://cpicpgx.org) [accessed 2026-10-31]." | 2026-10-31 | Public domain dedication: "To the extent possible under law, CPIC has waived all copyright and related or neighboring rights to CPIC guidelines and associated data tables." Free of copyright restrictions. Attribution requested by project. | None. |
 | **PubMed / NLM (NCBI E-utilities)** | U.S. Government Public Domain (metadata/citations); individual third-party copyright on abstracts & full text | https://www.ncbi.nlm.nih.gov/About/disclaimer.html | "Data sourced from the National Library of Medicine (NLM) / National Center for Biotechnology Information (NCBI) via E-utilities. NLM does not endorse or recommend this or any other application." | 2026-10-30 | NLM-generated bibliographic records are public domain in the US. However, abstracts may be copyrighted by journal publishers/authors. Redistribution of bulk abstracts commercially or publicly requires caution; fair-use and publisher rights apply. Full-text must never be fetched or redistributed. | None. Research scope limited to metadata and abstracts. |
+| **NRCeS Common Drug Codes for India (Flat Files Package)** (`CommonDrugCodesForIndia_FlatFilePackage.zip`) | Creative Commons Attribution 4.0 International (CC BY 4.0) + SNOMED CT Affiliate License clauses (India territorial restriction; third-party brand/trade name copyrights) | https://creativecommons.org/licenses/by/4.0/ | "Common Drug Codes for India (Flat Files Package) produced by National Resource Centre for EHR Standards (NRCeS) at Centre for Development of Advanced Computing (C-DAC), Pune [checked 2026-11-18]." | 2026-11-18 | Keep NRCeS-derived data private and local for now. Redistributable/derivatives permitted within India under SNOMED CT Affiliate License clauses; brand/trade names remain copyright of their respective owners. Do not push raw or NRCeS-derived data to public repositories or public DVC remotes. | Commercial use or public release of NRCeS-derived data requires review. |
 
 ---
 
@@ -77,4 +78,29 @@
     >
     > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
   - **Note on Submodule:** The installed wheel also includes an unused experimental module (`duckdb/experimental/spark/LICENSE`, Apache License Version 2.0). PharmaGraph uses only core in-memory DuckDB (`duckdb.connect(":memory:")`).
+
+---
+
+## 7. NRCeS Common Drug Codes for India (Flat Files Package)
+- **Date Checked:** `2026-11-18`
+- **Source Page:** `https://www.nrces.in/services/national-releases` (downloaded manually by user; copied write-once to `data/raw/nrces/20261118_2cab0068/CommonDrugCodesForIndia_FlatFilePackage.zip`, SHA-256 `aebd30ac95d73accf573c86fd4dae1dc90eff03ae0fbcd312bc761011e88270a`).
+- **Storage Policy:** Keep NRCeS-derived data private and local for now.
+- **Open Item:** Commercial use or public release of NRCeS-derived data requires review.
+- **Verbatim `CommonDrugCodesForIndia_FlatFilePackage/License.txt`** (read directly in memory from the archive on `2026-11-18`):
+  > Copyright (c) 2019, Centre for Development of Advanced Computing (C-DAC), Pune
+  > All rights reserved.
+  >
+  > The Common Drug Codes for India (Flat Files Package) is produced by National Resource Centre for EHR Standards (NRCeS) at Centre for Development of Advanced Computing (C-DAC), Pune under the terms of the Creative Commons Attribution 4.0 International Public License, https://creativecommons.org/licenses/by/4.0/
+  >
+  > Additional information about this license for use of Common Drug Codes for India (Flat Files Package):
+  >
+  > The Common Drug Codes for India (Flat Files Package) is a managed list of Common Drug Codes for India covering a list of unique identifiers and terms. The Flat Files Package contain some SNOMED CT codes (identifiers) and Terms from its International Release. The usage of SNOMED CT International Release content is governed by relevant clauses of SNOMED CT Affiliate License extended to the user of this package.
+  >
+  > SNOMED CT® was originally created by the College of American Pathologists.  "SNOMED" and "SNOMED CT" are registered trademarks of International Health Terminology Standards Development Organisation, trading as SNOMED International.
+  >
+  > The Licensee can redistribute this package within India. The Licensee can create derivatives or implementation-related products and services using this package within India.
+  >
+  > The Brand names and any trade names are copyright of their respective owners.
+  >
+  > C-DAC does not warrant the accuracy, completeness, or adequacy of content. The content provided is intended but not promised or guaranteed to be current, complete and up-to-date.
 

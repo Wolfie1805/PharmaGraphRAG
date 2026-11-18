@@ -21,6 +21,7 @@ env/
 # Data & Storage (Raw immutability & DVC tracked)
 data/raw/
 data/processed/
+manual_downloads/
 !data/entity_registry.jsonl
 
 # Tool Caches

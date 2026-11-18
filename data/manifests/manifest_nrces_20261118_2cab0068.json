@@ -1,0 +1,71 @@
+{
+  "run_id": "20261118_2cab0068",
+  "source_name": "NRCeS",
+  "endpoint_url": "https://www.nrces.in/services/national-releases",
+  "retrieval_timestamp_utc": "2026-11-18T14:09:01.587146+00:00",
+  "source_version": "2026-08-31 (Release Note PDF; BrandMaster.txt zip timestamp 2026-09-30)",
+  "license_name": "CC BY 4.0 International + SNOMED CT Affiliate License clauses (India territorial restriction)",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "license_checked_date": "2026-11-18",
+  "git_commit": "2dc037150e31baf2f008fa0013f98303f3846998",
+  "run_status": "complete",
+  "notes": "Downloaded manually by the user from https://www.nrces.in/services/national-releases (CAPTCHA completed manually by user) and copied write-once into data/raw/nrces/ without unzipping or modifying the original archive.",
+  "files": [
+    {
+      "relative_path": "data/raw/nrces/20261118_2cab0068/CommonDrugCodesForIndia_FlatFilePackage.zip",
+      "byte_size": 4148530,
+      "sha256": "aebd30ac95d73accf573c86fd4dae1dc90eff03ae0fbcd312bc761011e88270a",
+      "record_count": 9
+    }
+  ],
+  "acquisition_method": "manual_download_by_user",
+  "release_label_as_shown": "Common Drug Codes for India (Flat Files Package)",
+  "release_date_as_shown": "2026-08-31 (Release Note PDF; BrandMaster.txt zip timestamp 2026-09-30)",
+  "archive_members": [
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/BrandMaster.txt",
+      "byte_size": 11152784,
+      "zip_timestamp": "2026-09-30T12:45:06"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/DrugFormMaster.txt",
+      "byte_size": 16252,
+      "zip_timestamp": "2026-08-31T10:03:54"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/GenericMaster.txt",
+      "byte_size": 2598230,
+      "zip_timestamp": "2026-08-31T10:04:00"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/License.txt",
+      "byte_size": 1616,
+      "zip_timestamp": "2026-08-31T10:04:38"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/ProductMaster.txt",
+      "byte_size": 1997407,
+      "zip_timestamp": "2026-08-31T10:04:06"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/README.txt",
+      "byte_size": 1108,
+      "zip_timestamp": "2026-08-31T10:04:42"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/RouteOfAdministrationMaster.txt",
+      "byte_size": 4930,
+      "zip_timestamp": "2026-08-31T10:04:16"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/SubstanceMaster.txt",
+      "byte_size": 362703,
+      "zip_timestamp": "2026-08-31T10:04:22"
+    },
+    {
+      "filename": "CommonDrugCodesForIndia_FlatFilePackage/SupplierMaster.txt",
+      "byte_size": 410366,
+      "zip_timestamp": "2026-08-31T10:04:30"
+    }
+  ]
+}
