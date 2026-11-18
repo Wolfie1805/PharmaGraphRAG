@@ -3,13 +3,13 @@
   "source_name": "NRCeS",
   "endpoint_url": "https://www.nrces.in/services/national-releases",
   "retrieval_timestamp_utc": "2026-11-18T14:09:01.587146+00:00",
-  "source_version": "2026-08-31 (Release Note PDF; BrandMaster.txt zip timestamp 2026-09-30)",
+  "source_version": "not provided (README.txt provides no version or date; website release note link dated 2026-08-31; BrandMaster.txt zip timestamp 2026-09-30)",
   "license_name": "CC BY 4.0 International + SNOMED CT Affiliate License clauses (India territorial restriction)",
   "license_url": "https://creativecommons.org/licenses/by/4.0/",
   "license_checked_date": "2026-11-18",
   "git_commit": "2dc037150e31baf2f008fa0013f98303f3846998",
   "run_status": "complete",
-  "notes": "Downloaded manually by the user from https://www.nrces.in/services/national-releases (CAPTCHA completed manually by user) and copied write-once into data/raw/nrces/ without unzipping or modifying the original archive.",
+  "notes": "Downloaded manually by the user from https://www.nrces.in/services/national-releases. README.txt contains no version number or release date ('not provided'). The website release note link is dated 2026-08-31 ('Release Note (31-Aug-2026)'), while internal zip timestamps show 2026-08-31 for 8 members and 2026-09-30 12:45:06 for BrandMaster.txt. Note: the PDF release note was not read.",
   "files": [
     {
       "relative_path": "data/raw/nrces/20261118_2cab0068/CommonDrugCodesForIndia_FlatFilePackage.zip",
@@ -20,7 +20,8 @@
   ],
   "acquisition_method": "manual_download_by_user",
   "release_label_as_shown": "Common Drug Codes for India (Flat Files Package)",
-  "release_date_as_shown": "2026-08-31 (Release Note PDF; BrandMaster.txt zip timestamp 2026-09-30)",
+  "release_version_from_readme": "not provided",
+  "release_date_as_shown": "2026-08-31 (website release note link: 'Release Note (31-Aug-2026)'; BrandMaster.txt internal zip timestamp: 2026-09-30; PDF release note was not read; README.txt contains no version or date)",
   "archive_members": [
     {
       "filename": "CommonDrugCodesForIndia_FlatFilePackage/BrandMaster.txt",

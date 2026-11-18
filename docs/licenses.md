@@ -84,8 +84,14 @@
 ## 7. NRCeS Common Drug Codes for India (Flat Files Package)
 - **Date Checked:** `2026-11-18`
 - **Source Page:** `https://www.nrces.in/services/national-releases` (downloaded manually by user; copied write-once to `data/raw/nrces/20261118_2cab0068/CommonDrugCodesForIndia_FlatFilePackage.zip`, SHA-256 `aebd30ac95d73accf573c86fd4dae1dc90eff03ae0fbcd312bc761011e88270a`).
-- **Storage Policy:** Keep NRCeS-derived data private and local for now.
-- **Open Item:** Commercial use or public release of NRCeS-derived data requires review.
+- **Required CC BY 4.0 Attribution Text:**
+  > Common Drug Codes for India, National Resource Centre for EHR Standards (NRCeS), C-DAC, CC BY 4.0, https://www.nrces.in/services/national-releases; changes: parsed into tables
+- **Storage Policy:** NRCeS-derived data stays private and local.
+- **Open Items:**
+  1. Commercial use or public release of NRCeS-derived data requires review.
+  2. SNOMED CT Affiliate License paragraph: *"The Flat Files Package contain some SNOMED CT codes (identifiers) and Terms from its International Release. The usage of SNOMED CT International Release content is governed by relevant clauses of SNOMED CT Affiliate License extended to the user of this package."*
+  3. "Within India" redistribution and derivative wording: *"The Licensee can redistribute this package within India. The Licensee can create derivatives or implementation-related products and services using this package within India."*
+  4. NRCeS-derived data stays private and local.
 - **Verbatim `CommonDrugCodesForIndia_FlatFilePackage/License.txt`** (read directly in memory from the archive on `2026-11-18`):
   > Copyright (c) 2019, Centre for Development of Advanced Computing (C-DAC), Pune
   > All rights reserved.
