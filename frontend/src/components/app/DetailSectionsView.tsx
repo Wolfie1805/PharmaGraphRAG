@@ -36,7 +36,13 @@ export const DetailSectionsView: React.FC<DetailSectionsViewProps> = ({
   const drugLabels = sections.drug_labels || [];
   const variantFindings = sections.variant_findings || [];
   const linkedPapers = sections.linked_papers || [];
+  const allLinkedPapers = sections.all_linked_papers || [];
   const recordedRels = sections.recorded_relationships || [];
+
+  const [showAllPapers, setShowAllPapers] = useState(false);
+  const [papersPage, setPapersPage] = useState(1);
+  const PAPERS_PER_PAGE = 5;
+  const pagedAllPapers = allLinkedPapers.slice(0, papersPage * PAPERS_PER_PAGE);
 
   return (
     <div className="detail-sections-view" aria-label="Detailed Evidence Sections">
@@ -79,9 +85,14 @@ export const DetailSectionsView: React.FC<DetailSectionsViewProps> = ({
       {/* 1. Clinical Guidelines */}
       <section className="evidence-section" id="section-guidelines" aria-labelledby="heading-guidelines">
         <div className="section-header-row">
-          <h3 id="heading-guidelines" className="section-title">
-            1. Clinical Guidelines (CPIC / DPWG)
-          </h3>
+          <div className="section-title-group">
+            <h3 id="heading-guidelines" className="section-title">
+              1. Clinical Guidelines (CPIC / DPWG)
+            </h3>
+            {sections.guidelines_label && (
+              <span className="section-subtitle-pill">{sections.guidelines_label}</span>
+            )}
+          </div>
           <span className="section-count-badge">{guidelines.length}</span>
         </div>
         {guidelines.length === 0 ? (
@@ -115,14 +126,19 @@ export const DetailSectionsView: React.FC<DetailSectionsViewProps> = ({
       {/* 2. Drug Label Annotations */}
       <section className="evidence-section" id="section-drug-labels" aria-labelledby="heading-drug-labels">
         <div className="section-header-row">
-          <h3 id="heading-drug-labels" className="section-title">
-            2. Drug Label Annotations (FDA, EMA, PMDA, HCSC)
-          </h3>
+          <div className="section-title-group">
+            <h3 id="heading-drug-labels" className="section-title">
+              2. Drug Label Annotations (from ClinPGx)
+            </h3>
+            {sections.drug_labels_label && (
+              <span className="section-subtitle-pill">{sections.drug_labels_label}</span>
+            )}
+          </div>
           <span className="section-count-badge">{drugLabels.length}</span>
         </div>
         {drugLabels.length === 0 ? (
           <div className="section-empty-card">
-            No regulatory drug label annotations recorded for this pair.
+            No drug label annotations from ClinPGx recorded for this pair.
           </div>
         ) : (
           <div className="section-items-list" role="list">
@@ -298,6 +314,71 @@ export const DetailSectionsView: React.FC<DetailSectionsViewProps> = ({
                 </article>
               );
             })}
+          </div>
+        )}
+
+        {/* Paged "Show all linked papers" list (relationship PMIDs present in the corpus) */}
+        {allLinkedPapers.length > 0 && (
+          <div className="all-linked-papers-container">
+            <div className="all-papers-toggle-row">
+              <button
+                type="button"
+                className="btn-toggle-all-papers"
+                onClick={() => setShowAllPapers(!showAllPapers)}
+                aria-expanded={showAllPapers}
+              >
+                {showAllPapers
+                  ? 'Hide all linked papers'
+                  : `Show all linked papers (${allLinkedPapers.length} in corpus)`}
+              </button>
+              <span className="all-papers-note">
+                Relationship PMIDs present in corpus
+              </span>
+            </div>
+
+            {showAllPapers && (
+              <div className="all-papers-paged-list">
+                <div className="section-items-list" role="list">
+                  {pagedAllPapers.map((item: EvidenceItem) => {
+                    const pmidClean = item.source_id.replace(/^pmid:/i, '');
+                    return (
+                      <article
+                        key={item.source_id}
+                        className="evidence-record-card all-paper-item"
+                        role="listitem"
+                      >
+                        <div className="record-top-row">
+                          <span className="record-source-id font-mono">PMID: {pmidClean}</span>
+                          <a
+                            href={`https://pubmed.ncbi.nlm.nih.gov/${pmidClean}/`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="pubmed-ext-link font-mono"
+                            aria-label={`Open PubMed article ${pmidClean} in a new tab`}
+                          >
+                            <span>PubMed</span>
+                            <span className="ext-icon" aria-hidden="true">&#x2197;</span>
+                          </a>
+                        </div>
+                        <h4 className="record-title">{item.title}</h4>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {pagedAllPapers.length < allLinkedPapers.length && (
+                  <div className="all-papers-pagination-row">
+                    <button
+                      type="button"
+                      className="btn-show-more-papers"
+                      onClick={() => setPapersPage((p) => p + 1)}
+                    >
+                      Show more linked papers ({pagedAllPapers.length} of {allLinkedPapers.length})
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </section>

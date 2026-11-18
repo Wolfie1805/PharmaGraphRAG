@@ -148,7 +148,10 @@ export interface DetailSections {
   drug_labels: EvidenceItem[];
   variant_findings: VariantFindingGroup[];
   linked_papers: EvidenceItem[];
+  all_linked_papers?: EvidenceItem[];
   recorded_relationships: EvidenceItem[];
+  guidelines_label?: string;
+  drug_labels_label?: string;
 }
 
 export interface SuggestedNextItem {

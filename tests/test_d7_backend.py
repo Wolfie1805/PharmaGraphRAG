@@ -62,11 +62,11 @@ def test_medicine_overview_rows_and_paging(client):
     # Top row should be CYP2C19
     r0 = d1["overview"]["rows"][0]
     assert r0["gene_name"] == "CYP2C19"
-    assert r0["curated_count"] > 100
-    assert r0["annotation_count"] > 0
-    assert r0["drug_label_count"] > 0
-    assert r0["guideline_count"] > 0
-    assert r0["linked_papers_count"] > 0
+    assert r0["curated_count"] == 112
+    assert r0["annotation_count"] == 103
+    assert r0["drug_label_count"] == 5
+    assert r0["guideline_count"] == 4
+    assert r0["linked_papers_count"] == 259
     assert r0["chemical_id"] == "pg:chem:449053"
     assert r0["gene_id"] == "pg:gene:124"
 
@@ -191,3 +191,31 @@ def test_planted_instruction_only_in_quotes(client):
     answer = data.get("answer", "")
     assert "HACKED" not in answer or f"'{injection}'" in answer or f'"{injection}"' in answer
     assert data["query_mode"] in ("medicine_overview", "unrecognized", "refused")
+
+
+def test_variant_detail_gene_medicine_pair_labels(client):
+    """Verify variant_detail labels gene-level guidelines and drug labels accurately."""
+    resp = client.post("/api/ask", json={"question": "rs4244285 clopidogrel"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query_mode"] == "variant_detail"
+    sec = data["sections"]
+    assert sec is not None
+    expected_label = "Records for this gene-medicine pair (not variant-specific)"
+    assert sec["guidelines_label"] == expected_label
+    assert sec["drug_labels_label"] == expected_label
+    assert len(sec["guidelines"]) == 4
+    assert len(sec["drug_labels"]) == 5
+
+
+def test_pair_detail_all_linked_papers_list(client):
+    """Verify pair_detail includes full all_linked_papers from relationship PMIDs in corpus."""
+    resp = client.post("/api/ask", json={"question": "CYP2C19 clopidogrel"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query_mode"] == "pair_detail"
+    sec = data["sections"]
+    assert sec is not None
+    assert "all_linked_papers" in sec
+    assert len(sec["all_linked_papers"]) == 230
+    assert sec["all_linked_papers"][0]["source_type"] == "pubmed"

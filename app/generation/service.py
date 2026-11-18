@@ -416,6 +416,7 @@ class AnswerService:
         self,
         evidence_items: List[EvidenceItem],
         resolved_entities: List[Any],
+        query_mode: str = "pair_detail",
     ) -> DetailSections:
         """
         Group evidence items into guidelines, drug_labels, variant_findings
@@ -427,6 +428,134 @@ class AnswerService:
         recorded_relationships = [
             it for it in evidence_items if it.source_type == "relationship_record"
         ]
+
+        variant_ents = [
+            e
+            for e in resolved_entities
+            if getattr(e, "status", None) == "resolved"
+            and getattr(e, "candidates", None)
+            and e.candidates[0].entity_type.lower()
+            in ("variant", "haplotype", "snv", "allele")
+        ]
+        chem_ents = [
+            e
+            for e in resolved_entities
+            if getattr(e, "status", None) == "resolved"
+            and getattr(e, "candidates", None)
+            and e.candidates[0].entity_type.lower() == "chemical"
+        ]
+        gene_ents = [
+            e
+            for e in resolved_entities
+            if getattr(e, "status", None) == "resolved"
+            and getattr(e, "candidates", None)
+            and e.candidates[0].entity_type.lower() == "gene"
+        ]
+
+        guidelines_label: Optional[str] = None
+        drug_labels_label: Optional[str] = None
+
+        chunks_path = "data/processed/chunks_v2.parquet"
+        rel_path = "data/processed/relationships.parquet"
+
+        effective_gene_cid = gene_ents[0].canonical_id if gene_ents else None
+        effective_chem_cid = chem_ents[0].canonical_id if chem_ents else None
+
+        # If in variant_detail mode without explicit gene resolved,
+        # resolve parent gene from variant candidate
+        if query_mode == "variant_detail" and not effective_gene_cid and variant_ents:
+            v_sym = getattr(variant_ents[0].candidates[0], "gene_symbol", None)
+            if v_sym:
+                con = duckdb.connect(":memory:")
+                g_match = con.execute(
+                    f"""
+                    SELECT entity1_canonical_id FROM '{rel_path}'
+                    WHERE lower(entity1_name) = lower($1)
+                    UNION
+                    SELECT entity2_canonical_id FROM '{rel_path}'
+                    WHERE lower(entity2_name) = lower($1)
+                    LIMIT 1
+                    """,
+                    [v_sym],
+                ).fetchall()
+                if g_match:
+                    effective_gene_cid = g_match[0][0]
+
+        # For variant_detail: guidelines and drug labels are for the
+        # gene-medicine pair, not variant-specific
+        if query_mode == "variant_detail":
+            pair_note = "Records for this gene-medicine pair (not variant-specific)"
+            guidelines_label = pair_note
+            drug_labels_label = pair_note
+            # Fetch guidelines and drug labels for the parent gene + chemical
+            if (not guidelines or not drug_labels) and effective_gene_cid and effective_chem_cid:
+                con = duckdb.connect(":memory:")
+                pair_chunks = con.execute(
+                    f"""
+                    SELECT source_type, source_id, title, content, entity_ids
+                    FROM '{chunks_path}'
+                    WHERE source_type IN ('guideline', 'drug_label')
+                      AND list_contains(entity_ids, $1)
+                      AND list_contains(entity_ids, $2)
+                """,
+                    [effective_gene_cid, effective_chem_cid],
+                ).fetchall()
+                for stype, sid, title, content, eids in pair_chunks:
+                    item = EvidenceItem(
+                        source_type=stype,
+                        source_id=str(sid),
+                        title=title or "",
+                        chunk_text=content or "",
+                        matched_entities=list(eids) if eids else [],
+                    )
+                    if stype == "guideline" and not any(
+                        it.source_id == str(sid) for it in guidelines
+                    ):
+                        guidelines.append(item)
+                    elif stype == "drug_label" and not any(
+                        it.source_id == str(sid) for it in drug_labels
+                    ):
+                        drug_labels.append(item)
+
+        # All linked papers present in corpus
+        all_linked_papers: List[EvidenceItem] = []
+        if effective_gene_cid and effective_chem_cid:
+            con = duckdb.connect(":memory:")
+            pmids_raw = con.execute(
+                f"""
+                SELECT pmids FROM '{rel_path}'
+                WHERE (entity1_canonical_id = $1 AND entity2_canonical_id = $2)
+                   OR (entity2_canonical_id = $1 AND entity1_canonical_id = $2)
+            """,
+                [effective_chem_cid, effective_gene_cid],
+            ).fetchall()
+            rel_pmids = []
+            for (plist,) in pmids_raw:
+                if plist:
+                    for p in plist:
+                        for item in str(p).split(";"):
+                            clean = item.strip()
+                            if clean and clean not in rel_pmids:
+                                rel_pmids.append(clean)
+            if rel_pmids:
+                placeholders = ", ".join([f"'{p}'" for p in rel_pmids])
+                corpus_papers = con.execute(f"""
+                    SELECT source_id, title, min(content)
+                    FROM '{chunks_path}'
+                    WHERE source_type = 'pubmed' AND source_id IN ({placeholders})
+                    GROUP BY source_id, title
+                    ORDER BY source_id DESC
+                """).fetchall()
+                for sid, title, content in corpus_papers:
+                    all_linked_papers.append(
+                        EvidenceItem(
+                            source_type="pubmed",
+                            source_id=str(sid),
+                            title=title or "",
+                            chunk_text=content or "",
+                            matched_entities=[effective_gene_cid, effective_chem_cid],
+                        )
+                    )
 
         ann_cache = _get_var_drug_ann_cache()
         ann_items = [it for it in evidence_items if it.source_type == "annotation"]
@@ -486,7 +615,10 @@ class AnswerService:
             drug_labels=drug_labels,
             variant_findings=variant_groups,
             linked_papers=linked_papers,
+            all_linked_papers=all_linked_papers,
             recorded_relationships=recorded_relationships,
+            guidelines_label=guidelines_label,
+            drug_labels_label=drug_labels_label,
         )
 
     def answer_question(
@@ -813,7 +945,9 @@ class AnswerService:
         )
 
         # Build sections and suggested next
-        sections = self._build_sections(evidence_items, retrieval_res.resolved_entities)
+        sections = self._build_sections(
+            evidence_items, retrieval_res.resolved_entities, query_mode=query_mode
+        )
         suggested = self._build_suggested_next(retrieval_res.resolved_entities, query_mode)
 
         # 4. Basic Checks & Gate Stage B2

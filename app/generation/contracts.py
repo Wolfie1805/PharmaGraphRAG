@@ -130,7 +130,10 @@ class DetailSections(BaseModel):
     drug_labels: List[EvidenceItem] = Field(default_factory=list)
     variant_findings: List[VariantFindingGroup] = Field(default_factory=list)
     linked_papers: List[EvidenceItem] = Field(default_factory=list)
+    all_linked_papers: List[EvidenceItem] = Field(default_factory=list)
     recorded_relationships: List[EvidenceItem] = Field(default_factory=list)
+    guidelines_label: Optional[str] = None
+    drug_labels_label: Optional[str] = None
 
 
 class SuggestedNextItem(BaseModel):

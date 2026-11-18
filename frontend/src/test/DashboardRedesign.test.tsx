@@ -302,6 +302,45 @@ describe('Dashboard Redesign - Stage 3 Component Suite', () => {
       expect(headings[4].textContent).toContain('5. Recorded Relationships');
     });
 
+    it('renders gene-medicine pair labels and paged all linked papers list', () => {
+      const extendedSections = {
+        ...mockSections,
+        guidelines_label: 'Records for this gene-medicine pair (not variant-specific)',
+        drug_labels_label: 'Records for this gene-medicine pair (not variant-specific)',
+        all_linked_papers: [
+          { source_id: '1000001', source_type: 'pubmed', title: 'Paper One', chunk_text: 'Text 1' },
+          { source_id: '1000002', source_type: 'pubmed', title: 'Paper Two', chunk_text: 'Text 2' },
+          { source_id: '1000003', source_type: 'pubmed', title: 'Paper Three', chunk_text: 'Text 3' },
+          { source_id: '1000004', source_type: 'pubmed', title: 'Paper Four', chunk_text: 'Text 4' },
+          { source_id: '1000005', source_type: 'pubmed', title: 'Paper Five', chunk_text: 'Text 5' },
+          { source_id: '1000006', source_type: 'pubmed', title: 'Paper Six', chunk_text: 'Text 6' },
+        ],
+      } as unknown as DetailSections;
+
+      render(
+        <DetailSectionsView
+          sections={extendedSections}
+          claims={[]}
+          answer="Test answer"
+        />
+      );
+
+      const pairLabels = screen.getAllByText('Records for this gene-medicine pair (not variant-specific)');
+      expect(pairLabels.length).toBe(2);
+
+      const toggleBtn = screen.getByRole('button', { name: /Show all linked papers \(6 in corpus\)/i });
+      expect(toggleBtn).toBeInTheDocument();
+      fireEvent.click(toggleBtn);
+
+      expect(screen.getByText('Paper One')).toBeInTheDocument();
+      expect(screen.getByText('Paper Five')).toBeInTheDocument();
+      expect(screen.queryByText('Paper Six')).not.toBeInTheDocument();
+
+      const showMoreBtn = screen.getByRole('button', { name: /Show more linked papers \(5 of 6\)/i });
+      fireEvent.click(showMoreBtn);
+      expect(screen.getByText('Paper Six')).toBeInTheDocument();
+    });
+
     it('applies font-mono class to star alleles and rsIDs', () => {
       render(
         <DetailSectionsView
