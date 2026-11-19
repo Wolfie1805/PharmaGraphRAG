@@ -68,6 +68,19 @@ const SUPPORTED_SHAPES: ShapeCardConfig[] = [
     exampleText: 'Try rs4244285 clopidogrel',
     exampleQuery: 'rs4244285 clopidogrel',
   },
+  {
+    id: 'indian-brand',
+    title: 'An Indian brand name',
+    template: '[Brand name]',
+    description: 'Lookup ingredients for an Indian brand name from the official NRCeS release.',
+    bullets: [
+      'Active substance ingredients mapped to ClinPGx chemicals',
+      'One-click navigation into ClinPGx evidence for matched ingredients',
+      'Honest ingredient identification without dosing or therapeutic advice',
+    ],
+    exampleText: 'Try Dolo 650',
+    exampleQuery: 'Dolo 650',
+  },
 ];
 
 export const HomeStateCards: React.FC<HomeStateCardsProps> = ({
@@ -124,7 +137,7 @@ export const HomeStateCards: React.FC<HomeStateCardsProps> = ({
             <ul className="shape-bullets-list">
               <li className="shape-bullet-item">Personal medical advice, clinical decisions, or dosing instructions</li>
               <li className="shape-bullet-item">Multi-gene polygenic risk calculations or whole exome panels</li>
-              <li className="shape-bullet-item">Queries that do not contain a recognized gene, chemical, or variant</li>
+              <li className="shape-bullet-item">Brand names that are not in the NRCeS list</li>
             </ul>
           </div>
           <div className="unsupported-footer-note">

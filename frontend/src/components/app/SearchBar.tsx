@@ -92,12 +92,21 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const standardSuggestions = suggestions.filter(
+    (item) => item.sort_group !== 'Indian brand names (NRCeS)' && item.entity_type !== 'brand'
+  );
+  const brandSuggestions = suggestions.filter(
+    (item) => item.sort_group === 'Indian brand names (NRCeS)' || item.entity_type === 'brand'
+  );
   const totalItems = suggestions.length + searches.length;
 
   const getItemAt = (index: number): { type: 'suggestion'; item: SuggestItem } | { type: 'search'; item: ReadyMadeSearch } | null => {
     if (index < 0 || index >= totalItems) return null;
+    if (index < standardSuggestions.length) {
+      return { type: 'suggestion', item: standardSuggestions[index] };
+    }
     if (index < suggestions.length) {
-      return { type: 'suggestion', item: suggestions[index] };
+      return { type: 'suggestion', item: brandSuggestions[index - standardSuggestions.length] };
     }
     return { type: 'search', item: searches[index - suggestions.length] };
   };
@@ -106,7 +115,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     onChange(item.display_label);
     setIsOpen(false);
     setActiveIndex(-1);
-    onSubmit(item.display_label, [item.canonical_id]);
+    if (item.sort_group === 'Indian brand names (NRCeS)' || item.entity_type === 'brand') {
+      onSubmit(item.display_label);
+    } else {
+      onSubmit(item.display_label, [item.canonical_id]);
+    }
   };
 
   const handleSelectSearch = (search: ReadyMadeSearch) => {
@@ -241,10 +254,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           role="listbox"
           aria-label="Suggestions"
         >
-          {suggestions.length > 0 && (
+          {standardSuggestions.length > 0 && (
             <div className="suggest-group" role="group" aria-label="Genes and medicines">
               <div className="suggest-group-header">Genes &amp; Medicines</div>
-              {suggestions.map((item, idx) => {
+              {standardSuggestions.map((item, localIdx) => {
+                const idx = localIdx;
                 const isSelected = activeIndex === idx;
                 const isTypo = item.match_kind === 'typo';
                 return (
@@ -259,7 +273,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                   >
                     <div className="suggest-item-primary">
                       <span className="suggest-item-name">{item.display_label}</span>
-                      <span className={`suggest-tag tag-${item.sort_group}`}>
+                      <span className={`suggest-tag tag-${item.sort_group || item.entity_type}`}>
                         {item.sort_group || item.entity_type}
                       </span>
                       {isTypo && <span className="suggest-tag tag-typo">Did you mean</span>}
@@ -268,6 +282,42 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                           Ambiguous ({item.candidate_count ?? 2})
                         </span>
                       )}
+                    </div>
+                    {item.matched_alias && item.matched_alias.toLowerCase() !== item.display_label.toLowerCase() && (
+                      <div className="suggest-item-secondary">
+                        <span className="suggest-alias-prefix">Matched alias:</span>{' '}
+                        <span className="suggest-alias-val">{item.matched_alias}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {brandSuggestions.length > 0 && (
+            <div className="suggest-group" role="group" aria-label="Indian brand names (NRCeS)">
+              <div className="suggest-group-header">Indian brand names (NRCeS)</div>
+              {brandSuggestions.map((item, localIdx) => {
+                const idx = standardSuggestions.length + localIdx;
+                const isSelected = activeIndex === idx;
+                const isTypo = item.match_kind === 'typo';
+                return (
+                  <div
+                    key={`${item.canonical_id}-${item.matched_alias}-${idx}`}
+                    id={`suggest-option-${idx}`}
+                    className={`suggest-option-item ${isSelected ? 'is-active' : ''}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => handleSelectSuggestion(item)}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                  >
+                    <div className="suggest-item-primary">
+                      <span className="suggest-item-name">{item.display_label}</span>
+                      <span className="suggest-tag tag-brand">
+                        Indian brand (NRCeS)
+                      </span>
+                      {isTypo && <span className="suggest-tag tag-typo">Did you mean</span>}
                     </div>
                     {item.matched_alias && item.matched_alias.toLowerCase() !== item.display_label.toLowerCase() && (
                       <div className="suggest-item-secondary">

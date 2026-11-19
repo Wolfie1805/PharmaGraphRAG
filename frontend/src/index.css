@@ -395,6 +395,12 @@ body::before {
   border: 1px solid var(--border-subtle);
 }
 
+.tag-brand {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
 .suggest-item-secondary {
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -2825,6 +2831,267 @@ body::before {
 
 .rel-assoc-block {
   margin: 0.5rem 0 0.65rem 0;
+}
+
+/* ==========================================================================
+   Brand Lookup View Styles (NRCeS Common Drug Codes)
+   ========================================================================== */
+
+.brand-lookup-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.card-brand-header {
+  border-left: 3px solid #f59e0b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+}
+
+.brand-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.brand-source-badge {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.brand-count-badge {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.brand-lookup-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.brand-scope-banner {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.brand-scope-primary {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.brand-scope-secondary {
+  font-size: 0.82rem;
+  color: #f59e0b;
+  line-height: 1.4;
+}
+
+.brand-products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.brand-product-card {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  border-left: 3px solid rgba(255, 255, 255, 0.18);
+}
+
+.product-brand-name {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: #ffffff;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.product-generic-name {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.generic-label {
+  color: var(--text-muted);
+}
+
+.generic-val {
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+.product-orphan-fallback {
+  font-size: 0.85rem;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.3);
+  padding: 0.65rem 0.9rem;
+  border-radius: 6px;
+}
+
+.product-ingredients-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.ingredients-header {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.ingredients-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ingredient-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 0.6rem 0.9rem;
+}
+
+.ingredient-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ingredient-substance-name {
+  font-size: 0.9rem;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.ingredient-substance-id {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ingredient-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ingredient-matched {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ingredient-matched .status-label {
+  font-size: 0.82rem;
+  color: #a7f3d0;
+}
+
+.btn-open-ingredient {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-open-ingredient:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.7);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+}
+
+.ingredient-ambiguous {
+  font-size: 0.82rem;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+}
+
+.ingredient-unmatched {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.brand-pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-pagination {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-pagination:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-pagination:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 /* Reduced Effects Mode */

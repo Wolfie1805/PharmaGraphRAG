@@ -93,7 +93,7 @@ export const DoesNotDoSection: React.FC = () => {
             </li>
             <li className="check-item negated">
               <span className="icon-cross" aria-hidden="true">✕</span>
-              <span><strong>Does not know brand names:</strong> Resolves international non-proprietary chemical names only.</span>
+              <span><strong>Brand names limited to NRCeS:</strong> Indian brand names are recognized only where they appear in the NRCeS release, and only to list ingredients.</span>
             </li>
             <li className="check-item negated">
               <span className="icon-cross" aria-hidden="true">✕</span>

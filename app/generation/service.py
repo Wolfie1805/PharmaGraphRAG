@@ -30,6 +30,7 @@ from app.generation.contracts import (
 )
 from app.generation.guard import InputGuard
 from app.generation.verifier import CitationVerifier
+from app.retrieval.brand_index import BrandIndex, BrandLookupData
 from app.retrieval.pipeline import RetrievalPipeline
 
 # Module-level in-memory cache for variant annotations
@@ -134,6 +135,7 @@ class AnswerService:
             self.llm_client = llm_client
         else:
             self.llm_client = get_llm_client(self.config, mock=mock_llm)
+        self.brand_index = BrandIndex()
         # Pre-warm in-memory caches so first request never times out
         _get_var_drug_ann_cache()
         _get_guideline_source_cache()
@@ -750,6 +752,74 @@ class AnswerService:
         )
         has_ambiguous = any(e.status == "ambiguous" for e in retrieval_res.resolved_entities)
 
+        # Check brand matches
+        brand_matches = self.brand_index.search(question)
+
+        # Ambiguity resolution: if both a brand match and a ClinPGx entity match exist for the same text
+        if (resolved_cids or has_ambiguous) and brand_matches:
+            brand_candidates = [
+                {
+                    "canonical_id": f"nrces:brand:{b['brand_id']}",
+                    "entity_type": "Indian brand (NRCeS)",
+                    "primary_source_id": b["brand_id"],
+                    "display_name": b["brand_name"],
+                    "normalized_name": b["normalized_name"],
+                    "is_drug": True,
+                    "defined_by": "NRCeS",
+                    "is_ambiguous": False,
+                }
+                for b in brand_matches[:10]
+            ]
+            if resolved_entities_dicts:
+                for e_dict in resolved_entities_dicts:
+                    e_dict["status"] = "ambiguous"
+                    existing_cands = e_dict.get("candidates", [])
+                    e_dict["candidates"] = existing_cands + brand_candidates
+                    types = set(e_dict.get("candidate_types", []))
+                    types.add("Indian brand (NRCeS)")
+                    e_dict["candidate_types"] = sorted(list(types))
+            else:
+                resolved_entities_dicts.append({
+                    "name": question,
+                    "query": question,
+                    "status": "ambiguous",
+                    "candidate_types": ["Indian brand (NRCeS)"],
+                    "candidates": brand_candidates,
+                })
+
+            flags: List[str] = ["ambiguous_entity", "insufficient_evidence"]
+            return AskResponse(
+                question=question,
+                answer=(
+                    "Multiple matching entities and Indian brands were found in the database. "
+                    "Please select a specific candidate below."
+                ),
+                claims=[],
+                related_claims=[],
+                evidence_bundle=EvidenceBundle(
+                    query=question,
+                    resolved_entity_ids=[],
+                    items=[],
+                    total_items=0,
+                    has_sufficient_evidence=False,
+                ),
+                resolved_entities=resolved_entities_dicts,
+                flags=flags,
+                removed_claims_count=0,
+                disclaimer_text=self.config.disclaimer_text,
+                answer_mode=self.config.llm_mode,
+                meaning_coverage=meaning_coverage,
+                llm_calls=0,
+                network_calls=0,
+                builder_calls=0,
+                query_mode="ambiguous",
+                overview=None,
+                sections=None,
+                brands=None,
+                suggested_next=[],
+                prompt_templates=[],
+            )
+
         flags: List[str] = []
         if has_ambiguous:
             flags.append("ambiguous_entity")
@@ -793,6 +863,43 @@ class AnswerService:
 
         # 2c. Gate Stage B1: No resolved or ambiguous entity found
         if not resolved_cids and not has_ambiguous:
+            if brand_matches:
+                brand_data = self.brand_index.get_brand_lookup_data(
+                    question, offset=overview_offset, limit=10
+                )
+                disclaimer = (
+                    "This only identifies ingredients. It does not say what the medicine is for "
+                    "or how to take it. Lack of ClinPGx records does not mean a medicine is safe."
+                )
+                return AskResponse(
+                    question=question,
+                    answer="Indian brand name match from NRCeS Common Drug Codes for India.",
+                    claims=[],
+                    related_claims=[],
+                    evidence_bundle=EvidenceBundle(
+                        query=question,
+                        resolved_entity_ids=[],
+                        items=[],
+                        total_items=0,
+                        has_sufficient_evidence=False,
+                    ),
+                    resolved_entities=[],
+                    flags=["brand_lookup"],
+                    removed_claims_count=0,
+                    disclaimer_text=disclaimer,
+                    answer_mode="brand_lookup",
+                    meaning_coverage=meaning_coverage,
+                    llm_calls=0,
+                    network_calls=0,
+                    builder_calls=0,
+                    query_mode="brand_lookup",
+                    overview=None,
+                    sections=None,
+                    brands=brand_data,
+                    suggested_next=[],
+                    prompt_templates=[],
+                )
+
             flags.append("unrecognized_entity")
             unrecognized_message = (
                 "No recognized gene, variant or chemical was found in your question in the "

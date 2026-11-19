@@ -47,3 +47,5 @@ Thumbs.db
 .dvc/cache/
 .dvc/tmp/
 
+
+.vite/

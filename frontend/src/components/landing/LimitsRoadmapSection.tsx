@@ -19,8 +19,8 @@ export const LimitsRoadmapSection: React.FC = () => {
           </h3>
           <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#9a9aa0', fontSize: '0.88rem', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <li>
-              <strong style={{ color: '#ffffff' }}>Brand names not recognized: </strong>
-              The entity resolver is normalized to generic international non-proprietary chemical names.
+              <strong style={{ color: '#ffffff' }}>Brand names not recognized outside NRCeS: </strong>
+              Indian brand names are recognized only where they appear in the NRCeS release, and only to list ingredients.
             </li>
             <li>
               <strong style={{ color: '#ffffff' }}>Annotation records lack curation dates: </strong>

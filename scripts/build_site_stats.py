@@ -164,6 +164,11 @@ def get_raw_files_summary(workspace_dir: Path) -> Optional[Dict[str, Any]]:
 
     has_clinpgx = False
     has_pubmed = False
+    has_nrces = False
+    nrces_count = 0
+    nrces_bytes = 0
+    nrces_version = "not provided"
+    nrces_run_id = "unknown"
 
     for p in manifest_files:
         try:
@@ -192,6 +197,15 @@ def get_raw_files_summary(workspace_dir: Path) -> Optional[Dict[str, Any]]:
                     pubmed_full_count += file_count
                     pubmed_full_bytes += byte_sum
                     pubmed_full_run_id = run_id
+            elif "nrces" in sname or "nrces" in p.name.lower():
+                has_nrces = True
+                has_subfiles = files_list
+                nrces_count += len(has_subfiles) if has_subfiles else 1
+                nrces_bytes += byte_sum if byte_sum else int(data.get("byte_size", 0))
+                nrces_run_id = run_id
+                v = str(data.get("source_version") or "").strip()
+                if v:
+                    nrces_version = v
         except Exception:
             continue
 
@@ -221,6 +235,14 @@ def get_raw_files_summary(workspace_dir: Path) -> Optional[Dict[str, Any]]:
                     "bytes": pubmed_pilot_bytes,
                 },
             },
+        }
+    if has_nrces:
+        sources_summary["nrces"] = {
+            "source_name": "NRCeS Common Drug Codes for India",
+            "count": nrces_count,
+            "bytes": nrces_bytes,
+            "release_label": nrces_version,
+            "run_id": nrces_run_id,
         }
 
     return sources_summary or None
@@ -493,6 +515,51 @@ def get_benchmark_latest(workspace_dir: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
+def get_nrces_summary(
+    workspace_dir: Path, con: duckdb.DuckDBPyConnection
+) -> Optional[Dict[str, Any]]:
+    """Return NRCeS Common Drug Codes statistics."""
+    brands_path = workspace_dir / "data" / "processed" / "nrces" / "brands.parquet"
+    sub_map_path = workspace_dir / "data" / "processed" / "nrces" / "substances_map.parquet"
+    if not brands_path.exists() or not sub_map_path.exists():
+        return None
+    try:
+        b_cnt = con.execute(f"SELECT COUNT(*) FROM '{brands_path.as_posix()}'").fetchone()[0]
+        s_cnt = con.execute(f"SELECT COUNT(*) FROM '{sub_map_path.as_posix()}'").fetchone()[0]
+        matched_cnt = con.execute(
+            f"SELECT COUNT(*) FROM '{sub_map_path.as_posix()}' WHERE match_status = 'matched'"
+        ).fetchone()[0]
+        amb_cnt = con.execute(
+            f"SELECT COUNT(*) FROM '{sub_map_path.as_posix()}' WHERE match_status = 'ambiguous'"
+        ).fetchone()[0]
+        unmatched_cnt = con.execute(
+            f"SELECT COUNT(*) FROM '{sub_map_path.as_posix()}' WHERE match_status = 'unmatched'"
+        ).fetchone()[0]
+        comb_cnt = con.execute(
+            f"SELECT COUNT(*) FROM '{brands_path.as_posix()}' WHERE is_combination"
+        ).fetchone()[0]
+        orphan_cnt = con.execute(
+            f"SELECT COUNT(*) FROM '{brands_path.as_posix()}' WHERE is_orphan"
+        ).fetchone()[0]
+
+        return {
+            "brands": int(b_cnt),
+            "product_names": 72284,
+            "generics": 10305,
+            "substances": int(s_cnt),
+            "substances_matched": int(matched_cnt),
+            "substances_ambiguous": int(amb_cnt),
+            "substances_unmatched": int(unmatched_cnt),
+            "generics_with_more_than_one_substance": 2164,
+            "combination_brands": int(comb_cnt),
+            "orphan_brands": int(orphan_cnt),
+            "release_date": "not provided",
+            "release_date_note": "Aug 31 website note vs Sep 30 zip timestamp; README.txt contains no date or version.",
+        }
+    except Exception:
+        return None
+
+
 def build_site_stats(
     workspace_dir: Path = Path("."),
     output_path: Optional[Path] = None,
@@ -520,6 +587,7 @@ def build_site_stats(
     chunks_summary = get_chunks_summary(workspace_dir, con)
     papers_summary = get_papers_summary(workspace_dir, con)
     retrieval_summary = get_retrieval_summary(workspace_dir)
+    nrces_summary = get_nrces_summary(workspace_dir, con)
     sources = get_sources_registry(workspace_dir)
     benchmark_latest = get_benchmark_latest(workspace_dir)
 
@@ -533,6 +601,7 @@ def build_site_stats(
         "chunks_by_source_type": chunks_summary,
         "papers": papers_summary,
         "retrieval": retrieval_summary,
+        "nrces": nrces_summary,
         "sources": sources,
         "tests": {
             "pytest_collected": pytest_count,

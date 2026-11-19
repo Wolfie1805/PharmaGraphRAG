@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import duckdb
 from pydantic import BaseModel, Field
 
+from app.retrieval.brand_index import BrandIndex
 from app.retrieval.config import RetrievalConfig
 
 
@@ -95,6 +96,7 @@ class SuggestService:
         self._chem_to_genes: Dict[str, List[str]] = defaultdict(list)
 
         self._load_data()
+        self.brand_index = BrandIndex()
 
     def _determine_sort_group(self, entity_type: str) -> str:
         et = entity_type.lower()
@@ -464,7 +466,57 @@ class SuggestService:
                 if len(ready_searches) >= 3:
                     break
 
+        # Brand suggestions from NRCeS
+        brand_matches = self.brand_index.search(trimmed)
+        brand_suggestions: List[SuggestionItem] = []
+
+        if brand_matches:
+            # Sorted by name, capped by limit, label as stored
+            for b in brand_matches[:clamped_limit]:
+                brand_suggestions.append(
+                    SuggestionItem(
+                        label=b["brand_name"],
+                        canonical_id=f"nrces:brand:{b['brand_id']}",
+                        entity_type="brand",
+                        sort_group="Indian brand names (NRCeS)",
+                        display_label=b["brand_name"],
+                        matched_alias=b["brand_name"],
+                        match_kind="word_prefix",
+                        is_ambiguous=False,
+                        all_candidate_types=["Indian brand (NRCeS)"],
+                    )
+                )
+        elif q_len >= 5:
+            # Typo suggestions following existing typo rule (Levenshtein distance <= 2 for queries >= 5)
+            typo_matches: List[Tuple[int, Dict[str, Any]]] = []
+            seen_bids: Set[str] = set()
+            for b in self.brand_index._brands:
+                if b["brand_id"] in seen_bids:
+                    continue
+                first_tok = b["tokens"][0] if b["tokens"] else ""
+                dist = levenshtein_distance(q_low, first_tok, max_dist=2)
+                if dist <= 2:
+                    seen_bids.add(b["brand_id"])
+                    typo_matches.append((dist, b))
+            typo_matches.sort(key=lambda x: (x[0], x[1]["brand_name"].lower()))
+            for dist, b in typo_matches[:clamped_limit]:
+                brand_suggestions.append(
+                    SuggestionItem(
+                        label=b["brand_name"],
+                        canonical_id=f"nrces:brand:{b['brand_id']}",
+                        entity_type="brand",
+                        sort_group="Indian brand names (NRCeS)",
+                        display_label=b["brand_name"],
+                        matched_alias=b["brand_name"],
+                        match_kind="typo",
+                        is_ambiguous=False,
+                        all_candidate_types=["Indian brand (NRCeS)"],
+                    )
+                )
+
+        # Merge suggestions: entities first, then brands, capped by limit
+        combined_suggestions = final_suggestions + brand_suggestions
         return SuggestResponse(
-            suggestions=final_suggestions,
+            suggestions=combined_suggestions,
             searches=ready_searches[:3],
         )

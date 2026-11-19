@@ -20,6 +20,7 @@ const ALLOW_LIST_DIGITS = new Set([
   '480', // Canvas helix height px
   '500', // Font weight 500
   '600', // Font weight 600 / canvas fallback px
+  '650', // Common brand strength / example query (Dolo 650)
   '700', // Font weight 700 / SVG coordinate
   '768', // Tablet breakpoint px
   '800', // Canvas fallback px

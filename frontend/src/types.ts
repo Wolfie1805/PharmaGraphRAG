@@ -31,7 +31,7 @@ export interface SuggestItem {
   matched_alias: string;
   match_kind: 'exact' | 'prefix' | 'word_prefix' | 'substring' | 'typo';
   entity_type: string;
-  sort_group: 'chemical' | 'gene' | 'variant' | 'allele' | 'other';
+  sort_group: 'chemical' | 'gene' | 'variant' | 'allele' | 'Indian brand names (NRCeS)' | 'other';
   is_ambiguous?: boolean;
   candidate_count?: number;
 }
@@ -167,6 +167,36 @@ export interface PromptTemplateItem {
   description: string;
 }
 
+export interface BrandIngredientItem {
+  substance_id: string;
+  substance_name: string;
+  status: string;
+  clinpgx_canonical_id?: string | null;
+  clinpgx_display_name?: string | null;
+  clinpgx_candidates?: string[];
+  is_openable: boolean;
+}
+
+export interface BrandProductItem {
+  brand_id: string;
+  brand_name: string;
+  generic_id: string;
+  generic_name: string;
+  ingredients_listed: string[];
+  ingredients: BrandIngredientItem[];
+  is_combination: boolean;
+  is_orphan: boolean;
+  orphan_message?: string | null;
+}
+
+export interface BrandLookupData {
+  total_count: number;
+  offset: number;
+  limit: number;
+  products: BrandProductItem[];
+  disclaimer: string;
+}
+
 export interface AskResponse {
   question: string;
   answer: string;
@@ -185,6 +215,7 @@ export interface AskResponse {
   query_mode?: string;
   overview?: OverviewData | null;
   sections?: DetailSections | null;
+  brands?: BrandLookupData | null;
   suggested_next?: SuggestedNextItem[];
   prompt_templates?: PromptTemplateItem[];
 }

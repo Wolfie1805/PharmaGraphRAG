@@ -61,5 +61,38 @@
         "location": "docs/licenses.md#L43"
       }
     ]
+  },
+  {
+    "name": "NRCeS Common Drug Codes for India",
+    "description": "Common Drug Codes for India Flat Files Package published by NRCeS (C-DAC) providing substance, generic, brand, and product name mappings.",
+    "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+    "date_checked": "2026-11-18",
+    "attribution": "Common Drug Codes for India, National Resource Centre for EHR Standards (NRCeS), C-DAC, CC BY 4.0, https://www.nrces.in/services/national-releases; changes: parsed into tables",
+    "license_notes": [
+      {
+        "quote": "Common Drug Codes for India, National Resource Centre for EHR Standards (NRCeS), C-DAC, CC BY 4.0, https://www.nrces.in/services/national-releases; changes: parsed into tables",
+        "location": "docs/licenses.md#L88"
+      },
+      {
+        "quote": "The Common Drug Codes for India (Flat Files Package) is produced by National Resource Centre for EHR Standards (NRCeS) at Centre for Development of Advanced Computing (C-DAC), Pune under the terms of the Creative Commons Attribution 4.0 International Public License, https://creativecommons.org/licenses/by/4.0/",
+        "location": "docs/licenses.md#L99"
+      },
+      {
+        "quote": "The Flat Files Package contain some SNOMED CT codes (identifiers) and Terms from its International Release. The usage of SNOMED CT International Release content is governed by relevant clauses of SNOMED CT Affiliate License extended to the user of this package.",
+        "location": "docs/licenses.md#L103"
+      },
+      {
+        "quote": "The Licensee can redistribute this package within India. The Licensee can create derivatives or implementation-related products and services using this package within India.",
+        "location": "docs/licenses.md#L107"
+      },
+      {
+        "quote": "Commercial use or public release of NRCeS-derived data requires review.",
+        "location": "docs/licenses.md#L91"
+      },
+      {
+        "quote": "NRCeS-derived data stays private and local.",
+        "location": "docs/licenses.md#L89"
+      }
+    ]
   }
 ]

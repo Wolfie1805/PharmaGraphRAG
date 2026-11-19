@@ -32,6 +32,11 @@ const FAQ_ITEMS: FAQItem[] = [
       'To prevent clinical harm, automated refusal gates intercept requests for dosing advice, patient therapy guidance, or personal recommendations.',
   },
   {
+    question: 'Are brand name medicines supported?',
+    answer:
+      'Indian brand names are recognized only where they appear in the NRCeS release, and only to list ingredients. Commercial brand names outside this release are not recognized.',
+  },
+  {
     question: 'What is the purpose of this software?',
     answer:
       'It is an informational tool for researchers and educators to discover and verify published gene-drug interaction evidence through transparent, traceable citations.',
@@ -89,6 +94,24 @@ export const LicenseAndFaqSection: React.FC<LicenseAndFaqSectionProps> = ({ stat
               </span>
             </div>
           )}
+        </div>
+
+        <h4 style={{ fontFamily: 'var(--font-heading)', color: '#ffffff', fontSize: '1rem', marginTop: '1.25rem', marginBottom: '0.5rem' }}>
+          NRCES COMMON DRUG CODES LICENSE TERMS &amp; ATTRIBUTION
+        </h4>
+        <p style={{ fontSize: '0.88rem', color: '#9a9aa0', lineHeight: 1.5, marginBottom: '0.5rem' }}>
+          NRCeS-derived data is licensed under CC BY 4.0. NRCeS-derived data stays private and local. Commercial use or public release of NRCeS-derived data requires review.
+        </p>
+        <div style={{ background: 'rgba(0, 0, 0, 0.3)', padding: '0.85rem', borderRadius: '6px', fontSize: '0.82rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <p style={{ margin: '0 0 0.5rem 0', color: '#e5e5e8', fontWeight: 500 }}>
+            Attribution: Common Drug Codes for India, National Resource Centre for EHR Standards (NRCeS), C-DAC, CC BY 4.0, https://www.nrces.in/services/national-releases; changes: parsed into tables
+          </p>
+          <div style={{ marginTop: '0.5rem' }}>
+            <span style={{ color: '#9a9aa0', fontWeight: 600 }}>Verbatim Quote: </span>
+            <span style={{ color: '#ffffff', fontStyle: 'italic' }}>
+              &ldquo;The Licensee can redistribute this package within India. The Licensee can create derivatives or implementation-related products and services using this package within India.&rdquo;
+            </span>
+          </div>
         </div>
       </div>
 

@@ -1,9 +1,9 @@
 {
   "generated_at": "2026-11-14T12:50:11.147213+00:00",
   "git": {
-    "commit": "83b8ba869cf2b590b5c3941f8ad9e34a3c3320c6",
-    "latest_tag": "d3c-reviewed",
-    "dirty": false
+    "commit": "5d71961a6c6fdb0d5960001e246d7d6ee4952916",
+    "latest_tag": "d8-reviewed",
+    "dirty": true
   },
   "raw_files": {
     "clinpgx": {
@@ -29,6 +29,13 @@
           "bytes": 915740
         }
       }
+    },
+    "nrces": {
+      "source_name": "NRCeS Common Drug Codes for India",
+      "count": 1,
+      "bytes": 4148530,
+      "release_label": "not provided (README.txt provides no version or date; website release note link dated 2026-08-31; BrandMaster.txt zip timestamp 2026-09-30)",
+      "run_id": "20261118_2cab0068"
     }
   },
   "processed_tables": {
@@ -112,6 +119,20 @@
       }
     },
     "default_answer_mode": "extractive"
+  },
+  "nrces": {
+    "brands": 93911,
+    "product_names": 72284,
+    "generics": 10305,
+    "substances": 3283,
+    "substances_matched": 1460,
+    "substances_ambiguous": 4,
+    "substances_unmatched": 1819,
+    "generics_with_more_than_one_substance": 2164,
+    "combination_brands": 29095,
+    "orphan_brands": 14,
+    "release_date": "not provided",
+    "release_date_note": "Aug 31 website note vs Sep 30 zip timestamp; README.txt contains no date or version."
   },
   "sources": [
     {
@@ -200,6 +221,39 @@
           "query": "(VKORC1[Title/Abstract] AND warfarin[Title/Abstract]) AND hasabstract[text]",
           "esearch_count": 978,
           "retrieval_date": "2026-10-31"
+        }
+      ]
+    },
+    {
+      "name": "NRCeS Common Drug Codes for India",
+      "description": "Common Drug Codes for India Flat Files Package published by NRCeS (C-DAC) providing substance, generic, brand, and product name mappings.",
+      "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+      "date_checked": "2026-11-18",
+      "attribution": "Common Drug Codes for India, National Resource Centre for EHR Standards (NRCeS), C-DAC, CC BY 4.0, https://www.nrces.in/services/national-releases; changes: parsed into tables",
+      "license_notes": [
+        {
+          "quote": "Common Drug Codes for India, National Resource Centre for EHR Standards (NRCeS), C-DAC, CC BY 4.0, https://www.nrces.in/services/national-releases; changes: parsed into tables",
+          "location": "docs/licenses.md#L88"
+        },
+        {
+          "quote": "The Common Drug Codes for India (Flat Files Package) is produced by National Resource Centre for EHR Standards (NRCeS) at Centre for Development of Advanced Computing (C-DAC), Pune under the terms of the Creative Commons Attribution 4.0 International Public License, https://creativecommons.org/licenses/by/4.0/",
+          "location": "docs/licenses.md#L99"
+        },
+        {
+          "quote": "The Flat Files Package contain some SNOMED CT codes (identifiers) and Terms from its International Release. The usage of SNOMED CT International Release content is governed by relevant clauses of SNOMED CT Affiliate License extended to the user of this package.",
+          "location": "docs/licenses.md#L103"
+        },
+        {
+          "quote": "The Licensee can redistribute this package within India. The Licensee can create derivatives or implementation-related products and services using this package within India.",
+          "location": "docs/licenses.md#L107"
+        },
+        {
+          "quote": "Commercial use or public release of NRCeS-derived data requires review.",
+          "location": "docs/licenses.md#L91"
+        },
+        {
+          "quote": "NRCeS-derived data stays private and local.",
+          "location": "docs/licenses.md#L89"
         }
       ]
     }

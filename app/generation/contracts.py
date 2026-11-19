@@ -173,5 +173,6 @@ class AskResponse(BaseModel):
     query_mode: str = "unrecognized"
     overview: Optional[OverviewData] = None
     sections: Optional[DetailSections] = None
+    brands: Optional[Any] = None
     suggested_next: List[SuggestedNextItem] = Field(default_factory=list)
     prompt_templates: List[PromptTemplateItem] = Field(default_factory=list)

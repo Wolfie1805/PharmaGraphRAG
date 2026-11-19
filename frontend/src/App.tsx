@@ -6,6 +6,7 @@ import { HomeStateCards } from './components/app/HomeStateCards';
 import { ResultsHeader } from './components/app/ResultsHeader';
 import { OverviewTable } from './components/app/OverviewTable';
 import { DetailSectionsView } from './components/app/DetailSectionsView';
+import { BrandLookupView } from './components/app/BrandLookupView';
 import {
   AmbiguityPickerCard,
   BackendOfflineCard,
@@ -153,7 +154,8 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
     candidateName: string,
     originalTerm?: string
   ) => {
-    const updatedHints = [candidateId];
+    const isBrand = candidateId.startsWith('brand:');
+    const updatedHints = isBrand ? [] : [candidateId];
     setActiveHints(updatedHints);
     const newQuery = replaceAmbiguousTerm(question, originalTerm, candidateName);
     setQuestion(newQuery);
@@ -204,9 +206,11 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
   const isAmbiguous =
     queryMode === 'ambiguous' ||
     (response?.resolved_entities || []).some((e) => e.status === 'ambiguous');
+  const isBrandLookup = queryMode === 'brand_lookup' && Boolean(response?.brands);
   const isUnrecognized =
-    queryMode === 'unrecognized' ||
-    (response?.flags || []).includes('unrecognized_entity');
+    !isBrandLookup &&
+    (queryMode === 'unrecognized' ||
+      (response?.flags || []).includes('unrecognized_entity'));
   const isOverview =
     queryMode === 'medicine_overview' ||
     queryMode === 'gene_overview' ||
@@ -370,7 +374,7 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
               )}
 
               {/* Edge State C: Unrecognized Entity */}
-              {!isRefusal && !isAmbiguous && isUnrecognized && (
+              {!isRefusal && !isAmbiguous && !isBrandLookup && isUnrecognized && (
                 <UnrecognizedEntityCard
                   term={response.question}
                   templates={response.prompt_templates}
@@ -378,8 +382,21 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
                 />
               )}
 
+              {/* Mode 0: Brand Lookup Mode (NRCeS Indian Brand Names) */}
+              {!isRefusal && !isAmbiguous && isBrandLookup && response.brands && (
+                <BrandLookupView
+                  brands={response.brands}
+                  onOpenIngredient={(displayName, canonicalId) => {
+                    handleSelectExample(displayName, [canonicalId]);
+                  }}
+                  onPageChange={(newOffset) => {
+                    handleQuery(question, activeHints, false, newOffset);
+                  }}
+                />
+              )}
+
               {/* Mode 1: Overview Mode (Medicine or Gene Overview) */}
-              {!isRefusal && !isAmbiguous && !isUnrecognized && isOverview && response.overview && (
+              {!isRefusal && !isAmbiguous && !isBrandLookup && !isUnrecognized && isOverview && response.overview && (
                 <OverviewTable
                   overview={response.overview}
                   queryMode={queryMode}
@@ -390,7 +407,7 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
               )}
 
               {/* Mode 2: Detail Mode (Pair Detail or Variant Detail) */}
-              {!isRefusal && !isAmbiguous && !isUnrecognized && isDetail && (
+              {!isRefusal && !isAmbiguous && !isBrandLookup && !isUnrecognized && isDetail && (
                 <>
                   {hasInsufficientEvidence && (
                     <InsufficientEvidenceCard
