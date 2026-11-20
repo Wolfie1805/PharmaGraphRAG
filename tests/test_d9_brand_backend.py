@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 
 from app.api.app import app
 from app.ingestion.build_brand_tables import BANNED_COLUMN_NAMES
-from app.retrieval.brand_index import BrandIndex, is_unbranded_generic
+from app.retrieval.brand_index import BrandIndex
 
 
 @pytest.fixture(scope="module")

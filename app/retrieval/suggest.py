@@ -97,6 +97,7 @@ class SuggestService:
 
         self._load_data()
         self.brand_index = BrandIndex()
+        self._brand_typo_cache: Dict[str, List[SuggestionItem]] = {}
 
     def _determine_sort_group(self, entity_type: str) -> str:
         et = entity_type.lower()
@@ -487,32 +488,58 @@ class SuggestService:
                     )
                 )
         elif q_len >= 5:
-            # Typo suggestions following existing typo rule (Levenshtein distance <= 2 for queries >= 5)
-            typo_matches: List[Tuple[int, Dict[str, Any]]] = []
-            seen_bids: Set[str] = set()
-            for b in self.brand_index._brands:
-                if b["brand_id"] in seen_bids:
-                    continue
-                first_tok = b["tokens"][0] if b["tokens"] else ""
-                dist = levenshtein_distance(q_low, first_tok, max_dist=2)
-                if dist <= 2:
-                    seen_bids.add(b["brand_id"])
-                    typo_matches.append((dist, b))
-            typo_matches.sort(key=lambda x: (x[0], x[1]["brand_name"].lower()))
-            for dist, b in typo_matches[:clamped_limit]:
-                brand_suggestions.append(
-                    SuggestionItem(
-                        label=b["brand_name"],
-                        canonical_id=f"nrces:brand:{b['brand_id']}",
-                        entity_type="brand",
-                        sort_group="Indian brand names (NRCeS)",
-                        display_label=b["brand_name"],
-                        matched_alias=b["brand_name"],
-                        match_kind="typo",
-                        is_ambiguous=False,
-                        all_candidate_types=["Indian brand (NRCeS)"],
+            # Typo suggestions following existing typo rule
+            # (Levenshtein distance <= 2 for queries >= 5).
+            # Prefilter candidates by length (+/- 2) and first character or trigram.
+            cached_typos = self._brand_typo_cache.get(q_low)
+            if cached_typos is not None:
+                brand_suggestions.extend(cached_typos[:clamped_limit])
+            else:
+                cand_first_tokens = self.brand_index.get_typo_candidates(q_low)
+                valid_first_tokens: Dict[str, int] = {}
+                for ft in cand_first_tokens:
+                    dist = levenshtein_distance(q_low, ft, max_dist=2)
+                    if dist <= 2:
+                        valid_first_tokens[ft] = dist
+
+                matching_indices: Set[int] = set()
+                for ft in valid_first_tokens:
+                    matching_indices.update(
+                        self.brand_index._first_token_to_brand_indices.get(ft, [])
                     )
-                )
+
+                typo_matches: List[Tuple[int, Dict[str, Any]]] = []
+                seen_bids: Set[str] = set()
+                for b_idx in sorted(matching_indices):
+                    b = self.brand_index._brands[b_idx]
+                    bid = b["brand_id"]
+                    if bid not in seen_bids:
+                        ft = b["tokens"][0] if b["tokens"] else ""
+                        dist = valid_first_tokens.get(ft)
+                        if dist is not None:
+                            seen_bids.add(bid)
+                            typo_matches.append((dist, b))
+
+                typo_matches.sort(key=lambda x: (x[0], x[1]["brand_name"].lower()))
+                cur_typo_suggestions: List[SuggestionItem] = []
+                for dist, b in typo_matches[:clamped_limit]:
+                    cur_typo_suggestions.append(
+                        SuggestionItem(
+                            label=b["brand_name"],
+                            canonical_id=f"nrces:brand:{b['brand_id']}",
+                            entity_type="brand",
+                            sort_group="Indian brand names (NRCeS)",
+                            display_label=b["brand_name"],
+                            matched_alias=b["brand_name"],
+                            match_kind="typo",
+                            is_ambiguous=False,
+                            all_candidate_types=["Indian brand (NRCeS)"],
+                        )
+                    )
+                if len(self._brand_typo_cache) > 2000:
+                    self._brand_typo_cache.clear()
+                self._brand_typo_cache[q_low] = cur_typo_suggestions
+                brand_suggestions.extend(cur_typo_suggestions)
 
         # Merge suggestions: entities first, then brands, capped by limit
         combined_suggestions = final_suggestions + brand_suggestions

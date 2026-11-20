@@ -7,6 +7,7 @@ and citation verification.
 import csv
 import io
 import json
+import re
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -30,7 +31,8 @@ from app.generation.contracts import (
 )
 from app.generation.guard import InputGuard
 from app.generation.verifier import CitationVerifier
-from app.retrieval.brand_index import BrandIndex, BrandLookupData
+from app.retrieval.brand_index import BrandIndex
+from app.retrieval.entity_lookup import QUESTION_WORD_STOPLIST
 from app.retrieval.pipeline import RetrievalPipeline
 
 # Module-level in-memory cache for variant annotations
@@ -752,10 +754,18 @@ class AnswerService:
         )
         has_ambiguous = any(e.status == "ambiguous" for e in retrieval_res.resolved_entities)
 
-        # Check brand matches
-        brand_matches = self.brand_index.search(question)
+        # Check brand matches: attempted only when first query token has >= 4 characters
+        # and is not in question-words stoplist
+        first_token = (question.strip().split() or [""])[0].lower()
+        first_token_clean = re.sub(r"^[^\w]+|[^\w]+$", "", first_token)
+        can_trigger_brand = (
+            len(first_token_clean) >= 4
+            and first_token_clean not in QUESTION_WORD_STOPLIST
+        )
+        brand_matches = self.brand_index.search(question) if can_trigger_brand else []
 
-        # Ambiguity resolution: if both a brand match and a ClinPGx entity match exist for the same text
+        # Ambiguity resolution: if both a brand match and a ClinPGx entity match exist
+        # for the same text
         if (resolved_cids or has_ambiguous) and brand_matches:
             brand_candidates = [
                 {

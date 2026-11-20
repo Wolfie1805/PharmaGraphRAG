@@ -18,14 +18,12 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+
 import duckdb
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from app.ingestion.nrces import (
-    load_all_nrces_tables,
-    normalize_search_term,
-)
+from app.ingestion.nrces import normalize_search_term
 
 BANNED_COLUMN_NAMES = {
     "indication",
@@ -58,8 +56,9 @@ def build_nrces_processed_tables(
         archive_sha256 = hashlib.sha256(f.read()).hexdigest()
 
     # 2. Load required tables in memory
-    from app.ingestion.nrces import parse_nrces_tsv_bytes
     import zipfile
+
+    from app.ingestion.nrces import parse_nrces_tsv_bytes
 
     with zipfile.ZipFile(zip_path, "r") as z:
         sub_raw = z.read("CommonDrugCodesForIndia_FlatFilePackage/SubstanceMaster.txt")

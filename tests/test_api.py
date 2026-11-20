@@ -16,6 +16,8 @@ Unit tests for Phase D2 generation layer and API:
 - FastAPI endpoints (health and ask)
 """
 
+import json
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -358,7 +360,7 @@ def test_zero_builder_and_model_calls_on_refusal_and_insufficiency():
         retrieval_pipeline=MockNoEntityPipeline(),  # type: ignore
         llm_client=mock_client,
     )
-    resp_unrec = service_unrec.answer_question("dolo 650")
+    resp_unrec = service_unrec.answer_question("xyzzy")
     assert "unrecognized_entity" in resp_unrec.flags
     assert resp_unrec.claims == []
     assert resp_unrec.evidence_bundle.items == []
@@ -1172,10 +1174,22 @@ def test_api_section_c_question_words_and_lowercase_gene_flag(test_client):
 
     r_dolo = test_client.post("/api/ask", json={"question": "dolo 650"}).json()
     assert "refused" not in r_dolo["flags"]
-    assert "unrecognized_entity" in r_dolo["flags"]
+    assert r_dolo["query_mode"] == "brand_lookup"
+    assert "brand_lookup" in r_dolo["flags"]
     assert r_dolo["claims"] == []
-    assert r_dolo["evidence_bundle"]["items"] == []
-    assert r_dolo["evidence_bundle"]["has_sufficient_evidence"] is False
+    assert r_dolo["brands"] is not None
+    assert len(r_dolo["brands"]["products"]) > 0
+    full_json_str = json.dumps(r_dolo).lower()
+    for banned in (
+        "indication",
+        "contra indication",
+        "interaction with drugs",
+        "therapeutic role",
+        "classification of drugs",
+        "toxicity",
+        "substance description",
+    ):
+        assert banned not in full_json_str
 
 
 def test_fastapi_stats_endpoint(test_client):

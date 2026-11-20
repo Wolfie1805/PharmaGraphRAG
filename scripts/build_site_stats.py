@@ -554,7 +554,10 @@ def get_nrces_summary(
             "combination_brands": int(comb_cnt),
             "orphan_brands": int(orphan_cnt),
             "release_date": "not provided",
-            "release_date_note": "Aug 31 website note vs Sep 30 zip timestamp; README.txt contains no date or version.",
+            "release_date_note": (
+                "Aug 31 website note vs Sep 30 zip timestamp; "
+                "README.txt contains no date or version."
+            ),
         }
     except Exception:
         return None

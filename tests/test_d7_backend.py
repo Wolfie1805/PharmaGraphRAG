@@ -31,7 +31,7 @@ def test_query_modes_eight_queries(client):
         "rs4244285 clopidogrel": "variant_detail",
         "CYP2C19*2": "ambiguous",
         "DBI": "ambiguous",
-        "dolo 650": "unrecognized",
+        "xyzzy": "unrecognized",
         "how much clopidogrel should I take": "refused",
     }
 
@@ -145,7 +145,7 @@ def test_suggested_next_deterministic(client):
 
 def test_unrecognized_returns_prompt_templates(client):
     """Verify unrecognized query returns supported templates."""
-    resp = client.post("/api/ask", json={"question": "dolo 650"})
+    resp = client.post("/api/ask", json={"question": "xyzzy"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["query_mode"] == "unrecognized"
@@ -223,7 +223,7 @@ def test_pair_detail_all_linked_papers_list(client):
 
 def test_meaning_search_partial_absent_on_ambiguous_and_unrecognized(client):
     """Verify meaning_search_partial flag is absent on ambiguous/unrecognized, kept on answered."""
-    for q in ("DBI", "CYP2C19*2", "dolo 650"):
+    for q in ("DBI", "CYP2C19*2", "xyzzy"):
         data = client.post("/api/ask", json={"question": q}).json()
         assert data["query_mode"] in ("ambiguous", "unrecognized")
         assert not any(f.startswith("meaning_search_partial") for f in data["flags"]), (
