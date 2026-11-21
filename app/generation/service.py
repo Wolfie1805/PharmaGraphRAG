@@ -754,82 +754,6 @@ class AnswerService:
         )
         has_ambiguous = any(e.status == "ambiguous" for e in retrieval_res.resolved_entities)
 
-        # Check brand matches: attempted only when first query token has >= 4 characters
-        # and is not in question-words stoplist
-        first_token = (question.strip().split() or [""])[0].lower()
-        first_token_clean = re.sub(r"^[^\w]+|[^\w]+$", "", first_token)
-        can_trigger_brand = (
-            len(first_token_clean) >= 4
-            and first_token_clean not in QUESTION_WORD_STOPLIST
-        )
-        brand_matches = self.brand_index.search(question) if can_trigger_brand else []
-
-        # Ambiguity resolution: if both a brand match and a ClinPGx entity match exist
-        # for the same text
-        if (resolved_cids or has_ambiguous) and brand_matches:
-            brand_candidates = [
-                {
-                    "canonical_id": f"nrces:brand:{b['brand_id']}",
-                    "entity_type": "Indian brand (NRCeS)",
-                    "primary_source_id": b["brand_id"],
-                    "display_name": b["brand_name"],
-                    "normalized_name": b["normalized_name"],
-                    "is_drug": True,
-                    "defined_by": "NRCeS",
-                    "is_ambiguous": False,
-                }
-                for b in brand_matches[:10]
-            ]
-            if resolved_entities_dicts:
-                for e_dict in resolved_entities_dicts:
-                    e_dict["status"] = "ambiguous"
-                    existing_cands = e_dict.get("candidates", [])
-                    e_dict["candidates"] = existing_cands + brand_candidates
-                    types = set(e_dict.get("candidate_types", []))
-                    types.add("Indian brand (NRCeS)")
-                    e_dict["candidate_types"] = sorted(list(types))
-            else:
-                resolved_entities_dicts.append({
-                    "name": question,
-                    "query": question,
-                    "status": "ambiguous",
-                    "candidate_types": ["Indian brand (NRCeS)"],
-                    "candidates": brand_candidates,
-                })
-
-            flags: List[str] = ["ambiguous_entity", "insufficient_evidence"]
-            return AskResponse(
-                question=question,
-                answer=(
-                    "Multiple matching entities and Indian brands were found in the database. "
-                    "Please select a specific candidate below."
-                ),
-                claims=[],
-                related_claims=[],
-                evidence_bundle=EvidenceBundle(
-                    query=question,
-                    resolved_entity_ids=[],
-                    items=[],
-                    total_items=0,
-                    has_sufficient_evidence=False,
-                ),
-                resolved_entities=resolved_entities_dicts,
-                flags=flags,
-                removed_claims_count=0,
-                disclaimer_text=self.config.disclaimer_text,
-                answer_mode=self.config.llm_mode,
-                meaning_coverage=meaning_coverage,
-                llm_calls=0,
-                network_calls=0,
-                builder_calls=0,
-                query_mode="ambiguous",
-                overview=None,
-                sections=None,
-                brands=None,
-                suggested_next=[],
-                prompt_templates=[],
-            )
-
         flags: List[str] = []
         if has_ambiguous:
             flags.append("ambiguous_entity")
@@ -837,6 +761,8 @@ class AnswerService:
             flags.append(f"possible_gene_name_lowercase:{low_word}")
 
         # 2b. Gate Stage B1: Ambiguous entity found
+        # (ClinPGx wins: if text resolves to ClinPGx entities (resolved/ambiguous),
+        # ClinPGx handling wins and no brand candidates are added.)
         if has_ambiguous:
             flags.append("insufficient_evidence")
             ambiguous_answer = (
@@ -867,48 +793,68 @@ class AnswerService:
                 query_mode="ambiguous",
                 overview=None,
                 sections=None,
+                brands=None,
                 suggested_next=[],
                 prompt_templates=[],
             )
 
         # 2c. Gate Stage B1: No resolved or ambiguous entity found
         if not resolved_cids and not has_ambiguous:
-            if brand_matches:
-                brand_data = self.brand_index.get_brand_lookup_data(
-                    question, offset=overview_offset, limit=10
-                )
-                disclaimer = (
-                    "This only identifies ingredients. It does not say what the medicine is for "
-                    "or how to take it. Lack of ClinPGx records does not mean a medicine is safe."
-                )
-                return AskResponse(
-                    question=question,
-                    answer="Indian brand name match from NRCeS Common Drug Codes for India.",
-                    claims=[],
-                    related_claims=[],
-                    evidence_bundle=EvidenceBundle(
-                        query=question,
-                        resolved_entity_ids=[],
-                        items=[],
-                        total_items=0,
-                        has_sufficient_evidence=False,
-                    ),
-                    resolved_entities=[],
-                    flags=["brand_lookup"],
-                    removed_claims_count=0,
-                    disclaimer_text=disclaimer,
-                    answer_mode="brand_lookup",
-                    meaning_coverage=meaning_coverage,
-                    llm_calls=0,
-                    network_calls=0,
-                    builder_calls=0,
-                    query_mode="brand_lookup",
-                    overview=None,
-                    sections=None,
-                    brands=brand_data,
-                    suggested_next=[],
-                    prompt_templates=[],
-                )
+            # Brand lookup trigger rules:
+            # 1. query has at most 6 tokens
+            # 2. first token has at least 4 characters
+            # 3. first token is not in question-words stoplist
+            # 4. first token equals a complete brand first token
+            # 5. exact group from BrandIndex.search is non-empty
+            query_tokens = question.strip().split()
+            first_token = query_tokens[0].lower() if query_tokens else ""
+            first_token_clean = re.sub(r"^[^\w]+|[^\w]+$", "", first_token)
+            can_trigger_brand = (
+                len(query_tokens) <= 6
+                and len(first_token_clean) >= 4
+                and first_token_clean not in QUESTION_WORD_STOPLIST
+                and self.brand_index.has_first_token(first_token_clean)
+            )
+
+            if can_trigger_brand:
+                exact_matches, _similar_matches = self.brand_index.search(question, grouped=True)
+                if exact_matches:
+                    brand_data = self.brand_index.get_brand_lookup_data(
+                        question, offset=overview_offset, limit=10
+                    )
+                    disclaimer = (
+                        "This only identifies ingredients. It does not say what the "
+                        "medicine is for or how to take it. Lack of ClinPGx records "
+                        "does not mean a medicine is safe."
+                    )
+                    return AskResponse(
+                        question=question,
+                        answer="Indian brand name match from NRCeS Common Drug Codes for India.",
+                        claims=[],
+                        related_claims=[],
+                        evidence_bundle=EvidenceBundle(
+                            query=question,
+                            resolved_entity_ids=[],
+                            items=[],
+                            total_items=0,
+                            has_sufficient_evidence=False,
+                        ),
+                        resolved_entities=[],
+                        flags=["brand_lookup"],
+                        removed_claims_count=0,
+                        disclaimer_text=disclaimer,
+                        answer_mode="brand_lookup",
+                        meaning_coverage=meaning_coverage,
+                        llm_calls=0,
+                        network_calls=0,
+                        builder_calls=0,
+                        query_mode="brand_lookup",
+                        overview=None,
+                        sections=None,
+                        brands=brand_data,
+                        suggested_next=[],
+                        prompt_templates=[],
+                    )
 
             flags.append("unrecognized_entity")
             unrecognized_message = (

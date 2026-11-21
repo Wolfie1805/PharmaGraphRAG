@@ -269,4 +269,72 @@ describe('BrandLookupView Component Suite', () => {
     // Unsupported card
     expect(screen.getByText('Brand names that are not in the NRCeS list')).toBeInTheDocument();
   });
+
+  it('renders similar products collapsed under details summary and never opens automatically', () => {
+    const dataWithSimilar: BrandLookupData = {
+      total_count: 1,
+      offset: 0,
+      limit: 10,
+      disclaimer: 'This only identifies ingredients.',
+      products: [
+        {
+          brand_id: 'brand:1001',
+          brand_name: 'Dolo 650 mg oral tablet',
+          generic_id: 'gen:2001',
+          generic_name: 'paracetamol 650 mg oral tablet',
+          ingredients_listed: ['Paracetamol'],
+          is_combination: false,
+          is_orphan: false,
+          ingredients: [],
+        },
+      ],
+      similar_total_count: 2,
+      similar_products: [
+        {
+          brand_id: 'brand:1002',
+          brand_name: 'Dolod 650 mg oral tablet',
+          generic_id: 'gen:2002',
+          generic_name: 'paracetamol 650 mg oral tablet',
+          ingredients_listed: ['Paracetamol'],
+          is_combination: false,
+          is_orphan: false,
+          ingredients: [],
+        },
+        {
+          brand_id: 'brand:1003',
+          brand_name: 'Dolopar 650 mg oral tablet',
+          generic_id: 'gen:2003',
+          generic_name: 'paracetamol 650 mg oral tablet',
+          ingredients_listed: ['Paracetamol'],
+          is_combination: false,
+          is_orphan: false,
+          ingredients: [],
+        },
+      ],
+    };
+
+    render(
+      <BrandLookupView
+        brands={dataWithSimilar}
+        onOpenIngredient={vi.fn()}
+        onPageChange={vi.fn()}
+      />
+    );
+
+    // Exact product is present
+    expect(screen.getByText('Dolo 650 mg oral tablet')).toBeInTheDocument();
+
+    // Summary heading is present
+    const summaryText = 'Other products with similar names. Check the full name on your pack.';
+    expect(screen.getByText(summaryText)).toBeInTheDocument();
+
+    // Details element is not open by default
+    const detailsEl = screen.getByText(summaryText).closest('details');
+    expect(detailsEl).toBeInTheDocument();
+    expect(detailsEl).not.toHaveAttribute('open');
+
+    // Similar products exist in DOM inside details
+    expect(screen.getByText('Dolod 650 mg oral tablet')).toBeInTheDocument();
+    expect(screen.getByText('Dolopar 650 mg oral tablet')).toBeInTheDocument();
+  });
 });

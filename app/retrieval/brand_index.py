@@ -58,6 +58,8 @@ class BrandLookupData(BaseModel):
     offset: int
     limit: int
     products: List[BrandProductItem]
+    similar_total_count: int = 0
+    similar_products: List[BrandProductItem] = Field(default_factory=list)
     disclaimer: str = (
         "This only identifies ingredients. It does not say what the medicine is for "
         "or how to take it. Lack of ClinPGx records does not mean a medicine is safe."
@@ -180,8 +182,7 @@ class BrandIndex:
             self._first_tokens_by_char_and_len[k].sort()
         self._indexed_brand_count = len(self._brands)
 
-    def search(self, query: str) -> List[Dict[str, Any]]:
-        """Search brands where all query tokens are word-prefixes of brand tokens in order."""
+    def _ensure_dynamic_index(self) -> None:
         if len(self._brands) != self._indexed_brand_count:
             for idx in range(self._indexed_brand_count, len(self._brands)):
                 b = self._brands[idx]
@@ -198,79 +199,121 @@ class BrandIndex:
             self._sorted_unique_tokens = sorted(self._token_to_brand_indices.keys())
             self._indexed_brand_count = len(self._brands)
             self._cache.clear()
+
+    def has_first_token(self, token: str) -> bool:
+        """Check whether token equals a normalized first token of any brand."""
+        self._ensure_dynamic_index()
+        return token in self._first_token_to_brand_indices
+
+    def search(
+        self, query: str, grouped: bool = False
+    ) -> List[Dict[str, Any]] | Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Search brands where all query tokens are word-prefixes of brand tokens in order.
+
+        When grouped=True, returns (exact_matches, similar_matches):
+        - exact: query's first token equals brand's FIRST token (full-token equality),
+                 and remaining query tokens are word-prefixes of later brand tokens in order.
+        - similar: every other match under the existing prefix rule.
+        """
+        self._ensure_dynamic_index()
         q_norm = normalize_search_term(query)
         if not q_norm:
-            return []
+            return ([], []) if grouped else []
 
         # Explicit requirement: 'paracetamol' is an unrecognized generic substance, not a brand
         if q_norm == "paracetamol":
-            return []
-
-        if q_norm in self._cache:
-            return self._cache[q_norm]
+            return ([], []) if grouped else []
 
         q_tokens = q_norm.split()
         if not q_tokens:
-            return []
+            return ([], []) if grouped else []
 
-        first_q = q_tokens[0]
-        left = bisect.bisect_left(self._sorted_unique_tokens, first_q)
-        cand_tokens: List[str] = []
-        for i in range(left, len(self._sorted_unique_tokens)):
-            t = self._sorted_unique_tokens[i]
-            if t.startswith(first_q):
-                cand_tokens.append(t)
+        if q_norm in self._cache:
+            matches = self._cache[q_norm]
+        else:
+            first_q = q_tokens[0]
+            left = bisect.bisect_left(self._sorted_unique_tokens, first_q)
+            cand_tokens: List[str] = []
+            for i in range(left, len(self._sorted_unique_tokens)):
+                t = self._sorted_unique_tokens[i]
+                if t.startswith(first_q):
+                    cand_tokens.append(t)
+                else:
+                    break
+
+            if not cand_tokens:
+                self._cache[q_norm] = []
+                return ([], []) if grouped else []
+
+            cand_indices_set: Set[int] = set()
+            for t in cand_tokens:
+                cand_indices_set.update(self._token_to_brand_indices[t])
+
+            if len(q_tokens) > 1:
+                for extra_q in q_tokens[1:]:
+                    left_ex = bisect.bisect_left(self._sorted_unique_tokens, extra_q)
+                    ex_cands: List[str] = []
+                    for i in range(left_ex, len(self._sorted_unique_tokens)):
+                        t = self._sorted_unique_tokens[i]
+                        if t.startswith(extra_q):
+                            ex_cands.append(t)
+                        else:
+                            break
+                    if not ex_cands:
+                        self._cache[q_norm] = []
+                        return ([], []) if grouped else []
+                    ex_set: Set[int] = set()
+                    for t in ex_cands:
+                        ex_set.update(self._token_to_brand_indices[t])
+                    cand_indices_set.intersection_update(ex_set)
+                    if not cand_indices_set:
+                        self._cache[q_norm] = []
+                        return ([], []) if grouped else []
+
+            matches = []
+            for b_idx in sorted(cand_indices_set):
+                b = self._brands[b_idx]
+                b_tokens = b["tokens"]
+                q_idx = 0
+                for b_tok in b_tokens:
+                    if b_tok.startswith(q_tokens[q_idx]):
+                        q_idx += 1
+                        if q_idx == len(q_tokens):
+                            matches.append(b)
+                            break
+
+            matches.sort(key=lambda x: x["brand_name"].lower())
+            if len(self._cache) > 2000:
+                self._cache.clear()
+            self._cache[q_norm] = matches
+
+        if not grouped:
+            return matches
+
+        exact_matches: List[Dict[str, Any]] = []
+        similar_matches: List[Dict[str, Any]] = []
+        for b in matches:
+            b_tokens = b.get("tokens", [])
+            is_exact = False
+            if b_tokens and b_tokens[0] == q_tokens[0]:
+                if len(q_tokens) == 1:
+                    is_exact = True
+                else:
+                    q_idx = 1
+                    for b_tok in b_tokens[1:]:
+                        if b_tok.startswith(q_tokens[q_idx]):
+                            q_idx += 1
+                            if q_idx == len(q_tokens):
+                                is_exact = True
+                                break
+            if is_exact:
+                exact_matches.append(b)
             else:
-                break
+                similar_matches.append(b)
 
-        if not cand_tokens:
-            self._cache[q_norm] = []
-            return []
+        return exact_matches, similar_matches
 
-        cand_indices_set: Set[int] = set()
-        for t in cand_tokens:
-            cand_indices_set.update(self._token_to_brand_indices[t])
-
-        if len(q_tokens) > 1:
-            for extra_q in q_tokens[1:]:
-                left_ex = bisect.bisect_left(self._sorted_unique_tokens, extra_q)
-                ex_cands: List[str] = []
-                for i in range(left_ex, len(self._sorted_unique_tokens)):
-                    t = self._sorted_unique_tokens[i]
-                    if t.startswith(extra_q):
-                        ex_cands.append(t)
-                    else:
-                        break
-                if not ex_cands:
-                    self._cache[q_norm] = []
-                    return []
-                ex_set: Set[int] = set()
-                for t in ex_cands:
-                    ex_set.update(self._token_to_brand_indices[t])
-                cand_indices_set.intersection_update(ex_set)
-                if not cand_indices_set:
-                    self._cache[q_norm] = []
-                    return []
-
-        matches: List[Dict[str, Any]] = []
-        for b_idx in sorted(cand_indices_set):
-            b = self._brands[b_idx]
-            b_tokens = b["tokens"]
-            q_idx = 0
-            for b_tok in b_tokens:
-                if b_tok.startswith(q_tokens[q_idx]):
-                    q_idx += 1
-                    if q_idx == len(q_tokens):
-                        matches.append(b)
-                        break
-
-        matches.sort(key=lambda x: x["brand_name"].lower())
-        if len(self._cache) > 2000:
-            self._cache.clear()
-        self._cache[q_norm] = matches
-        return matches
-
-    def get_typo_candidates(self, q_low: str) -> List[str]:
+    def get_typo_candidates(self, q_low: str, candidate_cap: int = 120) -> List[str]:
         """Return candidate first tokens prefiltered by length and first character or trigrams."""
         q_len = len(q_low)
         if q_len < 5:
@@ -278,31 +321,35 @@ class BrandIndex:
         first_char = q_low[0]
         q_trigrams = {q_low[i : i + 3] for i in range(len(q_low) - 2)}
 
-        candidates: List[str] = []
+        raw_candidates: List[str] = []
         for (ch, l_val), tokens in self._first_tokens_by_char_and_len.items():
             if abs(l_val - q_len) <= 2:
                 if ch == first_char:
-                    candidates.extend(tokens)
+                    raw_candidates.extend(tokens)
                 elif q_trigrams:
                     for t in tokens:
                         if any(t[i : i + 3] in q_trigrams for i in range(len(t) - 2)):
-                            candidates.append(t)
+                            raw_candidates.append(t)
 
-        return sorted(list(dict.fromkeys(candidates)))
+        unique_cands = sorted(list(dict.fromkeys(raw_candidates)))
+        if len(unique_cands) <= candidate_cap:
+            return unique_cands
 
-    def get_brand_lookup_data(
-        self,
-        query: str,
-        offset: int = 0,
-        limit: int = 10,
-    ) -> BrandLookupData:
-        """Build BrandLookupData response with ingredient status and pagination."""
-        all_matches = self.search(query)
-        total_count = len(all_matches)
-        paged = all_matches[offset : offset + limit]
+        # Rank candidates: same first character + trigram overlap
+        scored = []
+        for t in unique_cands:
+            t_tri = {t[i : i + 3] for i in range(len(t) - 2)}
+            shared = len(q_trigrams & t_tri) if q_trigrams else 0
+            same_first = 3 if t and t[0] == first_char else 0
+            scored.append((same_first + shared, t))
+        scored.sort(key=lambda x: (-x[0], x[1]))
+        return [t for _, t in scored[:candidate_cap]]
 
+    def _build_product_items(
+        self, brand_records: List[Dict[str, Any]]
+    ) -> List[BrandProductItem]:
         products: List[BrandProductItem] = []
-        for b in paged:
+        for b in brand_records:
             ingredients: List[BrandIngredientItem] = []
             orphan_msg: Optional[str] = None
 
@@ -373,10 +420,36 @@ class BrandIndex:
                     orphan_message=orphan_msg,
                 )
             )
+        return products
+
+    def get_brand_lookup_data(
+        self,
+        query: str,
+        offset: int = 0,
+        limit: int = 10,
+        similar_offset: int = 0,
+        similar_limit: int = 20,
+    ) -> BrandLookupData:
+        """Build BrandLookupData response with ingredient status and pagination.
+
+        Exact matches are placed in products (paged).
+        Similar matches are placed in similar_products (paged, capped at 20).
+        """
+        exact_matches, similar_matches = self.search(query, grouped=True)
+        total_count = len(exact_matches)
+        similar_total_count = len(similar_matches)
+
+        paged_exact = exact_matches[offset : offset + limit]
+        paged_similar = similar_matches[similar_offset : similar_offset + similar_limit]
+
+        products = self._build_product_items(paged_exact)
+        similar_products = self._build_product_items(paged_similar)
 
         return BrandLookupData(
             total_count=total_count,
             offset=offset,
             limit=limit,
             products=products,
+            similar_total_count=similar_total_count,
+            similar_products=similar_products,
         )

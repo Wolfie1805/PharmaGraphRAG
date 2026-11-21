@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrandLookupData } from '../../types';
+import { BrandLookupData, BrandProductItem } from '../../types';
 
 interface BrandLookupViewProps {
   brands: BrandLookupData;
@@ -12,9 +12,70 @@ export const BrandLookupView: React.FC<BrandLookupViewProps> = ({
   onOpenIngredient,
   onPageChange,
 }) => {
-  const { total_count, offset, limit, products } = brands;
+  const { total_count, offset, limit, products, similar_products } = brands;
   const start = total_count > 0 ? offset + 1 : 0;
   const end = Math.min(offset + limit, total_count);
+
+  const renderProductCard = (product: BrandProductItem) => (
+    <article key={product.brand_id} className="brand-product-card edge-card" role="listitem">
+      <div className="product-header">
+        <h4 className="product-brand-name">{product.brand_name}</h4>
+        {product.generic_name ? (
+          <div className="product-generic-name">
+            <span className="generic-label">Generic formulation:</span>{' '}
+            <span className="generic-val">{product.generic_name}</span>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Orphan check: "Ingredients not available in NRCeS data for this product" (orphan generic) */}
+      {product.is_orphan || product.ingredients.length === 0 ? (
+        <div className="product-orphan-fallback" role="note">
+          Ingredients not available in NRCeS data for this product
+        </div>
+      ) : (
+        <div className="product-ingredients-section">
+          <div className="ingredients-header">Ingredients listed by NRCeS:</div>
+          <ul className="ingredients-list">
+            {product.ingredients.map((ing) => (
+              <li key={ing.substance_id} className="ingredient-item">
+                <div className="ingredient-info">
+                  <span className="ingredient-substance-name">{ing.substance_name}</span>
+                  <span className="ingredient-substance-id font-mono">[{ing.substance_id}]</span>
+                </div>
+
+                <div className="ingredient-status-row">
+                  {ing.is_openable && ing.clinpgx_display_name && ing.clinpgx_canonical_id ? (
+                    <div className="ingredient-matched">
+                      <span className="status-label">
+                        found in ClinPGx as <strong>{ing.clinpgx_display_name}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-open-ingredient btn-glow"
+                        onClick={() => onOpenIngredient(ing.clinpgx_display_name!, ing.clinpgx_canonical_id!)}
+                        aria-label={`Open ClinPGx evidence for ${ing.clinpgx_display_name}`}
+                      >
+                        Open {ing.clinpgx_display_name}
+                      </button>
+                    </div>
+                  ) : ing.status === 'ambiguous' ? (
+                    <div className="ingredient-ambiguous">
+                      Matches several ClinPGx chemicals: {ing.clinpgx_candidates && ing.clinpgx_candidates.length > 0 ? ing.clinpgx_candidates.join(', ') : 'multiple'} (not openable)
+                    </div>
+                  ) : (
+                    <div className="ingredient-unmatched">
+                      Not matched in ClinPGx
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </article>
+  );
 
   return (
     <div className="brand-lookup-view" role="region" aria-label="Brand Lookup Results">
@@ -43,69 +104,22 @@ export const BrandLookupView: React.FC<BrandLookupViewProps> = ({
         </div>
       </div>
 
-      {/* 3. Product List */}
+      {/* 3. Exact Product List */}
       <div className="brand-products-list" role="list">
-        {products.map((product) => (
-          <article key={product.brand_id} className="brand-product-card edge-card" role="listitem">
-            <div className="product-header">
-              <h4 className="product-brand-name">{product.brand_name}</h4>
-              {product.generic_name ? (
-                <div className="product-generic-name">
-                  <span className="generic-label">Generic formulation:</span>{' '}
-                  <span className="generic-val">{product.generic_name}</span>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Orphan check: "Ingredients not available in NRCeS data for this product" (orphan generic) */}
-            {product.is_orphan || product.ingredients.length === 0 ? (
-              <div className="product-orphan-fallback" role="note">
-                Ingredients not available in NRCeS data for this product
-              </div>
-            ) : (
-              <div className="product-ingredients-section">
-                <div className="ingredients-header">Ingredients listed by NRCeS:</div>
-                <ul className="ingredients-list">
-                  {product.ingredients.map((ing) => (
-                    <li key={ing.substance_id} className="ingredient-item">
-                      <div className="ingredient-info">
-                        <span className="ingredient-substance-name">{ing.substance_name}</span>
-                        <span className="ingredient-substance-id font-mono">[{ing.substance_id}]</span>
-                      </div>
-
-                      <div className="ingredient-status-row">
-                        {ing.is_openable && ing.clinpgx_display_name && ing.clinpgx_canonical_id ? (
-                          <div className="ingredient-matched">
-                            <span className="status-label">
-                              found in ClinPGx as <strong>{ing.clinpgx_display_name}</strong>
-                            </span>
-                            <button
-                              type="button"
-                              className="btn-open-ingredient btn-glow"
-                              onClick={() => onOpenIngredient(ing.clinpgx_display_name!, ing.clinpgx_canonical_id!)}
-                              aria-label={`Open ClinPGx evidence for ${ing.clinpgx_display_name}`}
-                            >
-                              Open {ing.clinpgx_display_name}
-                            </button>
-                          </div>
-                        ) : ing.status === 'ambiguous' ? (
-                          <div className="ingredient-ambiguous">
-                            Matches several ClinPGx chemicals: {ing.clinpgx_candidates && ing.clinpgx_candidates.length > 0 ? ing.clinpgx_candidates.join(', ') : 'multiple'} (not openable)
-                          </div>
-                        ) : (
-                          <div className="ingredient-unmatched">
-                            Not matched in ClinPGx
-                          </div>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </article>
-        ))}
+        {products.map((product) => renderProductCard(product))}
       </div>
+
+      {/* 3b. Similar Products Collapsible */}
+      {similar_products && similar_products.length > 0 && (
+        <details className="brand-similar-details">
+          <summary className="brand-similar-summary">
+            Other products with similar names. Check the full name on your pack.
+          </summary>
+          <div className="brand-similar-list" role="list">
+            {similar_products.map((product) => renderProductCard(product))}
+          </div>
+        </details>
+      )}
 
       {/* 4. Paging */}
       {total_count > limit && (

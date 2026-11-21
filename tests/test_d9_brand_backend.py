@@ -29,7 +29,7 @@ def client() -> TestClient:
 
 
 def test_dolo_650_brand_lookup(client: TestClient):
-    """'Dolo 650' gives Dolo 650 mg oral tablet with Acetaminophen and ClinPGx ID."""
+    """'Dolo 650' gives Dolo 650 mg oral tablet in exact group and Dolod/Dolopar in similar."""
     resp = client.post("/api/ask", json={"question": "Dolo 650"})
     assert resp.status_code == 200
     data = resp.json()
@@ -38,16 +38,20 @@ def test_dolo_650_brand_lookup(client: TestClient):
 
     brands_data = data["brands"]
     products = brands_data["products"]
-    assert len(products) >= 1
+    similar_products = brands_data["similar_products"]
+    assert len(products) == 1, f"Expected 1 exact product, got {len(products)}"
+    assert len(similar_products) == 2, f"Expected 2 similar products, got {len(similar_products)}"
 
     # Find exact Dolo 650 mg oral tablet
-    dolo_650 = next(
-        (p for p in products if "Dolo 650" in p["brand_name"]),
-        None,
-    )
-    assert dolo_650 is not None, "Dolo 650 mg oral tablet must be present"
+    dolo_650 = products[0]
+    assert "Dolo 650" in dolo_650["brand_name"]
     assert dolo_650["generic_name"] == "Acetaminophen 650 mg oral tablet"
     assert dolo_650["is_orphan"] is False
+
+    # Check similar products (Dolod 650 and Dolopar 650)
+    sim_names = [p["brand_name"] for p in similar_products]
+    assert any("Dolod 650" in n for n in sim_names)
+    assert any("Dolopar 650" in n for n in sim_names)
 
     # Check ingredient Acetaminophen
     assert len(dolo_650["ingredients"]) == 1
@@ -59,23 +63,27 @@ def test_dolo_650_brand_lookup(client: TestClient):
 
 
 def test_flexon_gives_4_products_including_three_ingredients(client: TestClient):
-    """'Flexon' gives 4 products including one combination with three ingredients."""
+    """'Flexon' gives 3 exact products and Mega Flexon in similar (4 total)."""
     resp = client.post("/api/ask", json={"question": "Flexon"})
     assert resp.status_code == 200
     data = resp.json()
     assert data["query_mode"] == "brand_lookup"
 
     products = data["brands"]["products"]
-    assert len(products) == 4, f"Expected exactly 4 Flexon products, got {len(products)}"
+    similar_products = data["brands"]["similar_products"]
+    assert len(products) == 3, f"Expected exactly 3 exact Flexon products, got {len(products)}"
+    assert len(similar_products) >= 1
 
     names = [p["brand_name"] for p in products]
     assert any("Flexon 100 mg/5 mL" in n for n in names)
     assert any("Flexon 400 mg" in n for n in names)
-    assert any("Mega Flexon" in n for n in names)
+
+    similar_names = [p["brand_name"] for p in similar_products]
+    assert any("Mega Flexon" in n for n in similar_names)
 
     # Combination with three ingredients (Flexon MR)
     flexon_mr = next((p for p in products if "Flexon MR" in p["brand_name"]), None)
-    assert flexon_mr is not None, "Flexon MR must be present"
+    assert flexon_mr is not None, "Flexon MR must be present in exact products"
     assert len(flexon_mr["ingredients"]) == 3
     ing_names = [i["substance_name"] for i in flexon_mr["ingredients"]]
     assert set(ing_names) == {"Chlorzoxazone", "Ibuprofen", "Acetaminophen"}
@@ -148,21 +156,85 @@ def test_refusal_guard_takes_priority(client: TestClient):
     assert data["builder_calls"] == 0
 
 
-def test_brand_and_entity_collision_returns_ambiguous(client: TestClient):
-    """When a query matches both a ClinPGx entity and a brand, return ambiguous mode."""
-    resp = client.post("/api/ask", json={"question": "AVIL"})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["query_mode"] == "ambiguous"
-    assert "ambiguous_entity" in data["flags"]
+def test_clinpgx_wins_over_brand_lookup(client: TestClient):
+    """If text resolves to ClinPGx entities, ClinPGx wins with no brand candidates."""
+    # 1. 'bosentan' resolves to ClinPGx chemical bosentan; no brand candidates
+    resp_bos = client.post("/api/ask", json={"question": "bosentan"})
+    assert resp_bos.status_code == 200
+    data_bos = resp_bos.json()
+    assert data_bos["query_mode"] == "medicine_overview"
+    assert any(e["name"] == "bosentan" for e in data_bos["resolved_entities"])
+    for ent in data_bos.get("resolved_entities", []):
+        cand_types = ent.get("candidate_types", [])
+        assert "Indian brand (NRCeS)" not in cand_types
+        for c in ent.get("candidates", []):
+            assert c.get("entity_type") != "Indian brand (NRCeS)"
 
-    resolved = data["resolved_entities"]
-    assert len(resolved) >= 1
-    candidates = resolved[0]["candidates"]
-    # Verify candidate types include 'Indian brand (NRCeS)'
-    brand_cands = [c for c in candidates if c["entity_type"] == "Indian brand (NRCeS)"]
-    assert len(brand_cands) >= 1, "Must contain Indian brand (NRCeS) candidates"
-    assert any("Avil" in c["display_name"] for c in brand_cands)
+    # 2. 'AVIL' resolves to ClinPGx entity; no Indian brand candidates added
+    resp_avil = client.post("/api/ask", json={"question": "AVIL"})
+    assert resp_avil.status_code == 200
+    data_avil = resp_avil.json()
+    assert data_avil["query_mode"] != "brand_lookup"
+    for ent in data_avil.get("resolved_entities", []):
+        cand_types = ent.get("candidate_types", [])
+        assert "Indian brand (NRCeS)" not in cand_types
+        for c in ent.get("candidates", []):
+            assert c.get("entity_type") != "Indian brand (NRCeS)"
+
+
+def test_trigger_rules_negative_and_positive(client: TestClient):
+    """Verify brand lookup trigger rules for single words, stoplist, length, and brands."""
+    # Negative cases: must NOT return brand_lookup
+    negatives = [
+        ("cat", "unrecognized", "possible_gene_name_lowercase:cat"),
+        ("pain", "unrecognized", None),
+        ("cold", "unrecognized", None),
+        ("gene", "unrecognized", None),
+        ("drug", "unrecognized", None),
+        ("dose", "unrecognized", None),
+        ("effect", "unrecognized", None),
+        ("role", "unrecognized", None),
+        ("pain relief tablets", "unrecognized", None),
+        ("cold and cough", "unrecognized", None),
+        ("what is the relationship between clopidogrel and CYP2C19", "pair_detail", None),
+    ]
+
+    for q, expected_mode, required_flag in negatives:
+        resp = client.post("/api/ask", json={"question": q})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["query_mode"] == expected_mode, f"Query '{q}' returned {data['query_mode']}"
+        assert data["query_mode"] != "brand_lookup", f"Query '{q}' should NOT return brand_lookup"
+        if required_flag:
+            assert required_flag in data.get("flags", [])
+
+    # Positive cases: must return brand_lookup
+    positives = ["dolo 650", "flexon", "minidolo"]
+    for q in positives:
+        resp = client.post("/api/ask", json={"question": q})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["query_mode"] == "brand_lookup", f"Query '{q}' must return brand_lookup"
+        assert "brand_lookup" in data.get("flags", [])
+
+
+def test_exact_vs_similar_brand_grouping_structure():
+    """Verify BrandIndex.search with grouped=True partitions exact from similar matches."""
+    index = BrandIndex()
+    # 1. 'dolo 650'
+    exact_dolo, sim_dolo = index.search("dolo 650", grouped=True)
+    assert len(exact_dolo) == 1
+    assert "Dolo 650" in exact_dolo[0]["brand_name"]
+    sim_dolo_names = [b["brand_name"] for b in sim_dolo]
+    assert any("Dolod 650" in n for n in sim_dolo_names)
+    assert any("Dolopar 650" in n for n in sim_dolo_names)
+
+    # 2. 'flexon'
+    exact_flexon, sim_flexon = index.search("flexon", grouped=True)
+    assert len(exact_flexon) == 3
+    assert len(sim_flexon) >= 1
+    sim_flexon_names = [b["brand_name"] for b in sim_flexon]
+    assert any("Mega Flexon" in n for n in sim_flexon_names)
 
 
 def test_suggest_returns_indian_brand_group_and_typo(client: TestClient):

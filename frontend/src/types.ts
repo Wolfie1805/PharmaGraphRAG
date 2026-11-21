@@ -194,6 +194,8 @@ export interface BrandLookupData {
   offset: number;
   limit: number;
   products: BrandProductItem[];
+  similar_total_count?: number;
+  similar_products?: BrandProductItem[];
   disclaimer: string;
 }
 
