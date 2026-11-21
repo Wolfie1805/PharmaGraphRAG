@@ -245,6 +245,88 @@ export const UnrecognizedEntityCard: React.FC<UnrecognizedEntityProps> = ({
 };
 
 // ============================================================================
+// 3b. Other Entity Card (Calm Blue Panel for recognized non-overview entities)
+// ============================================================================
+
+interface OtherEntityCardProps {
+  resolvedEntities?: ResolvedEntity[];
+  answer?: string;
+  templates?: PromptTemplateItem[];
+  onSelectTemplate?: (query: string) => void;
+}
+
+export const OtherEntityCard: React.FC<OtherEntityCardProps> = ({
+  resolvedEntities = [],
+  answer,
+  templates = DEFAULT_TEMPLATES,
+  onSelectTemplate,
+}) => {
+  return (
+    <div className="edge-card card-unrecognized card-other-entity" role="region" aria-label="Other Entity Notice">
+      <div className="edge-card-header">
+        <span className="edge-icon icon-info" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+        </span>
+        <div>
+          <h4 className="edge-card-title">Entity Recognized (No Dedicated Evidence Overview)</h4>
+          <p className="edge-card-lead">
+            {answer ||
+              'We recognized this entity, but this prototype currently only provides curated evidence overviews for genes, medicines, variants, and gene-medicine pairs.'}
+          </p>
+        </div>
+      </div>
+
+      {resolvedEntities.length > 0 && (
+        <div className="other-entity-chips-block">
+          <span className="other-entity-chips-label">Recognized in database:</span>
+          <div className="other-entity-chips-list">
+            {resolvedEntities.map((ent, idx) => {
+              const c = ent.candidates && ent.candidates.length > 0 ? ent.candidates[0] : null;
+              const dName = c ? c.display_name : ent.name;
+              const eType = c ? c.entity_type : (ent.candidate_types && ent.candidate_types[0]) || 'entity';
+              return (
+                <span key={idx} className="entity-chip chip-resolved">
+                  <strong>{dName}</strong>
+                  <span className="chip-type-badge">({eType})</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {templates.length > 0 && (
+        <div className="unrecognized-templates-block">
+          <span className="templates-grid-header">Supported Query Shapes:</span>
+          <div className="templates-mini-grid">
+            {templates.map((tmpl) => (
+              <div key={tmpl.name} className="template-mini-card">
+                <span className="tmpl-name">{tmpl.name}</span>
+                <code className="tmpl-shape font-mono">{tmpl.template}</code>
+                <p className="tmpl-desc">{tmpl.description}</p>
+                {onSelectTemplate && (
+                  <button
+                    type="button"
+                    className="btn-tmpl-example"
+                    onClick={() => onSelectTemplate(tmpl.example)}
+                  >
+                    <span>Try "{tmpl.example}"</span>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
 // 4. Insufficient Evidence Card (Calm Grey Panel)
 // ============================================================================
 

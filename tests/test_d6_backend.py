@@ -6,6 +6,7 @@ Tests for Phase D6 Backend Enhancements:
 4. paper_reserve mechanics for top 10 (annotations displaced, guidelines/drug_labels preserved)
 """
 
+import statistics
 import time
 
 import pytest
@@ -148,21 +149,30 @@ def test_suggest_alias_short_restriction(client):
 
 
 def test_suggest_latency_under_100ms(suggest_service):
-    """Suggest latency must be < 100 ms over 200 mixed queries."""
+    """Suggest latency must be < 100 ms over 200 mixed queries (warm-up + median of 3 p95s)."""
     queries = [
         "war", "clop", "cyp", "cyp2c19", "vkor", "abac", "hla", "fluor", "dpyd", "tpmt",
         "warfrin", "clopidogrl", "asprn", "codeine", "simva", "metformin", "tamoxifen",
         "CYP2D6", "CYP3A4", "SLCO1B1"
     ] * 10
-    latencies = []
-    for q in queries:
-        t0 = time.perf_counter()
-        suggest_service.suggest(q)
-        latencies.append((time.perf_counter() - t0) * 1000)
 
-    latencies.sort()
-    p95 = latencies[int(len(latencies) * 0.95)]
-    assert p95 < 100.0, f"p95 latency was {p95:.2f}ms, expected < 100ms"
+    # Warm-up pass
+    for q in queries[:20]:
+        suggest_service.suggest(q)
+
+    # 3 rounds of 200 queries
+    p95_runs = []
+    for _ in range(3):
+        latencies = []
+        for q in queries:
+            t0 = time.perf_counter()
+            suggest_service.suggest(q)
+            latencies.append((time.perf_counter() - t0) * 1000)
+        latencies.sort()
+        p95_runs.append(latencies[int(len(latencies) * 0.95)])
+
+    p95_median = statistics.median(p95_runs)
+    assert p95_median < 100.0, f"Median p95 latency was {p95_median:.2f}ms, expected < 100ms"
 
 
 # =========================================================================

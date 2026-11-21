@@ -12,6 +12,7 @@ import {
   BackendOfflineCard,
   HowToReadThisCard,
   InsufficientEvidenceCard,
+  OtherEntityCard,
   RefusalCard,
   SkeletonLoading,
   UnrecognizedEntityCard,
@@ -209,8 +210,10 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
   const isBrandLookup = queryMode === 'brand_lookup' && Boolean(response?.brands);
   const isUnrecognized =
     !isBrandLookup &&
+    queryMode !== 'other_entity' &&
     (queryMode === 'unrecognized' ||
       (response?.flags || []).includes('unrecognized_entity'));
+  const isOtherEntity = queryMode === 'other_entity';
   const isOverview =
     queryMode === 'medicine_overview' ||
     queryMode === 'gene_overview' ||
@@ -374,9 +377,19 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
               )}
 
               {/* Edge State C: Unrecognized Entity */}
-              {!isRefusal && !isAmbiguous && !isBrandLookup && isUnrecognized && (
+              {!isRefusal && !isAmbiguous && !isBrandLookup && !isOtherEntity && isUnrecognized && (
                 <UnrecognizedEntityCard
                   term={response.question}
+                  templates={response.prompt_templates}
+                  onSelectTemplate={(ex) => handleSelectExample(ex)}
+                />
+              )}
+
+              {/* Edge State C2: Other Recognized Entity (no dedicated overview) */}
+              {!isRefusal && !isAmbiguous && !isBrandLookup && isOtherEntity && (
+                <OtherEntityCard
+                  resolvedEntities={response.resolved_entities}
+                  answer={response.answer}
                   templates={response.prompt_templates}
                   onSelectTemplate={(ex) => handleSelectExample(ex)}
                 />

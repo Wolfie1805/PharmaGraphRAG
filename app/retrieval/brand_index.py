@@ -20,7 +20,12 @@ Phase D9 requirements:
 from __future__ import annotations
 
 import bisect
+import hashlib
+import json
+import logging
 import re
+import shutil
+import uuid
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -29,6 +34,27 @@ import duckdb
 from pydantic import BaseModel, Field
 
 from app.ingestion.nrces import normalize_search_term
+
+logger = logging.getLogger(__name__)
+
+INDEX_VERSION = "v1"
+
+
+def compute_cache_key(
+    brands_path: Path, substances_path: Path, version: str = INDEX_VERSION
+) -> str:
+    """Compute sha256 of brands.parquet + substances_map.parquet + index version constant."""
+    h = hashlib.sha256()
+    if brands_path.exists():
+        with open(brands_path, "rb") as f:
+            while chunk := f.read(1024 * 1024):
+                h.update(chunk)
+    if substances_path.exists():
+        with open(substances_path, "rb") as f:
+            while chunk := f.read(1024 * 1024):
+                h.update(chunk)
+    h.update(version.encode("utf-8"))
+    return h.hexdigest()
 
 
 class BrandIngredientItem(BaseModel):
@@ -84,9 +110,15 @@ class BrandIndex:
         self,
         brands_parquet: Path | str = Path("data/processed/nrces/brands.parquet"),
         substances_parquet: Path | str = Path("data/processed/nrces/substances_map.parquet"),
+        cache_root: Optional[Path | str] = None,
+        use_cache: bool = True,
     ):
         self.brands_parquet = Path(brands_parquet)
         self.substances_parquet = Path(substances_parquet)
+        self.cache_root = (
+            Path(cache_root) if cache_root is not None else self.brands_parquet.parent / "cache"
+        )
+        self.use_cache = use_cache
 
         # Map substance_id -> (match_status, [canonical_ids], [display_names])
         self._sub_map: Dict[str, Tuple[str, List[str], List[str]]] = {}
@@ -96,6 +128,7 @@ class BrandIndex:
         self._token_to_brand_indices: Dict[str, List[int]] = defaultdict(list)
         self._sorted_unique_tokens: List[str] = []
         self._first_tokens_by_char_and_len: Dict[Tuple[str, int], List[str]] = defaultdict(list)
+        self._first_token_trigrams: Dict[str, List[str]] = defaultdict(list)
         self._first_token_to_brand_indices: Dict[str, List[int]] = defaultdict(list)
         self._cache: Dict[str, List[Dict[str, Any]]] = {}
         self._indexed_brand_count: int = 0
@@ -104,6 +137,143 @@ class BrandIndex:
     def _load_index(self) -> None:
         if not self.brands_parquet.exists() or not self.substances_parquet.exists():
             return
+
+        if self.use_cache:
+            cache_key = compute_cache_key(
+                self.brands_parquet, self.substances_parquet, INDEX_VERSION
+            )
+            cache_dir = self.cache_root / cache_key
+            if self._load_from_cache(cache_dir, cache_key):
+                return
+
+        # Cache missed, disabled, or invalid -> rebuild cold from duckdb
+        self._build_from_duckdb()
+
+        if self.use_cache:
+            cache_key = compute_cache_key(
+                self.brands_parquet, self.substances_parquet, INDEX_VERSION
+            )
+            cache_dir = self.cache_root / cache_key
+            self._save_to_cache(cache_dir, cache_key)
+
+    def _load_from_cache(self, cache_dir: Path, expected_cache_key: str) -> bool:
+        """Validate and load persisted cache files under cache_dir."""
+        try:
+            meta_file = cache_dir / "metadata.json"
+            if not meta_file.is_file():
+                return False
+
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            if (
+                meta.get("index_version") != INDEX_VERSION
+                or meta.get("cache_key") != expected_cache_key
+            ):
+                return False
+
+            expected_brand_count = meta.get("brand_count")
+            expected_sub_count = meta.get("substance_count")
+            if not isinstance(expected_brand_count, int) or not isinstance(expected_sub_count, int):
+                return False
+
+            sub_file = cache_dir / "substances_map.json"
+            brands_file = cache_dir / "brands.json"
+            token_idx_file = cache_dir / "token_to_brand_indices.json"
+            first_token_idx_file = cache_dir / "first_token_to_brand_indices.json"
+
+            if not (
+                sub_file.is_file()
+                and brands_file.is_file()
+                and token_idx_file.is_file()
+                and first_token_idx_file.is_file()
+            ):
+                return False
+
+            raw_sub_map = json.loads(sub_file.read_text(encoding="utf-8"))
+            if len(raw_sub_map) != expected_sub_count:
+                return False
+
+            brands = json.loads(brands_file.read_text(encoding="utf-8"))
+            if len(brands) != expected_brand_count:
+                return False
+
+            token_to_brand_indices = json.loads(token_idx_file.read_text(encoding="utf-8"))
+            first_token_to_brand_indices = json.loads(
+                first_token_idx_file.read_text(encoding="utf-8")
+            )
+
+            if not isinstance(token_to_brand_indices, dict) or not isinstance(
+                first_token_to_brand_indices, dict
+            ):
+                return False
+
+            # Assign to internal state
+            self._sub_map = {
+                str(sid): (v[0], list(v[1]), list(v[2])) for sid, v in raw_sub_map.items()
+            }
+            self._brands = brands
+            self._token_to_brand_indices = defaultdict(list, token_to_brand_indices)
+            self._first_token_to_brand_indices = defaultdict(list, first_token_to_brand_indices)
+            self._rebuild_secondary_lookups()
+            return True
+        except Exception as e:
+            logger.warning("BrandIndex cache validation/loading failed: %s", e)
+            self._sub_map.clear()
+            self._brands.clear()
+            self._token_to_brand_indices.clear()
+            self._first_token_to_brand_indices.clear()
+            self._sorted_unique_tokens.clear()
+            self._first_tokens_by_char_and_len.clear()
+            self._first_token_trigrams.clear()
+            self._indexed_brand_count = 0
+            return False
+
+    def _save_to_cache(self, cache_dir: Path, cache_key: str) -> None:
+        """Atomically persist brand index data structures to cache_dir."""
+        cache_root = cache_dir.parent
+        tmp_dir = cache_root / f".tmp_{cache_dir.name}_{uuid.uuid4().hex[:8]}"
+        try:
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+
+            sub_file = tmp_dir / "substances_map.json"
+            sub_file.write_text(json.dumps(self._sub_map), encoding="utf-8")
+
+            brands_file = tmp_dir / "brands.json"
+            brands_file.write_text(json.dumps(self._brands), encoding="utf-8")
+
+            token_idx_file = tmp_dir / "token_to_brand_indices.json"
+            token_idx_file.write_text(json.dumps(self._token_to_brand_indices), encoding="utf-8")
+
+            first_token_idx_file = tmp_dir / "first_token_to_brand_indices.json"
+            first_token_idx_file.write_text(
+                json.dumps(self._first_token_to_brand_indices), encoding="utf-8"
+            )
+
+            meta = {
+                "index_version": INDEX_VERSION,
+                "cache_key": cache_key,
+                "brand_count": len(self._brands),
+                "substance_count": len(self._sub_map),
+            }
+            meta_file = tmp_dir / "metadata.json"
+            meta_file.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+            if cache_dir.exists():
+                shutil.rmtree(cache_dir, ignore_errors=True)
+            tmp_dir.replace(cache_dir)
+        except Exception as e:
+            logger.warning("Failed to atomically write brand index cache: %s", e)
+            if tmp_dir.exists():
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    def _build_from_duckdb(self) -> None:
+        """Cold build from DuckDB parquet files."""
+        self._sub_map.clear()
+        self._brands.clear()
+        self._token_to_brand_indices.clear()
+        self._first_token_to_brand_indices.clear()
+        self._sorted_unique_tokens.clear()
+        self._first_tokens_by_char_and_len.clear()
+        self._cache.clear()
 
         con = duckdb.connect(":memory:")
         sub_p = str(self.substances_parquet).replace("\\", "/")
@@ -171,13 +341,23 @@ class BrandIndex:
                 ft = tokens[0]
                 self._first_token_to_brand_indices[ft].append(idx)
 
-        # Sorted unique tokens for bisect prefix search
-        self._sorted_unique_tokens = sorted(self._token_to_brand_indices.keys())
+        self._rebuild_secondary_lookups()
 
-        # Index distinct first tokens by (first_char, length)
+    def _rebuild_secondary_lookups(self) -> None:
+        """Reconstruct fast sorted tokens, length buckets, and trigrams in-memory."""
+        self._sorted_unique_tokens = sorted(self._token_to_brand_indices.keys())
+        self._first_tokens_by_char_and_len.clear()
+        self._first_token_trigrams.clear()
         for ft in self._first_token_to_brand_indices.keys():
             if ft:
                 self._first_tokens_by_char_and_len[(ft[0], len(ft))].append(ft)
+                if len(ft) >= 3:
+                    seen_tri: Set[str] = set()
+                    for i in range(len(ft) - 2):
+                        tri = ft[i : i + 3]
+                        if tri not in seen_tri:
+                            seen_tri.add(tri)
+                            self._first_token_trigrams[tri].append(ft)
         for k in self._first_tokens_by_char_and_len:
             self._first_tokens_by_char_and_len[k].sort()
         self._indexed_brand_count = len(self._brands)
@@ -195,9 +375,7 @@ class BrandIndex:
                 if tokens:
                     ft = tokens[0]
                     self._first_token_to_brand_indices[ft].append(idx)
-                    self._first_tokens_by_char_and_len[(ft[0], len(ft))].append(ft)
-            self._sorted_unique_tokens = sorted(self._token_to_brand_indices.keys())
-            self._indexed_brand_count = len(self._brands)
+            self._rebuild_secondary_lookups()
             self._cache.clear()
 
     def has_first_token(self, token: str) -> bool:
@@ -321,27 +499,25 @@ class BrandIndex:
         first_char = q_low[0]
         q_trigrams = {q_low[i : i + 3] for i in range(len(q_low) - 2)}
 
-        raw_candidates: List[str] = []
-        for (ch, l_val), tokens in self._first_tokens_by_char_and_len.items():
-            if abs(l_val - q_len) <= 2:
-                if ch == first_char:
-                    raw_candidates.extend(tokens)
-                elif q_trigrams:
-                    for t in tokens:
-                        if any(t[i : i + 3] in q_trigrams for i in range(len(t) - 2)):
-                            raw_candidates.append(t)
+        shared_counts: Dict[str, int] = defaultdict(int)
+        if q_trigrams:
+            for tri in q_trigrams:
+                for ft in self._first_token_trigrams.get(tri, []):
+                    if abs(len(ft) - q_len) <= 2:
+                        shared_counts[ft] += 1
 
-        unique_cands = sorted(list(dict.fromkeys(raw_candidates)))
-        if len(unique_cands) <= candidate_cap:
-            return unique_cands
+        for l_diff in (-2, -1, 0, 1, 2):
+            for ft in self._first_tokens_by_char_and_len.get((first_char, q_len + l_diff), []):
+                if ft not in shared_counts:
+                    shared_counts[ft] = 0
 
-        # Rank candidates: same first character + trigram overlap
+        if not shared_counts:
+            return []
+
         scored = []
-        for t in unique_cands:
-            t_tri = {t[i : i + 3] for i in range(len(t) - 2)}
-            shared = len(q_trigrams & t_tri) if q_trigrams else 0
-            same_first = 3 if t and t[0] == first_char else 0
-            scored.append((same_first + shared, t))
+        for ft, shared in shared_counts.items():
+            same_first = 3 if ft and ft[0] == first_char else 0
+            scored.append((same_first + shared, ft))
         scored.sort(key=lambda x: (-x[0], x[1]))
         return [t for _, t in scored[:candidate_cap]]
 

@@ -99,12 +99,6 @@ QUESTION_WORD_STOPLIST = frozenset(
         "risk",
         "dose",
         "dosage",
-        "gene",
-        "genes",
-        "drug",
-        "drugs",
-        "pain",
-        "cold",
         "metabolism",
         "therapy",
         "treatment",
@@ -115,6 +109,21 @@ QUESTION_WORD_STOPLIST = frozenset(
         "study",
         "studies",
         "evidence",
+    }
+)
+
+# Separate stoplist for NRCeS brand lookup trigger gate in /api/ask.
+# Prevents generic clinical terms from triggering brand lookup
+# without degrading ClinPGx entity extraction for phenotypes such as 'Pain'.
+BRAND_TRIGGER_STOPLIST = frozenset(
+    QUESTION_WORD_STOPLIST
+    | {
+        "gene",
+        "genes",
+        "drug",
+        "drugs",
+        "pain",
+        "cold",
     }
 )
 

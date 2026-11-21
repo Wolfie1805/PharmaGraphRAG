@@ -32,7 +32,7 @@ from app.generation.contracts import (
 from app.generation.guard import InputGuard
 from app.generation.verifier import CitationVerifier
 from app.retrieval.brand_index import BrandIndex
-from app.retrieval.entity_lookup import QUESTION_WORD_STOPLIST
+from app.retrieval.entity_lookup import BRAND_TRIGGER_STOPLIST
 from app.retrieval.pipeline import RetrievalPipeline
 
 # Module-level in-memory cache for variant annotations
@@ -201,6 +201,7 @@ class AnswerService:
         chems = []
         genes = []
         variants = []
+        other_types = []
         for ent in resolved_cids:
             etype = ""
             if getattr(ent, "candidates", None) and ent.candidates:
@@ -209,6 +210,10 @@ class AnswerService:
                 etype = ent.candidate_types[0].lower()
             elif getattr(ent, "entity_type", None):
                 etype = ent.entity_type.lower()
+            elif getattr(ent, "canonical_id", None):
+                cid = str(ent.canonical_id).lower()
+                if "phenotype" in cid or "disease" in cid:
+                    etype = "phenotype"
 
             if etype == "chemical":
                 chems.append(ent)
@@ -216,6 +221,8 @@ class AnswerService:
                 genes.append(ent)
             elif etype in {"variant", "snv", "haplotype", "cnv"}:
                 variants.append(ent)
+            elif etype:
+                other_types.append(ent)
 
         if variants and chems:
             return "variant_detail"
@@ -227,6 +234,8 @@ class AnswerService:
             return "gene_overview"
         if variants and not chems:
             return "variant_overview"
+        if other_types and not chems and not genes and not variants:
+            return "other_entity"
         return "unrecognized"
 
     def _build_overview(
@@ -812,7 +821,7 @@ class AnswerService:
             can_trigger_brand = (
                 len(query_tokens) <= 6
                 and len(first_token_clean) >= 4
-                and first_token_clean not in QUESTION_WORD_STOPLIST
+                and first_token_clean not in BRAND_TRIGGER_STOPLIST
                 and self.brand_index.has_first_token(first_token_clean)
             )
 
@@ -891,6 +900,49 @@ class AnswerService:
 
         # 2d. Determine Query Mode
         query_mode = self._resolve_query_mode(False, retrieval_res.resolved_entities, False)
+
+        # Handle other_entity mode (entities resolved but no dedicated overview/detail mode exists)
+        if query_mode == "other_entity":
+            ent_descs = []
+            for e_dict in resolved_entities_dicts:
+                cands = e_dict.get("candidates", [])
+                e_type = cands[0].get("entity_type") if cands else "entity"
+                d_name = cands[0].get("display_name") if cands else e_dict.get("name")
+                ent_descs.append(f"'{d_name}' ({e_type})")
+            ent_str = ", ".join(ent_descs) if ent_descs else "this entity"
+            other_answer = (
+                f"We recognized {ent_str}, but this prototype currently only provides "
+                f"curated evidence overviews for genes, medicines, variants, and gene-medicine "
+                f"pairs. Supported query formats are shown below."
+            )
+            return AskResponse(
+                question=question,
+                answer=other_answer,
+                claims=[],
+                related_claims=[],
+                evidence_bundle=EvidenceBundle(
+                    query=question,
+                    resolved_entity_ids=resolved_cids,
+                    items=[],
+                    total_items=0,
+                    has_sufficient_evidence=False,
+                ),
+                resolved_entities=resolved_entities_dicts,
+                flags=["other_entity"],
+                removed_claims_count=0,
+                disclaimer_text=self.config.disclaimer_text,
+                answer_mode=self.config.llm_mode,
+                meaning_coverage=meaning_coverage,
+                llm_calls=0,
+                network_calls=0,
+                builder_calls=0,
+                query_mode="other_entity",
+                overview=None,
+                sections=None,
+                brands=None,
+                suggested_next=[],
+                prompt_templates=SUPPORTED_PROMPT_TEMPLATES,
+            )
 
         # Handle Overview Modes (medicine_overview, gene_overview, variant_overview)
         if query_mode in ("medicine_overview", "gene_overview", "variant_overview"):

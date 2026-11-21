@@ -45,6 +45,11 @@ const MODE_METADATA: Record<string, { label: string; explanation: string; badgeC
     explanation: 'No recognized chemical, gene, or variant was matched in the data archive.',
     badgeClass: 'badge-unrecognized',
   },
+  other_entity: {
+    label: 'Recognized entity',
+    explanation: 'This entity was recognized, but this prototype only provides dedicated evidence overviews for genes, medicines, variants, and gene-medicine pairs.',
+    badgeClass: 'badge-ambiguous',
+  },
   refused: {
     label: 'Clinical guard notice',
     explanation: 'This prototype provides pharmacogenomic evidence retrieval rather than prescriptive guidance.',

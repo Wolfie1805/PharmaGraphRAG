@@ -187,15 +187,15 @@ def test_trigger_rules_negative_and_positive(client: TestClient):
     # Negative cases: must NOT return brand_lookup
     negatives = [
         ("cat", "unrecognized", "possible_gene_name_lowercase:cat"),
-        ("pain", "unrecognized", None),
+        ("pain", "other_entity", "other_entity"),
         ("cold", "unrecognized", None),
         ("gene", "unrecognized", None),
         ("drug", "unrecognized", None),
         ("dose", "unrecognized", None),
         ("effect", "unrecognized", None),
         ("role", "unrecognized", None),
-        ("pain relief tablets", "unrecognized", None),
-        ("cold and cough", "unrecognized", None),
+        ("pain relief tablets", "other_entity", "other_entity"),
+        ("cold and cough", "other_entity", "other_entity"),
         ("what is the relationship between clopidogrel and CYP2C19", "pair_detail", None),
     ]
 
