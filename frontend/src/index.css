@@ -1895,6 +1895,46 @@ body::before {
   font-size: 0.675rem;
 }
 
+.results-also-recognized-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.results-also-recognized-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.also-recognized-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.also-recognized-chip .chip-name {
+  color: #e4e4e7;
+  font-weight: 500;
+}
+
+.also-recognized-chip .chip-type {
+  font-size: 0.775rem;
+  color: #a1a1aa;
+}
+
+.also-recognized-help-text {
+  font-size: 0.775rem;
+  color: #71717a;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .results-mode-content {
   display: flex;
   flex-wrap: wrap;

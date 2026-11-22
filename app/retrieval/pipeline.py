@@ -14,6 +14,29 @@ from app.retrieval.graph_lookup import GraphEdge, GraphLookupService
 from app.retrieval.keyword_search import BM25KeywordIndex
 from app.retrieval.meaning_search import MeaningSearchIndex
 
+EVIDENCE_ENTITY_TYPES = frozenset({"gene", "chemical", "variant", "haplotype", "snv"})
+
+
+def _is_evidence_entity(ent: Any) -> bool:
+    """Check if entity is of allowed evidence types (gene, chemical, variant, haplotype, snv)."""
+    if getattr(ent, "candidates", None) and ent.candidates:
+        t = getattr(ent.candidates[0], "entity_type", "")
+        if t and t.lower() in EVIDENCE_ENTITY_TYPES:
+            return True
+        return False
+    if getattr(ent, "candidate_types", None) and ent.candidate_types:
+        for ct in ent.candidate_types:
+            if ct and ct.lower() in EVIDENCE_ENTITY_TYPES:
+                return True
+        return False
+    if getattr(ent, "entity_type", None):
+        return ent.entity_type.lower() in EVIDENCE_ENTITY_TYPES
+    cid = str(getattr(ent, "canonical_id", "") or "").lower()
+    for prefix in ("gene", "chem", "var", "haplo", "snv"):
+        if f":{prefix}:" in cid or cid.startswith(f"pg:{prefix}"):
+            return True
+    return False
+
 
 class PipelineQueryResult(BaseModel):
     """Complete result package for a biomedical user question."""
@@ -78,11 +101,16 @@ class RetrievalPipeline:
                 question, entity_hints=entity_hints
             )
         )
+        evidence_resolved = [
+            e
+            for e in resolved_entities
+            if getattr(e, "status", "") == "resolved" and _is_evidence_entity(e)
+        ]
         resolved_cids = list(
             dict.fromkeys(
                 e.canonical_id
-                for e in resolved_entities
-                if e.status == "resolved" and e.canonical_id
+                for e in evidence_resolved
+                if getattr(e, "canonical_id", None)
             )
         )
         resolved_cid_set = set(resolved_cids)

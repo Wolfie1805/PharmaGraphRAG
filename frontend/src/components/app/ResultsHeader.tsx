@@ -1,10 +1,11 @@
 import React from 'react';
-import { ResolvedEntity, SuggestedNextItem } from '../../types';
+import { AlsoRecognizedItem, ResolvedEntity, SuggestedNextItem } from '../../types';
 
 interface ResultsHeaderProps {
   question: string;
   queryMode: string;
   resolvedEntities: ResolvedEntity[];
+  alsoRecognized?: AlsoRecognizedItem[];
   suggestedNext?: SuggestedNextItem[];
   onSelectSuggestion: (query: string, hints?: string[]) => void;
 }
@@ -61,6 +62,7 @@ export const ResultsHeader: React.FC<ResultsHeaderProps> = ({
   question,
   queryMode,
   resolvedEntities,
+  alsoRecognized = [],
   suggestedNext = [],
   onSelectSuggestion,
 }) => {
@@ -70,8 +72,9 @@ export const ResultsHeader: React.FC<ResultsHeaderProps> = ({
     badgeClass: 'badge-default',
   };
 
+  const alsoCids = new Set((alsoRecognized || []).map((a) => a.canonical_id).filter(Boolean));
   const resolvedOnly = (resolvedEntities || []).filter(
-    (e) => e.status === 'resolved' && e.canonical_id
+    (e) => e.status === 'resolved' && e.canonical_id && !alsoCids.has(e.canonical_id)
   );
 
   return (
@@ -105,6 +108,33 @@ export const ResultsHeader: React.FC<ResultsHeaderProps> = ({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* 2b. Also recognized (not used to narrow results) */}
+      {alsoRecognized && alsoRecognized.length > 0 && (
+        <div className="results-also-recognized-row" data-testid="also-recognized-section">
+          <span className="results-row-label">
+            Also recognized (not used to narrow results):
+          </span>
+          <div className="results-also-recognized-content">
+            <div className="results-chips-list" role="list">
+              {alsoRecognized.map((item) => (
+                <div
+                  key={item.canonical_id || item.name}
+                  className="also-recognized-chip"
+                  role="listitem"
+                  data-testid="also-recognized-chip"
+                >
+                  <span className="chip-name">{item.name}</span>
+                  <span className="chip-type">({item.type})</span>
+                </div>
+              ))}
+            </div>
+            <p className="also-recognized-help-text">
+              These terms were recognized as clinical entities but are not used to filter, rank, or exclude evidence.
+            </p>
           </div>
         </div>
       )}

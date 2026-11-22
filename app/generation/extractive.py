@@ -102,7 +102,12 @@ class ExtractiveAnswerBuilder:
         # Separate chunk items and relationship records (keep everything in bundle intact)
         chunk_items = [it for it in bundle.items if it.source_type != "relationship_record"]
 
-        resolved_ids = list(dict.fromkeys(cid for cid in bundle.resolved_entity_ids if cid))
+        non_evidence_prefixes = ("phenotype", "cnv", "disease")
+        resolved_ids = [
+            cid
+            for cid in dict.fromkeys(cid for cid in bundle.resolved_entity_ids if cid)
+            if not any(cid.startswith(f"pg:{p}:") for p in non_evidence_prefixes)
+        ]
         resolved_set: Set[str] = set(resolved_ids)
         is_multi_entity = len(resolved_set) >= 2
         inferred_multi_target = 0

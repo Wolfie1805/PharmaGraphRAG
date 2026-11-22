@@ -25,6 +25,12 @@ export interface ResolvedEntity {
   };
 }
 
+export interface AlsoRecognizedItem {
+  name: string;
+  type: string;
+  canonical_id: string;
+}
+
 export interface SuggestItem {
   canonical_id: string;
   display_label: string;
@@ -206,6 +212,7 @@ export interface AskResponse {
   related_claims?: Claim[];
   evidence_bundle: EvidenceBundle;
   resolved_entities: ResolvedEntity[];
+  also_recognized?: AlsoRecognizedItem[];
   flags: string[];
   removed_claims_count: number;
   disclaimer_text: string;

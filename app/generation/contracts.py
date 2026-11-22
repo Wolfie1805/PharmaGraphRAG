@@ -153,6 +153,14 @@ class PromptTemplateItem(BaseModel):
     description: str
 
 
+class AlsoRecognizedItem(BaseModel):
+    """Recognized entity not used for evidence matching, ranking or claim filtering."""
+
+    name: str
+    type: str
+    canonical_id: str
+
+
 class AskResponse(BaseModel):
     """Final API response for POST /api/ask."""
 
@@ -162,6 +170,7 @@ class AskResponse(BaseModel):
     related_claims: List[Claim] = Field(default_factory=list)
     evidence_bundle: EvidenceBundle
     resolved_entities: List[Dict[str, Any]] = Field(default_factory=list)
+    also_recognized: List[AlsoRecognizedItem] = Field(default_factory=list)
     flags: List[str] = Field(default_factory=list)
     removed_claims_count: int = 0
     disclaimer_text: str

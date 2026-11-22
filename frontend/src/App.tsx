@@ -347,6 +347,7 @@ export const App: React.FC<AppProps> = ({ initialQuestion = '', initialStats }) 
                 question={response.question}
                 queryMode={queryMode}
                 resolvedEntities={response.resolved_entities || []}
+                alsoRecognized={response.also_recognized || []}
                 suggestedNext={response.suggested_next || []}
                 onSelectSuggestion={(nextQ, hints) => handleSelectExample(nextQ, hints)}
               />

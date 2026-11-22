@@ -18,6 +18,7 @@ from app.generation.adapter import BaseLLMClient, get_llm_client
 from app.generation.checks import detect_evidence_conflicts, evaluate_evidence_sufficiency
 from app.generation.config import GenerationConfig
 from app.generation.contracts import (
+    AlsoRecognizedItem,
     AskResponse,
     DetailSections,
     EvidenceBundle,
@@ -34,6 +35,29 @@ from app.generation.verifier import CitationVerifier
 from app.retrieval.brand_index import BrandIndex
 from app.retrieval.entity_lookup import BRAND_TRIGGER_STOPLIST
 from app.retrieval.pipeline import RetrievalPipeline
+
+EVIDENCE_ENTITY_TYPES = frozenset({"gene", "chemical", "variant", "haplotype", "snv"})
+
+
+def _is_evidence_entity(ent: Any) -> bool:
+    """Check if entity is of allowed evidence types (gene, chemical, variant, haplotype, snv)."""
+    if getattr(ent, "candidates", None) and ent.candidates:
+        t = getattr(ent.candidates[0], "entity_type", "")
+        if t and t.lower() in EVIDENCE_ENTITY_TYPES:
+            return True
+        return False
+    if getattr(ent, "candidate_types", None) and ent.candidate_types:
+        for ct in ent.candidate_types:
+            if ct and ct.lower() in EVIDENCE_ENTITY_TYPES:
+                return True
+        return False
+    if getattr(ent, "entity_type", None):
+        return ent.entity_type.lower() in EVIDENCE_ENTITY_TYPES
+    cid = str(getattr(ent, "canonical_id", "") or "").lower()
+    for prefix in ("gene", "chem", "var", "haplo", "snv"):
+        if f":{prefix}:" in cid or cid.startswith(f"pg:{prefix}"):
+            return True
+    return False
 
 # Module-level in-memory cache for variant annotations
 _VAR_DRUG_ANN_CACHE: Optional[Dict[str, Dict[str, str]]] = None
@@ -219,7 +243,7 @@ class AnswerService:
                 chems.append(ent)
             elif etype == "gene":
                 genes.append(ent)
-            elif etype in {"variant", "snv", "haplotype", "cnv"}:
+            elif etype in {"variant", "snv", "haplotype"}:
                 variants.append(ent)
             elif etype:
                 other_types.append(ent)
@@ -754,13 +778,67 @@ class AnswerService:
                 ent_dict["hint_overrode_text"] = ent.hint_overrode_text
             resolved_entities_dicts.append(ent_dict)
 
-        resolved_cids = list(
+        primary_resolved = [
+            e
+            for e in retrieval_res.resolved_entities
+            if getattr(e, "status", "") == "resolved" and _is_evidence_entity(e)
+        ]
+        non_primary_resolved = [
+            e
+            for e in retrieval_res.resolved_entities
+            if getattr(e, "status", "") == "resolved" and not _is_evidence_entity(e)
+        ]
+        primary_cids = list(
+            dict.fromkeys(
+                e.canonical_id
+                for e in primary_resolved
+                if getattr(e, "canonical_id", None)
+            )
+        )
+        all_resolved_cids = list(
             dict.fromkeys(
                 e.canonical_id
                 for e in retrieval_res.resolved_entities
-                if e.status == "resolved" and e.canonical_id
+                if getattr(e, "status", "") == "resolved" and getattr(e, "canonical_id", None)
             )
         )
+        also_recognized: List[AlsoRecognizedItem] = []
+        seen_also_ids: Set[str] = set()
+        for ent in non_primary_resolved:
+            cid = str(
+                getattr(ent, "canonical_id", "")
+                or (
+                    ent.candidates[0].canonical_id
+                    if getattr(ent, "candidates", None) and ent.candidates
+                    else ""
+                )
+            )
+            if cid and cid in seen_also_ids:
+                continue
+            if cid:
+                seen_also_ids.add(cid)
+            name = (
+                ent.candidates[0].display_name
+                if getattr(ent, "candidates", None) and ent.candidates
+                else getattr(ent, "query", "")
+            )
+            etype = (
+                ent.candidates[0].entity_type.lower()
+                if getattr(ent, "candidates", None) and ent.candidates
+                else (
+                    ent.candidate_types[0].lower()
+                    if getattr(ent, "candidate_types", None) and ent.candidate_types
+                    else "entity"
+                )
+            )
+            also_recognized.append(
+                AlsoRecognizedItem(
+                    name=name,
+                    type=etype,
+                    canonical_id=cid,
+                )
+            )
+        resolved_cids = primary_cids
         has_ambiguous = any(e.status == "ambiguous" for e in retrieval_res.resolved_entities)
 
         flags: List[str] = []
@@ -808,7 +886,7 @@ class AnswerService:
             )
 
         # 2c. Gate Stage B1: No resolved or ambiguous entity found
-        if not resolved_cids and not has_ambiguous:
+        if not all_resolved_cids and not has_ambiguous:
             # Brand lookup trigger rules:
             # 1. query has at most 6 tokens
             # 2. first token has at least 4 characters
@@ -928,6 +1006,7 @@ class AnswerService:
                     has_sufficient_evidence=False,
                 ),
                 resolved_entities=resolved_entities_dicts,
+                also_recognized=also_recognized,
                 flags=["other_entity"],
                 removed_claims_count=0,
                 disclaimer_text=self.config.disclaimer_text,
@@ -998,7 +1077,7 @@ class AnswerService:
                 target_ent, offset=overview_offset, limit=overview_limit
             )
             suggested = self._build_suggested_next(
-                retrieval_res.resolved_entities, query_mode
+                primary_resolved or retrieval_res.resolved_entities, query_mode
             )
 
             bundle = EvidenceBundle(
@@ -1015,6 +1094,7 @@ class AnswerService:
                 related_claims=[],
                 evidence_bundle=bundle,
                 resolved_entities=resolved_entities_dicts,
+                also_recognized=also_recognized,
                 flags=flags,
                 removed_claims_count=0,
                 disclaimer_text=self.config.disclaimer_text,
@@ -1101,9 +1181,9 @@ class AnswerService:
 
         # Build sections and suggested next
         sections = self._build_sections(
-            evidence_items, retrieval_res.resolved_entities, query_mode=query_mode
+            evidence_items, primary_resolved, query_mode=query_mode
         )
-        suggested = self._build_suggested_next(retrieval_res.resolved_entities, query_mode)
+        suggested = self._build_suggested_next(primary_resolved, query_mode)
 
         # 4. Basic Checks & Gate Stage B2
         has_grounded_chunk = any(
@@ -1148,6 +1228,7 @@ class AnswerService:
                 related_claims=[],
                 evidence_bundle=bundle,
                 resolved_entities=resolved_entities_dicts,
+                also_recognized=also_recognized,
                 flags=flags,
                 removed_claims_count=0,
                 disclaimer_text=self.config.disclaimer_text,
@@ -1190,6 +1271,7 @@ class AnswerService:
             related_claims=verified_related,
             evidence_bundle=bundle,
             resolved_entities=resolved_entities_dicts,
+            also_recognized=also_recognized,
             flags=flags,
             removed_claims_count=removed_count,
             disclaimer_text=self.config.disclaimer_text,
